@@ -324,4 +324,4 @@ export default function BadgeArt({ badge, size = 72, earned = badge.earned, anim
       )}
     </svg>
   );
-}
+}n

@@ -180,20 +180,20 @@ export default function PacePlanner({ remaining, total, signedIn }) {
     </div>
   );
 
-  return (
+    return (
     <section
       aria-label="Daily pace planner"
       className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-gradient-to-br from-accent-soft via-surface to-surface px-4 py-3 sm:px-5"
     >
       <div className="min-w-0">
-        <p className="text-xs font-semibold uppercase tracking-widest text-accent">Pace planner</p>
-        <h2 className="truncate text-base font-semibold tracking-tight sm:text-lg">How fast do you want to finish?</h2>
+        <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-accent sm:text-xs">Pace planner</p>
+        <h2 className="text-sm font-semibold leading-snug tracking-tight sm:text-lg">How fast do you want to finish?</h2>
       </div>
 
       <Popup
         wide
         buttonLabel="Plan my pace"
-        buttonClassName="shrink-0 rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-accent-ink hover:opacity-90"
+        buttonClassName="h-10 shrink-0 rounded-xl bg-accent px-4 text-sm font-semibold text-accent-ink hover:opacity-90"
         title="Pace planner"
         subtitle={
           signedIn

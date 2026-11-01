@@ -98,34 +98,37 @@ export default async function CategoryPage({ category, searchParams }) {
   return (
     <ProblemsShell items={navItems}>
       <JsonLd data={jsonLd} />
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-accent">
+      <header className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="flex items-center gap-2 text-[0.7rem] font-semibold uppercase tracking-widest text-accent sm:text-xs">
             {copy.eyebrow} {pro && <ProBadge />}
           </p>
-          <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">{copy.h1}</h1>
-          <p className="mt-2 max-w-xl text-sm text-muted">{copy.intro}</p>
+          <h1 className="mt-1 text-[1.65rem] font-semibold leading-tight tracking-tight sm:text-4xl">{copy.h1}</h1>
+          <p className="mt-1.5 line-clamp-2 max-w-xl text-sm text-muted sm:mt-2 sm:line-clamp-none">{copy.intro}</p>
         </div>
         {user && (
           <Link
             href="/dashboard#saved"
-            className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-4 py-2 text-sm font-medium transition-colors hover:border-muted"
+            aria-label="Saved for later"
+            title="Saved for later"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line bg-surface text-sm font-medium transition-colors hover:border-muted sm:w-auto sm:gap-2 sm:px-4"
           >
-            <Bookmark width={16} height={16} /> Saved for later
+            <Bookmark width={16} height={16} />
+            <span className="hidden sm:inline">Saved for later</span>
           </Link>
         )}
       </header>
 
-      <div className="mt-6">
+      <div className="mt-5 sm:mt-6">
         <PacePlanner remaining={Math.max(0, stats.total - stats.solved)} total={stats.total} signedIn={Boolean(user)} />
       </div>
 
-      <section aria-label="Your stats" className={`mt-4 grid gap-4 ${category === 'ai' ? 'md:grid-cols-[2fr_3fr]' : ''}`}>
+      <section aria-label="Your stats" className={`mt-3 grid grid-cols-1 gap-3 sm:mt-4 sm:gap-4 ${category === 'ai' ? 'md:grid-cols-[2fr_3fr]' : ''}`}>
         <ProgressCard stats={stats} signedIn={Boolean(user)} />
         {category === 'ai' && <PromoSection ads={ads} />}
       </section>
 
-      <div className="mt-8">
+      <div className="mt-6 sm:mt-8">
         <Suspense fallback={<div className="h-24" />}>
           <ProblemFilters
             topics={topics}

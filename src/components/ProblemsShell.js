@@ -13,7 +13,7 @@ const ICONS = { ai: Book, hr: Users };
  * Left (about 20%): the question types, AI problems and HR questions. It can be collapsed to a thin icon rail
  * and expanded again; the choice is remembered in this browser.
  * Right: the list for the selected type (children).
- * Below the lg breakpoint the left column becomes a row of tabs above the list.
+ * Below the lg breakpoint the left column becomes a segmented switch above the list.
  *
  * items: [{ key, label, href, count, description }]
  */
@@ -42,22 +42,30 @@ export default function ProblemsShell({ items, children }) {
     it.key === 'hr' ? pathname === '/problems/hr' || pathname.startsWith('/problems/hr/') : !(pathname === '/problems/hr' || pathname.startsWith('/problems/hr/'));
 
   return (
-    <div className="mx-auto flex w-full max-w-[96rem] flex-col gap-4 px-4 pb-16 pt-6 sm:px-6 lg:flex-row lg:gap-5">
-      {/* Mobile and tablet: tabs */}
-      <nav aria-label="Question type" className="flex gap-2 lg:hidden">
+    <div className="mx-auto flex w-full max-w-[96rem] flex-col gap-4 px-4 pb-16 pt-4 sm:px-6 sm:pt-6 lg:flex-row lg:gap-5">
+      {/* Mobile and tablet: segmented switch */}
+      <nav aria-label="Question type" className="grid grid-cols-2 gap-1 rounded-2xl bg-surface-2 p-1 lg:hidden">
         {items.map((it) => {
           const on = isOn(it);
+          const Icon = ICONS[it.key] ?? Book;
           return (
             <Link
               key={it.key}
               href={it.href}
               aria-current={on ? 'page' : undefined}
-              className={`flex-1 rounded-xl border px-4 py-2.5 text-center text-sm font-semibold transition-colors ${
-                on ? 'border-ink bg-ink text-bg' : 'border-line bg-surface text-muted hover:border-muted hover:text-ink'
+              className={`flex h-11 min-w-0 items-center justify-center gap-2 rounded-xl px-2 text-sm font-semibold transition-all ${
+                on ? 'bg-surface text-ink shadow-sm ring-1 ring-line' : 'text-muted hover:text-ink'
               }`}
             >
-              {it.label}
-              <span className={`ml-2 text-xs font-medium ${on ? 'opacity-80' : 'text-muted'}`}>{it.count}</span>
+              <Icon width={16} height={16} className={`shrink-0 ${on ? 'text-accent' : ''}`} />
+              <span className="truncate">{it.label}</span>
+              <span
+                className={`shrink-0 rounded-full px-1.5 py-0.5 text-[0.7rem] font-semibold tabular-nums ${
+                  on ? 'bg-accent-soft text-accent' : 'bg-line/60 text-muted'
+                }`}
+              >
+                {it.count}
+              </span>
             </Link>
           );
         })}

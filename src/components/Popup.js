@@ -6,7 +6,7 @@ import { Close } from './icons';
 /**
  * A button that opens a popup (native <dialog>, so Esc, focus and the backdrop work properly).
  * Phones get a bottom sheet, larger screens a centred dialog.
- * The content (children) can be server-rendered markup.
+ * The content (children) can be server-rendered markup, or a function ({ close }) => node when it needs a "Done" button.
  * Pass `wide` for content that needs more room (for example a two-column layout).
  */
 export default function Popup({ buttonLabel, buttonClassName = '', title, subtitle, wide = false, children }) {
@@ -33,6 +33,8 @@ export default function Popup({ buttonLabel, buttonClassName = '', title, subtit
     };
   }, [open]);
 
+  const content = typeof children === 'function' ? children({ close: () => setOpen(false) }) : children;
+
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} aria-haspopup="dialog" className={buttonClassName}>
@@ -49,8 +51,10 @@ export default function Popup({ buttonLabel, buttonClassName = '', title, subtit
         }}
         className={`m-auto ${width} max-w-none rounded-2xl border border-line bg-surface p-0 text-ink shadow-2xl backdrop:bg-black/60 backdrop:backdrop-blur-sm max-sm:mb-0 max-sm:mt-auto max-sm:w-full max-sm:rounded-b-none`}
       >
-        <div className="flex max-h-[85vh] flex-col">
-          <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
+        <div className="flex max-h-[88dvh] flex-col">
+          {/* Grab handle, phones only */}
+          <div aria-hidden="true" className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-line sm:hidden" />
+          <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4 max-sm:pt-3">
             <div className="min-w-0">
               <h2 id={titleId} className="text-lg font-semibold tracking-tight">{title}</h2>
               {subtitle && <p className="mt-0.5 text-sm text-muted">{subtitle}</p>}
@@ -64,7 +68,7 @@ export default function Popup({ buttonLabel, buttonClassName = '', title, subtit
               <Close />
             </button>
           </div>
-          <div className="overflow-y-auto overscroll-contain px-5 py-5">{children}</div>
+          <div className="overflow-y-auto overscroll-contain px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-5">{content}</div>
         </div>
       </dialog>
     </>
