@@ -14,7 +14,7 @@ function partOfDay(hour) {
 const indiaHour = () =>
   Number(new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hourCycle: 'h23', timeZone: 'Asia/Kolkata' }).format(new Date()));
 
-/** Phone: "Good morning" on line 1, the name on line 2. Desktop: "Good morning, Name" on one line. */
+/** Phone: small muted "Good morning" on line 1, the name in large type on line 2. Desktop: "Good morning, Name" on one line. */
 export default function Greeting({ name }) {
   const [greeting, setGreeting] = useState(() => partOfDay(indiaHour()));
 
@@ -27,11 +27,11 @@ export default function Greeting({ name }) {
 
   return (
     <h1 className="flex min-w-0 flex-col text-2xl font-semibold leading-tight tracking-tight sm:flex-row sm:flex-nowrap sm:items-center sm:gap-x-2 sm:text-3xl">
-      <span suppressHydrationWarning className="shrink-0">
+      <span suppressHydrationWarning className="shrink-0 text-sm font-medium tracking-normal text-muted sm:text-3xl sm:font-semibold sm:tracking-tight sm:text-ink">
         {greeting}
         {name && <span className="hidden sm:inline">,</span>}
       </span>
-      {name && <span className="min-w-0 truncate">{name}</span>}
+      {name && <span className="min-w-0 truncate text-[1.65rem] sm:text-3xl">{name}</span>}
     </h1>
   );
 }

@@ -31,15 +31,21 @@ export default function ProBanner({ periodEnd, className = '' }) {
                 <Crown width={22} height={22} />
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block text-base font-semibold leading-snug tracking-tight">You&rsquo;re on Buncho Pro</span>
-                <span className="mt-1 block">
+                <span className="flex items-center gap-2">
+                  <span className="text-base font-semibold leading-snug tracking-tight">Buncho Pro</span>
                   <ProBadge />
+                </span>
+                <span className="mt-0.5 block text-sm text-muted">
+                  Active ·{' '}
+                  <span className={soon ? 'font-semibold text-medium' : 'font-medium text-ink'}>
+                    {daysLeft} day{daysLeft === 1 ? '' : 's'} left
+                  </span>
                 </span>
               </span>
               <ChevronRight width={20} height={20} className="shrink-0 text-muted" />
             </>
           }
-          buttonClassName={`flex w-full items-center gap-4 rounded-2xl p-4 text-left ${SURFACE}`}
+          buttonClassName={`flex w-full items-center gap-3.5 rounded-2xl p-3.5 text-left ${SURFACE}`}
         >
           <PlanDetails periodEnd={periodEnd} />
         </Popup>

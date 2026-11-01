@@ -75,7 +75,7 @@ export default function ReadinessCard({ readiness, competencies }) {
   const { score, label, provisional, assessed, totalCompetencies, evaluatedProblems } = readiness;
 
   return (
-    <section aria-labelledby="readiness-h" className="card p-6 sm:p-8">
+    <section aria-labelledby="readiness-h" className="card p-5 sm:p-8">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="readiness-h" className="text-base font-semibold tracking-tight">AI Engineering Readiness</h2>
         {provisional && score !== null && (
@@ -83,7 +83,7 @@ export default function ReadinessCard({ readiness, competencies }) {
         )}
       </div>
 
-      <div className="mt-6 flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-8">
+      <div className="mt-5 flex flex-col items-center gap-5 text-center sm:mt-6 sm:flex-row sm:gap-8 sm:text-left">
         <Ring score={score} />
         <div className="min-w-0">
           <p className="text-2xl font-semibold tracking-tight">{label}</p>

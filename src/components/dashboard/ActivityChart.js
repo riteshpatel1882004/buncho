@@ -85,7 +85,7 @@ export default function ActivityChart({ activeDays, todayKey, title = 'Activity'
   const active = hover !== null ? series[hover] : null;
 
   return (
-    <section aria-label={title} className="card p-5 sm:p-6">
+    <section aria-label={title} className="card p-4 sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
           <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
@@ -100,7 +100,7 @@ export default function ActivityChart({ activeDays, todayKey, title = 'Activity'
           </p>
         </div>
 
-        <div role="tablist" aria-label="Time range" className="flex shrink-0 self-start rounded-xl border border-line bg-surface-2/60 p-1">
+        <div role="tablist" aria-label="Time range" className="grid w-full shrink-0 grid-cols-4 self-start rounded-xl border border-line bg-surface-2/60 p-1 sm:flex sm:w-auto">
           {RANGES.map((r) => (
             <button
               key={r.id}
@@ -111,8 +111,8 @@ export default function ActivityChart({ activeDays, todayKey, title = 'Activity'
                 setRangeId(r.id);
                 setHover(null);
               }}
-              className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${
-                r.id === rangeId ? 'bg-bg text-ink shadow-sm' : 'text-muted hover:text-ink'
+              className={`whitespace-nowrap rounded-lg px-1 py-2 text-center text-xs font-semibold transition-colors sm:px-3 sm:py-1.5 sm:text-sm ${
+                r.id === rangeId ? 'bg-accent text-accent-ink shadow-sm' : 'text-muted hover:text-ink'
               }`}
             >
               {r.label}
@@ -121,7 +121,7 @@ export default function ActivityChart({ activeDays, todayKey, title = 'Activity'
         </div>
       </div>
 
-      <div className="relative mt-5">
+      <div className="relative mt-4 sm:mt-5">
         <svg
           viewBox={`0 0 ${W} ${H}`}
           className="h-auto w-full"

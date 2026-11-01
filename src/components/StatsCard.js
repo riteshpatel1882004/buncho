@@ -41,7 +41,7 @@ const ROWS = [
 
 export function StatsCard({ stats, signedIn, roomy = false }) {
   return (
-    <section aria-label="Your progress" className={roomy ? 'card p-6' : 'panel p-4'}>
+    <section aria-label="Your progress" className={roomy ? 'card p-5 sm:p-6' : 'panel p-4'}>
       {roomy && <h2 className="mb-5 text-base font-semibold tracking-tight">Problems solved</h2>}
       <div className={`flex items-center ${roomy ? 'gap-6' : 'gap-4'}`}>
         <Ring solved={stats.solved} total={stats.total} size={roomy ? 116 : 104} />

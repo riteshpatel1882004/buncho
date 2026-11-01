@@ -3,7 +3,7 @@ import Link from 'next/link';
 // Shared dashboard card: consistent padding, heading, optional hint and action link.
 export default function Section({ id, title, hint, action, children, className = '' }) {
   return (
-    <section aria-labelledby={id} className={`card p-6 ${className}`}>
+    <section aria-labelledby={id} className={`card p-5 sm:p-6 ${className}`}>
       <header className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h2 id={id} className="text-base font-semibold tracking-tight">{title}</h2>
@@ -15,7 +15,7 @@ export default function Section({ id, title, hint, action, children, className =
           </Link>
         )}
       </header>
-      <div className="mt-5">{children}</div>
+      <div className="mt-4 sm:mt-5">{children}</div>
     </section>
   );
 }

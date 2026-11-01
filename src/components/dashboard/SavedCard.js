@@ -9,7 +9,7 @@ export default function SavedCard({ items, pro }) {
   const count = items.length;
 
   return (
-    <section id="saved" aria-labelledby="saved-h" className="card p-6">
+    <section id="saved" aria-labelledby="saved-h" className="card p-5 sm:p-6">
       <h2 id="saved-h" className="text-base font-semibold tracking-tight">Saved for later</h2>
 
       {count ? (

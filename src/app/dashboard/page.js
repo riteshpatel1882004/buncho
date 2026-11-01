@@ -12,6 +12,8 @@ import PlanCard from '@/components/billing/PlanCard';
 import ProBanner from '@/components/ProBanner';
 import { listJobs } from '@/lib/jobs/progress';
 import JobPrepCard from '@/components/jobs/JobPrepCard';
+import MobileHero from '@/components/dashboard/MobileHero';
+import ProfileTiles from '@/components/dashboard/ProfileTiles';
 import StatTile from '@/components/dashboard/StatTile';
 import Greeting from '@/components/dashboard/Greeting';
 import SavedCard from '@/components/dashboard/SavedCard';
@@ -58,11 +60,11 @@ export default async function DashboardPage() {
     : 'rounded-full bg-gradient-to-br from-accent/60 to-accent/10 p-[3px]';
 
   return (
-    <div className="relative mx-auto w-full max-w-[80rem] overflow-x-clip px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
+    <div className="relative mx-auto w-full max-w-[80rem] overflow-x-clip px-4 py-5 sm:px-6 lg:px-8 lg:py-10">
       <div className="relative">
         {/* Public profile links + share, at the very top (or a prompt to claim a username) */}
         {user.username ? (
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+          <div className="mb-5 hidden flex-wrap items-center justify-between gap-x-4 gap-y-3 lg:flex">
             <p className="flex items-center gap-2 text-sm">
               <Link href={`/user/${user.username}`} className="font-semibold text-accent hover:underline">
                 View public profile
@@ -89,13 +91,13 @@ export default async function DashboardPage() {
 
         {/* Header: greeting + Pro banner in ONE row (stacks on phones) */}
         <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
-          <div className="flex min-w-0 shrink-0 items-center gap-4">
+          <div className="flex min-w-0 shrink-0 items-center gap-3.5 sm:gap-4">
             <span className={`shrink-0 ${avatarRing}`}>
               {user.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={user.imageUrl} alt="" width={56} height={56} className="h-14 w-14 rounded-full object-cover" />
+                <img src={user.imageUrl} alt="" width={56} height={56} className="h-12 w-12 rounded-full object-cover sm:h-14 sm:w-14" />
               ) : (
-                <span className="grid h-14 w-14 place-items-center rounded-full bg-accent-soft text-xl font-semibold text-accent">
+                <span className="grid h-12 w-12 place-items-center rounded-full bg-accent-soft text-xl font-semibold text-accent sm:h-14 sm:w-14">
                   {(user.name ?? '?').charAt(0).toUpperCase()}
                 </span>
               )}
@@ -103,16 +105,30 @@ export default async function DashboardPage() {
             <Greeting name={firstName} pro={pro} />
           </div>
 
+          {/* Phones: quick actions right under the greeting (desktop has the text links bar above) */}
+          {user.username && (
+            <ProfileTiles
+              username={user.username}
+              url={`${SITE_URL}/user/${user.username}`}
+              name={user.profileName || firstName || 'my'}
+            />
+          )}
+
           {pro && <ProBanner periodEnd={ent.periodEnd} className="min-w-0 lg:flex-1" />}
         </header>
 
+        {/* Phones: one summary card (desktop shows the four stat tiles below instead) */}
+        <div className="mt-5 lg:hidden">
+          <MobileHero solved={stats.solved} total={stats.total} streak={stats.streak} saved={bookmarks.length} />
+        </div>
+
         {/* Milestones: animated badge path, right at the top */}
-        <div className="mt-6">
+        <div className="mt-5 lg:mt-6">
           <MilestoneJourney solved={stats.solved} badges={badgeData.badges} />
         </div>
 
         {/* Key numbers */}
-        <dl className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
+        <dl className="mt-6 hidden grid-cols-4 gap-6 lg:grid">
           <StatTile label="Solved" value={stats.solved} sub={`of ${stats.total} problems`} accent icon={<Check width={16} height={16} />} />
           <StatTile
             label="Day streak"
@@ -126,7 +142,7 @@ export default async function DashboardPage() {
 
         {/* On phones both columns "dissolve" (contents) and the cards follow the order-* classes,
             so Readiness lands right below the calendar. From lg up it is the normal 2-column layout. */}
-        <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_24rem]">
+        <div className="mt-5 grid gap-5 lg:mt-8 lg:gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_24rem]">
           {/* Main column */}
           <div className="contents min-w-0 lg:block lg:space-y-8">
             <div className="order-1 min-w-0">

@@ -5,7 +5,7 @@ import { useEffect, useState } from 'react';
 const btn =
   'inline-flex items-center justify-center gap-2 rounded-lg border border-line bg-surface px-3.5 py-2 text-sm font-semibold transition hover:border-accent hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]/40';
 
-async function copy(text) {
+export async function copy(text) {
   try {
     await navigator.clipboard.writeText(text);
     return true;
