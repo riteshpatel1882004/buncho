@@ -63,7 +63,7 @@ export default function ShareProfile({ url, name = 'my', owner = false, compact 
   }
 
   return (
-    <div>
+    <div className={compact ? 'flex flex-wrap items-center gap-2' : undefined}>
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" onClick={onCopy} className={btn}>
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -94,7 +94,7 @@ export default function ShareProfile({ url, name = 'my', owner = false, compact 
           </button>
         )}
       </div>
-      <p role="status" aria-live="polite" className="mt-2 min-h-5 text-sm font-medium text-easy">
+      <p role="status" aria-live="polite" className={compact ? 'text-sm font-medium text-easy' : 'mt-2 min-h-5 text-sm font-medium text-easy'}>
         {note}
       </p>
     </div>

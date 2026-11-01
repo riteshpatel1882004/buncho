@@ -59,13 +59,34 @@ export default async function DashboardPage() {
 
   return (
     <div className="relative mx-auto w-full max-w-[80rem] overflow-x-clip px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
-      {/* soft glow behind the header */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-gradient-to-b from-accent/10 via-accent/[0.03] to-transparent"
-      />
-
       <div className="relative">
+        {/* Public profile links + share, at the very top (or a prompt to claim a username) */}
+        {user.username ? (
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+            <p className="flex items-center gap-2 text-sm">
+              <Link href={`/user/${user.username}`} className="font-semibold text-accent hover:underline">
+                View public profile
+              </Link>
+              <span className="text-muted" aria-hidden="true">·</span>
+              <Link href="/settings/profile" className="font-medium text-muted hover:text-ink">
+                Edit
+              </Link>
+            </p>
+            <ShareProfile url={`${SITE_URL}/user/${user.username}`} name={user.profileName || firstName || 'my'} compact />
+          </div>
+        ) : (
+          <Link
+            href="/settings/profile"
+            className="group mb-5 flex items-center justify-between gap-4 rounded-2xl border border-accent/40 bg-accent-soft px-5 py-4 transition hover:border-accent"
+          >
+            <span>
+              <span className="block font-semibold">Claim your username and get a shareable profile</span>
+              <span className="mt-0.5 block text-sm text-muted">Show your level, streak and badges at buncho.live/user/your-name.</span>
+            </span>
+            <span className="shrink-0 rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-accent-ink group-hover:opacity-90">Claim it</span>
+          </Link>
+        )}
+
         {/* Header: greeting + Pro banner in ONE row (stacks on phones) */}
         <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
           <div className="flex min-w-0 shrink-0 items-center gap-4">
@@ -90,33 +111,6 @@ export default async function DashboardPage() {
           <MilestoneJourney solved={stats.solved} badges={badgeData.badges} />
         </div>
 
-        {/* Public profile: share + links (or a prompt to claim a username) */}
-        {user.username ? (
-          <div className="mt-4 flex flex-wrap items-start justify-between gap-x-4 gap-y-1">
-            <p className="flex items-center gap-2 pt-2 text-sm">
-              <Link href={`/user/${user.username}`} className="font-semibold text-accent hover:underline">
-                View public profile
-              </Link>
-              <span className="text-muted" aria-hidden="true">·</span>
-              <Link href="/settings/profile" className="font-medium text-muted hover:text-ink">
-                Edit
-              </Link>
-            </p>
-            <ShareProfile url={`${SITE_URL}/user/${user.username}`} name={user.profileName || firstName || 'my'} compact />
-          </div>
-        ) : (
-          <Link
-            href="/settings/profile"
-            className="group mt-6 flex items-center justify-between gap-4 rounded-2xl border border-accent/40 bg-accent-soft px-5 py-4 transition hover:border-accent"
-          >
-            <span>
-              <span className="block font-semibold">Claim your username and get a shareable profile</span>
-              <span className="mt-0.5 block text-sm text-muted">Show your level, streak and badges at buncho.live/user/your-name.</span>
-            </span>
-            <span className="shrink-0 rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-accent-ink group-hover:opacity-90">Claim it</span>
-          </Link>
-        )}
-
         {/* Key numbers */}
         <dl className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
           <StatTile label="Solved" value={stats.solved} sub={`of ${stats.total} problems`} accent icon={<Check width={16} height={16} />} />
@@ -130,21 +124,39 @@ export default async function DashboardPage() {
           <StatTile label="Saved" value={bookmarks.length} sub="for later" icon={<Bookmark width={16} height={16} />} />
         </dl>
 
+        {/* On phones both columns "dissolve" (contents) and the cards follow the order-* classes,
+            so Readiness lands right below the calendar. From lg up it is the normal 2-column layout. */}
         <div className="mt-8 grid gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_24rem]">
           {/* Main column */}
-          <div className="min-w-0 space-y-8">
-            <ActivityChart activeDays={stats.activeDays} todayKey={todayKey} />
-            <StatsCard stats={stats} signedIn roomy />
-            <ReadinessCard readiness={insights.readiness} competencies={insights.competencies} />
+          <div className="contents min-w-0 lg:block lg:space-y-8">
+            <div className="order-1 min-w-0">
+              <ActivityChart activeDays={stats.activeDays} todayKey={todayKey} />
+            </div>
+            <div className="order-2 min-w-0">
+              <StatsCard stats={stats} signedIn roomy />
+            </div>
+            <div className="order-5 min-w-0">
+              <ReadinessCard readiness={insights.readiness} competencies={insights.competencies} />
+            </div>
           </div>
 
           {/* Sidebar */}
-          <aside className="min-w-0 space-y-8">
+          <aside className="contents min-w-0 lg:block lg:space-y-8">
             {/* Pro members see their plan in the "Plan details" popup on the banner above */}
-            {!pro && <PlanCard ent={ent} />}
-            <StreakCalendar activeDays={stats.activeDays} todayKey={todayKey} streak={stats.streak} />
-            <JobPrepCard jobs={jobs.slice(0, 3)} />
-            <SavedCard items={savedList} pro={pro} />
+            {!pro && (
+              <div className="order-3 min-w-0">
+                <PlanCard ent={ent} />
+              </div>
+            )}
+            <div className="order-4 min-w-0">
+              <StreakCalendar activeDays={stats.activeDays} todayKey={todayKey} streak={stats.streak} />
+            </div>
+            <div className="order-6 min-w-0">
+              <JobPrepCard jobs={jobs.slice(0, 3)} />
+            </div>
+            <div className="order-7 min-w-0">
+              <SavedCard items={savedList} pro={pro} />
+            </div>
           </aside>
         </div>
       </div>

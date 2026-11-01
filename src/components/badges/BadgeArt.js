@@ -13,16 +13,18 @@ const TIERS = {
 };
 const LOCKED = { light: '#8b9198', mid: '#5f656b', dark: '#33373b', text: '#c4c9ce' };
 
-// Every earned badge always moves. Body motion (6) x overlay effect (4) = 24 unique combinations,
-// picked from badge.fx (set in lib/badges.js). Nothing here fades the whole badge in and out.
-const MOTIONS = ['float', 'sway', 'breathe', 'drift', 'swing', 'tumble'];
-const OVERLAYS = ['sweep', 'orbit', 'radar', 'rise'];
+// Every earned badge is animated IN PLACE: it never moves up, down, left or right (no float, sway, drift,
+// swing or scale). Glow effect (6) x overlay effect (4) = 24 unique combinations, picked from badge.fx
+// (set in lib/badges.js). The glow effects only change light (glow + brightness), never position.
+const MOTIONS = ['ignition', 'blaze', 'glow', 'shimmer', 'halo', 'flare'];
+const OVERLAYS = ['sweep', 'orbit', 'radar', 'twinkle'];
 
-const RISE = [
-  { x: 30, r: 1.6, t: 0 },
-  { x: 46, r: 2, t: 700 },
-  { x: 62, r: 1.4, t: 1400 },
-  { x: 76, r: 1.8, t: 2100 },
+// Fixed spots where small sparkles twinkle (they stay where they are, only their light changes).
+const TWINKLE = [
+  { x: 30, y: 30, r: 2, t: 0 },
+  { x: 72, y: 36, r: 1.6, t: 700 },
+  { x: 38, y: 74, r: 1.5, t: 1400 },
+  { x: 68, y: 70, r: 1.9, t: 2100 },
 ];
 const ORBIT = [
   { a: 0, r: 2.6 },
@@ -159,8 +161,8 @@ const STAR_X = { 1: [50], 2: [42, 58], 3: [34, 50, 66] };
  * One badge, drawn as SVG.
  * Milestones show a family icon and 0-3 stars (the level), achievements show an icon.
  * earned=false renders a dim grey version with no motion.
- * Earned badges are always animated (animate defaults to true): each design has its own body motion
- * plus its own overlay effect, both looping smoothly with no idle gap and no blinking.
+ * Earned badges are always animated (animate defaults to true): each design has its own in-place glow effect
+ * (Ignition, Blaze, ...) plus its own overlay effect. The badge itself never changes position.
  * The pop-in is still done by the wrapper with the .badge-pop class. Works in server and client components.
  */
 export default function BadgeArt({ badge, size = 72, earned = badge.earned, animate = true, delay = 0, className = '' }) {
@@ -194,7 +196,9 @@ export default function BadgeArt({ badge, size = 72, earned = badge.earned, anim
       style={{
         '--d': `${delay}ms`,
         '--p': `${phase}ms`,
-        filter: earned ? `drop-shadow(0 5px 8px ${pal.mid}59)` : undefined,
+        '--glow': pal.mid,
+        // Animated badges get their glow from the .bm-* class (so it can pulse); static ones keep a fixed shadow.
+        filter: earned && !animated ? `drop-shadow(0 5px 8px ${pal.mid}59)` : undefined,
         opacity: earned ? 1 : 0.55,
       }}
     >
@@ -288,16 +292,16 @@ export default function BadgeArt({ badge, size = 72, earned = badge.earned, anim
         )}
 
         {animated &&
-          overlay === 'rise' &&
-          RISE.map((p) => (
+          overlay === 'twinkle' &&
+          TWINKLE.map((p) => (
             <circle
-              key={p.x}
-              className="bo-rise"
+              key={`${p.x}-${p.y}`}
+              className="bo-twinkle"
               cx={p.x}
-              cy="80"
+              cy={p.y}
               r={p.r}
               fill={pal.text}
-              style={{ animationDelay: `calc(var(--p, 0ms) - ${p.t}ms)` }}
+              style={{ animationDelay: `calc(var(--p, 0ms) - ${p.t}ms)`, transformOrigin: `${p.x}px ${p.y}px` }}
             />
           ))}
       </g>

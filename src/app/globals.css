@@ -356,50 +356,6 @@ html[data-busy='true'] body { cursor: progress; }
 html, body { overflow-x: clip; }
 
 
-/* ---------- Badge animations (milestone path on the dashboard) ---------- */
-@keyframes badge-pop {
-  0% { opacity: 0; transform: scale(0.2) rotate(-25deg); }
-  60% { opacity: 1; transform: scale(1.18) rotate(6deg); }
-  100% { opacity: 1; transform: scale(1) rotate(0deg); }
-}
-@keyframes badge-float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-3px); }
-}
-/* pop in once, then float gently */
-.badge-pop {
-  opacity: 0;
-  animation:
-    badge-pop 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.2) forwards,
-    badge-float 3.2s ease-in-out infinite;
-  animation-delay: var(--d, 0ms), calc(var(--d, 0ms) + 900ms);
-}
-/* slow light sweep across earned badges (SVG user units, so px = viewBox units) */
-@keyframes badge-shine {
-  0%, 35% { transform: translateX(-60px) skewX(-20deg); }
-  75%, 100% { transform: translateX(130px) skewX(-20deg); }
-}
-.badge-shine {
-  animation: badge-shine 4.2s ease-in-out infinite;
-  animation-delay: calc(var(--d, 0ms) + 700ms);
-}
-@keyframes track-fill { from { width: 0; } to { width: var(--w); } }
-.track-fill { animation: track-fill 1.6s cubic-bezier(0.3, 0.7, 0.2, 1) 0.2s both; }
-@keyframes ring-draw { from { stroke-dashoffset: var(--c); } to { stroke-dashoffset: var(--o); } }
-.ring-draw { animation: ring-draw 1.4s cubic-bezier(0.3, 0.7, 0.2, 1) 0.6s both; }
-@keyframes glow-pulse {
-  0%, 100% { opacity: 0.35; transform: scale(1); }
-  50% { opacity: 0.85; transform: scale(1.15); }
-}
-.glow-pulse { animation: glow-pulse 2.2s ease-in-out infinite; }
-
-@media (prefers-reduced-motion: reduce) {
-  .badge-pop { opacity: 1; animation: none; }
-  .badge-shine, .glow-pulse { animation: none; }
-  .track-fill, .ring-draw { animation: none; }
-}
-
-
 /* ---------- Badge animations ---------- */
 /* Pop in once. The continuous motion lives on the badge itself (.bm-*), so every badge moves differently. */
 @keyframes badge-pop {
@@ -413,25 +369,45 @@ html, body { overflow-x: clip; }
   animation-delay: var(--d, 0ms);
 }
 
-/* Body motions: all loop seamlessly, transform only, nothing fades. --p is a per-badge negative delay. */
-@keyframes bm-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3.5px); } }
-@keyframes bm-sway { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
-@keyframes bm-breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
-@keyframes bm-drift {
-  0%, 100% { transform: translate(0, -2px); }
-  25% { transform: translate(2px, 0); }
-  50% { transform: translate(0, 2px); }
-  75% { transform: translate(-2px, 0); }
+/* Glow effects ("body" animations): in place only. They change light (glow + brightness), never position,
+   size or rotation, so no badge moves up, down, left or right. --glow is the badge's metal colour, --p a per-badge phase. */
+@keyframes bm-ignition {
+  0%, 100% { filter: drop-shadow(0 0 2px var(--glow)) brightness(1); }
+  50% { filter: drop-shadow(0 0 11px var(--glow)) brightness(1.28); }
 }
-@keyframes bm-swing { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
-@keyframes bm-tumble { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.88); } }
+@keyframes bm-blaze {
+  0%, 100% { filter: drop-shadow(0 0 5px var(--glow)) brightness(1.05) saturate(1.1); }
+  12% { filter: drop-shadow(0 0 11px var(--glow)) brightness(1.3) saturate(1.35); }
+  26% { filter: drop-shadow(0 0 4px var(--glow)) brightness(1) saturate(1.05); }
+  41% { filter: drop-shadow(0 0 13px var(--glow)) brightness(1.35) saturate(1.4); }
+  58% { filter: drop-shadow(0 0 6px var(--glow)) brightness(1.1) saturate(1.15); }
+  74% { filter: drop-shadow(0 0 10px var(--glow)) brightness(1.25) saturate(1.3); }
+  88% { filter: drop-shadow(0 0 5px var(--glow)) brightness(1.05) saturate(1.1); }
+}
+@keyframes bm-glow {
+  0%, 100% { filter: drop-shadow(0 0 3px var(--glow)); }
+  50% { filter: drop-shadow(0 0 14px var(--glow)); }
+}
+@keyframes bm-shimmer {
+  0%, 100% { filter: drop-shadow(0 0 4px var(--glow)) brightness(0.96) contrast(1); }
+  50% { filter: drop-shadow(0 0 6px var(--glow)) brightness(1.18) contrast(1.08); }
+}
+@keyframes bm-halo {
+  0%, 100% { filter: drop-shadow(0 0 2px #fff) drop-shadow(0 0 6px var(--glow)); }
+  50% { filter: drop-shadow(0 0 5px #fff) drop-shadow(0 0 16px var(--glow)); }
+}
+@keyframes bm-flare {
+  0%, 62%, 100% { filter: drop-shadow(0 0 4px var(--glow)) brightness(1); }
+  72% { filter: drop-shadow(0 0 16px var(--glow)) brightness(1.5); }
+  84% { filter: drop-shadow(0 0 7px var(--glow)) brightness(1.12); }
+}
 
-.bm-float { animation: bm-float 3.2s ease-in-out infinite; animation-delay: var(--p, 0ms); }
-.bm-sway { animation: bm-sway 3.6s ease-in-out infinite; animation-delay: var(--p, 0ms); }
-.bm-breathe { animation: bm-breathe 3s ease-in-out infinite; animation-delay: var(--p, 0ms); }
-.bm-drift { animation: bm-drift 4s linear infinite; animation-delay: var(--p, 0ms); }
-.bm-swing { transform-origin: 50% 8%; animation: bm-swing 3.4s ease-in-out infinite; animation-delay: var(--p, 0ms); }
-.bm-tumble { animation: bm-tumble 2.8s ease-in-out infinite; animation-delay: var(--p, 0ms); }
+.bm-ignition { animation: bm-ignition 2.4s ease-in-out infinite; animation-delay: var(--p, 0ms); }
+.bm-blaze { animation: bm-blaze 2.2s ease-in-out infinite; animation-delay: var(--p, 0ms); }
+.bm-glow { animation: bm-glow 3s ease-in-out infinite; animation-delay: var(--p, 0ms); }
+.bm-shimmer { animation: bm-shimmer 2.8s ease-in-out infinite; animation-delay: var(--p, 0ms); }
+.bm-halo { animation: bm-halo 3.2s ease-in-out infinite; animation-delay: var(--p, 0ms); }
+.bm-flare { animation: bm-flare 3.4s ease-in-out infinite; animation-delay: var(--p, 0ms); }
 
 /* Overlay effects (SVG user units, so px = viewBox units). No idle gap, they keep moving. */
 @keyframes bo-sweep {
@@ -444,12 +420,12 @@ html, body { overflow-x: clip; }
 .bo-orbit { transform-origin: 50px 50px; animation: bo-spin 5s linear infinite; animation-delay: var(--p, 0ms); }
 .bo-radar { transform-origin: 50px 50px; animation: bo-spin 4.2s linear infinite; animation-delay: var(--p, 0ms); }
 
-@keyframes bo-rise {
-  from { transform: translateY(0); opacity: 0; }
-  20%, 80% { opacity: 0.9; }
-  to { transform: translateY(-46px); opacity: 0; }
+/* Sparkles that stay in one spot and only change their light. */
+@keyframes bo-twinkle {
+  0%, 100% { opacity: 0.15; transform: scale(0.6); }
+  50% { opacity: 1; transform: scale(1.3); }
 }
-.bo-rise { animation: bo-rise 2.8s linear infinite; }
+.bo-twinkle { animation: bo-twinkle 2.8s ease-in-out infinite; }
 
 /* Soft glow around the next milestone: it rotates instead of pulsing, so it never blinks. */
 .glow-spin {
@@ -465,7 +441,7 @@ html, body { overflow-x: clip; }
 
 @media (prefers-reduced-motion: reduce) {
   .badge-pop { opacity: 1; animation: none; }
-  .bm-float, .bm-sway, .bm-breathe, .bm-drift, .bm-swing, .bm-tumble { animation: none; }
-  .bo-sweep, .bo-orbit, .bo-radar, .bo-rise, .glow-spin { animation: none; }
+  .bm-ignition, .bm-blaze, .bm-glow, .bm-shimmer, .bm-halo, .bm-flare { animation: none; }
+  .bo-sweep, .bo-orbit, .bo-radar, .bo-twinkle, .glow-spin { animation: none; }
   .track-fill, .ring-draw { animation: none; }
 }
