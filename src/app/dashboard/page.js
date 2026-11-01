@@ -6,7 +6,9 @@ import ReadinessCard from '@/components/ReadinessCard';
 import { StatsCard } from '@/components/StatsCard';
 import { getUserStats, dayKey } from '@/lib/problems';
 import { getInsights } from '@/lib/insights';
-import { getUserBadges } from '@/lib/profile';
+import { getUserBadges, publicName } from '@/lib/profile';
+import { profileTheme } from '@/lib/profile-theme';
+import ShareCards from '@/components/profile/ShareCards';
 import { attachInsights, getEntitlements } from '@/lib/subscription';
 import PlanCard from '@/components/billing/PlanCard';
 import ProBanner from '@/components/ProBanner';
@@ -125,6 +127,19 @@ export default async function DashboardPage() {
         {/* Milestones: animated badge path, right at the top */}
         <div className="mt-5 lg:mt-6">
           <MilestoneJourney solved={stats.solved} badges={badgeData.badges} />
+        </div>
+
+        {/* Share cards: downloadable / shareable achievement images, with locked previews of what is next */}
+        <div className="mt-6">
+          <ShareCards
+            name={publicName(user)}
+            username={user.username ?? null}
+            url={user.username ? `${SITE_URL}/user/${user.username}` : null}
+            metrics={badgeData.metrics}
+            badges={badgeData.badges}
+            total={stats.total}
+            defaultColor={profileTheme(user.username ?? user.name ?? 'buncho').a}
+          />
         </div>
 
         {/* Key numbers */}

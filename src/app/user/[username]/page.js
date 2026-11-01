@@ -16,7 +16,6 @@ import StatTile from '@/components/dashboard/StatTile';
 import MilestoneJourney from '@/components/badges/MilestoneJourney';
 import BadgeGrid from '@/components/profile/BadgeGrid';
 import BadgeArt from '@/components/badges/BadgeArt';
-import ShareCards from '@/components/profile/ShareCards';
 import ShareProfile from '@/components/profile/ShareProfile';
 import SkillRadar from '@/components/profile/SkillRadar';
 
@@ -24,7 +23,7 @@ const formatDate = (d) => d.toLocaleDateString('en-IN', { dateStyle: 'medium', t
 
 const BOT = /bot|crawl|spider|slurp|preview|facebookexternalhit|whatsapp|telegram|discord|slack|embed|headless/i;
 
-// Main colour of each badge tier 
+// Main colour of each badge tier (same palette as BadgeArt), used to tint the badge chip and card.
 const TIER_COLOR = {
   bronze: '#cd7f32',
   silver: '#aab4c3',
@@ -426,26 +425,6 @@ export default async function PublicProfilePage({ params }) {
         </div>
       ) : (
         <p className="card mt-6 p-8 text-center text-sm text-muted">{name} keeps the details private for now.</p>
-      )}
-
-      {/* Share cards: downloadable / shareable images with the profile link on them (owner only) */}
-      {isOwner && stats && (
-        <div className="mt-6">
-          <ShareCards
-            name={name}
-            username={user.username}
-            url={url}
-            solved={stats.solved}
-            total={stats.total}
-            streak={stats.streak}
-            avgScore={data.avgScore}
-            days={Object.keys(stats.activeDays).length}
-            earned={sortEarned(data.badges)}
-            next={badgeProgress?.next?.name ?? null}
-            toNext={badgeProgress?.toNext ?? 0}
-            defaultColor={theme.a}
-          />
-        </div>
       )}
 
       {/* Call to action */}
