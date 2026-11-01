@@ -163,6 +163,84 @@ export default async function AdminBillingPage({ searchParams }) {
       </dl>
 
       <div className="mt-8 space-y-8">
+        {/* Recent payments */}
+        <Card id="recent-payments" title="Recent payments" hint="Pro payments from Cashfree (INR) and Dodo Payments (other currency), newest first. Shows the last 50 in the selected tab.">
+          <nav aria-label="Payment lists" className="flex gap-1 overflow-x-auto border-b border-line">
+            {PAY_TABS.map((t) => {
+              const on = payTab.id === t.id;
+              const count = tabCounts[t.id];
+              return (
+                <Link
+                  key={t.id}
+                  href={`/admin/billing?pay=${t.id}#recent-payments`}
+                  aria-current={on ? 'page' : undefined}
+                  className={`-mb-px flex shrink-0 items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition-colors ${on ? 'border-accent text-ink' : 'border-transparent text-muted hover:text-ink'}`}
+                >
+                  {t.label}
+                  {count > 0 && <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[0.7rem] font-bold tabular-nums text-muted">{count}</span>}
+                </Link>
+              );
+            })}
+          </nav>
+
+          {payments.length ? (
+            <ul className="mt-5 space-y-5">
+              {payments.map((p) => {
+                const [statusLabel, statusStyle] = STATUS_BADGE[p.status] ?? [p.status, 'bg-surface-2 text-muted'];
+                const providerLabel = PROVIDER_LABEL[p.provider] ?? p.provider;
+                const paymentId = p.provider === 'DODO' ? p.dodoPaymentId : p.cfPaymentId;
+                return (
+                  <li key={p.id} className="rounded-2xl border border-line bg-surface-2/30 p-4 sm:p-5">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusStyle}`}>{statusLabel}</span>
+                        <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-semibold text-accent">{providerLabel}</span>
+                        <span className="text-sm font-semibold tabular-nums">{formatMoney(p.amountPaise, p.currency)}</span>
+                      </div>
+                      <span className="text-xs text-muted">Created {fmt(p.createdAt)}</span>
+                    </div>
+
+                    <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-muted">Customer</p>
+                        <dl className="mt-2 divide-y divide-line">
+                          <Row label="Name">{p.user?.name}</Row>
+                          <Row label="Account email">{p.user?.email}</Row>
+                          <Row label="Joined Buncho">{p.user ? dateOnly(p.user.createdAt) : null}</Row>
+                          <Row label="Total orders">{p.user?._count.payments}</Row>
+                          <Row label="User ID">{p.user?.id}</Row>
+                        </dl>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold uppercase tracking-widest text-muted">Payment ({providerLabel})</p>
+                        <dl className="mt-2 divide-y divide-line">
+                          <Row label="Amount">{formatMoney(p.amountPaise, p.currency)} {p.currency}</Row>
+                          <Row label="Plan">
+                            {monthsLabel(p.periodMonths)}{p.bonusDays > 0 ? ` + ${p.bonusDays} bonus days` : ''}
+                          </Row>
+                          {(p.discountPaise > 0 || p.discountCode) && (
+                            <Row label="Discount">
+                              {p.discountPaise > 0 ? `${formatMoney(p.discountPaise, p.currency)} off` : 'Bonus days'}
+                              {p.discountCode ? ` (${p.discountCode})` : ''}
+                            </Row>
+                          )}
+                          <Row label="Paid at">{p.paidAt ? fmt(p.paidAt) : null}</Row>
+                          <Row label="Payment ID">{paymentId}</Row>
+                          <Row label="Method">{p.paymentMethod}</Row>
+                          <Row label="Payer email">{p.payerEmail}</Row>
+                          <Row label="Order ID">{p.orderId}</Row>
+                        </dl>
+                      </div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <p className="mt-5 rounded-lg bg-surface-2/60 px-4 py-5 text-sm text-muted">Nothing here yet.</p>
+          )}
+        </Card>
+        
         {/* Price and site-wide offer */}
         <Card title="Pro price and site-wide offer" hint="The offer applies to everyone automatically. A promo code replaces it (they do not stack). The lowest price is ₹1 or $1. Flat ₹ offers apply to INR payments only.">
           <form action={saveSettings} className="space-y-6">
@@ -317,83 +395,7 @@ export default async function AdminBillingPage({ searchParams }) {
           )}
         </Card>
 
-        {/* Recent payments */}
-        <Card id="recent-payments" title="Recent payments" hint="Pro payments from Cashfree (INR) and Dodo Payments (other currency), newest first. Shows the last 50 in the selected tab.">
-          <nav aria-label="Payment lists" className="flex gap-1 overflow-x-auto border-b border-line">
-            {PAY_TABS.map((t) => {
-              const on = payTab.id === t.id;
-              const count = tabCounts[t.id];
-              return (
-                <Link
-                  key={t.id}
-                  href={`/admin/billing?pay=${t.id}#recent-payments`}
-                  aria-current={on ? 'page' : undefined}
-                  className={`-mb-px flex shrink-0 items-center gap-2 border-b-2 px-4 py-2.5 text-sm font-semibold transition-colors ${on ? 'border-accent text-ink' : 'border-transparent text-muted hover:text-ink'}`}
-                >
-                  {t.label}
-                  {count > 0 && <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[0.7rem] font-bold tabular-nums text-muted">{count}</span>}
-                </Link>
-              );
-            })}
-          </nav>
-
-          {payments.length ? (
-            <ul className="mt-5 space-y-5">
-              {payments.map((p) => {
-                const [statusLabel, statusStyle] = STATUS_BADGE[p.status] ?? [p.status, 'bg-surface-2 text-muted'];
-                const providerLabel = PROVIDER_LABEL[p.provider] ?? p.provider;
-                const paymentId = p.provider === 'DODO' ? p.dodoPaymentId : p.cfPaymentId;
-                return (
-                  <li key={p.id} className="rounded-2xl border border-line bg-surface-2/30 p-4 sm:p-5">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${statusStyle}`}>{statusLabel}</span>
-                        <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-semibold text-accent">{providerLabel}</span>
-                        <span className="text-sm font-semibold tabular-nums">{formatMoney(p.amountPaise, p.currency)}</span>
-                      </div>
-                      <span className="text-xs text-muted">Created {fmt(p.createdAt)}</span>
-                    </div>
-
-                    <div className="mt-5 grid gap-5 sm:grid-cols-2">
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-widest text-muted">Customer</p>
-                        <dl className="mt-2 divide-y divide-line">
-                          <Row label="Name">{p.user?.name}</Row>
-                          <Row label="Account email">{p.user?.email}</Row>
-                          <Row label="Joined Buncho">{p.user ? dateOnly(p.user.createdAt) : null}</Row>
-                          <Row label="Total orders">{p.user?._count.payments}</Row>
-                          <Row label="User ID">{p.user?.id}</Row>
-                        </dl>
-                      </div>
-                      <div>
-                        <p className="text-xs font-semibold uppercase tracking-widest text-muted">Payment ({providerLabel})</p>
-                        <dl className="mt-2 divide-y divide-line">
-                          <Row label="Amount">{formatMoney(p.amountPaise, p.currency)} {p.currency}</Row>
-                          <Row label="Plan">
-                            {monthsLabel(p.periodMonths)}{p.bonusDays > 0 ? ` + ${p.bonusDays} bonus days` : ''}
-                          </Row>
-                          {(p.discountPaise > 0 || p.discountCode) && (
-                            <Row label="Discount">
-                              {p.discountPaise > 0 ? `${formatMoney(p.discountPaise, p.currency)} off` : 'Bonus days'}
-                              {p.discountCode ? ` (${p.discountCode})` : ''}
-                            </Row>
-                          )}
-                          <Row label="Paid at">{p.paidAt ? fmt(p.paidAt) : null}</Row>
-                          <Row label="Payment ID">{paymentId}</Row>
-                          <Row label="Method">{p.paymentMethod}</Row>
-                          <Row label="Payer email">{p.payerEmail}</Row>
-                          <Row label="Order ID">{p.orderId}</Row>
-                        </dl>
-                      </div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p className="mt-5 rounded-lg bg-surface-2/60 px-4 py-5 text-sm text-muted">Nothing here yet.</p>
-          )}
-        </Card>
+        
       </div>
     </div>
   );
