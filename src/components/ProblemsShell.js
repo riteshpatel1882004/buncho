@@ -3,14 +3,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Book, ChevronLeft, ChevronRight, Users } from './icons';
+import { Book, ChevronLeft, ChevronRight, Database, Users } from './icons';
 
 const KEY = 'buncho-problems-nav';
-const ICONS = { ai: Book, hr: Users };
+const ICONS = { ai: Book, hr: Users, sql: Database };
 
 /**
  * Two-column shell for the question library.
- * Left (about 20%): the question types, AI problems and HR questions. It can be collapsed to a thin icon rail
+ * Left (about 20%): the question types, AI problems, HR questions and SQL questions. It can be collapsed to a thin icon rail
  * and expanded again; the choice is remembered in this browser.
  * Right: the list for the selected type (children).
  * Below the lg breakpoint the left column becomes a segmented switch above the list.
@@ -37,14 +37,15 @@ export default function ProblemsShell({ items, children }) {
     });
   }
 
-  // AI problems live at /problems (and /problems/ai); HR questions at /problems/hr
-  const isOn = (it) =>
-    it.key === 'hr' ? pathname === '/problems/hr' || pathname.startsWith('/problems/hr/') : !(pathname === '/problems/hr' || pathname.startsWith('/problems/hr/'));
+  // AI problems live at /problems (and /problems/ai); HR questions at /problems/hr; SQL questions at /problems/sql
+  const under = (base) => pathname === base || pathname.startsWith(`${base}/`);
+  const section = under('/problems/hr') ? 'hr' : under('/problems/sql') ? 'sql' : 'ai';
+  const isOn = (it) => it.key === section;
 
   return (
     <div className="mx-auto flex w-full max-w-[96rem] flex-col gap-4 px-4 pb-16 pt-4 sm:px-6 sm:pt-6 lg:flex-row lg:gap-5">
       {/* Mobile and tablet: segmented switch */}
-      <nav aria-label="Question type" className="grid grid-cols-2 gap-1 rounded-2xl bg-surface-2 p-1 lg:hidden">
+      <nav aria-label="Question type" className={`grid gap-1 rounded-2xl bg-surface-2 p-1 lg:hidden ${items.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
         {items.map((it) => {
           const on = isOn(it);
           const Icon = ICONS[it.key] ?? Book;

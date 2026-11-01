@@ -13,7 +13,7 @@ const LEVEL = {
   HARD: { dot: 'bg-hard', text: 'text-hard' },
 };
 // Columns follow the width of the list itself (container queries), not the screen, because the list sits in
-// different layouts (beside the sidebar on /problems/ai and /problems/hr, beside a sidebar and a rail on topic pages).
+// different layouts (beside the sidebar on /problems/ai, /problems/hr and /problems/sql, beside a sidebar and a rail on topic pages).
 //   narrow (phones): status | title + meta line | chevron   (a stacked card row)
 //   @2xl:    status | title | topic | type | time | difficulty
 //   @5xl:    status | title | topic | type | time | asked % | companies | difficulty
@@ -59,10 +59,10 @@ function Level({ difficulty }) {
 const Sep = () => <span aria-hidden="true" className="h-[3px] w-[3px] shrink-0 rounded-full bg-muted/60" />;
 
 export function ProblemRow({ problem, status, number, pro = false, category = 'ai' }) {
-  const hr = category === 'hr';
-  // HR questions have one topic, so the column shows their group (subcategory) instead
-  const topicLabel = hr ? problem.subcategory ?? problem.topic.name : problem.topic.name;
-  const typeLabel = hr ? 'Behavioural' : TYPE_LABEL[problem.type];
+  const grouped = category === 'hr' || category === 'sql';
+  // HR and SQL questions each have one topic, so the column shows their group (subcategory) instead
+  const topicLabel = grouped ? problem.subcategory ?? problem.topic.name : problem.topic.name;
+  const typeLabel = category === 'hr' ? 'Behavioural' : category === 'sql' ? 'SQL' : TYPE_LABEL[problem.type];
   return (
     <li>
       <Link
@@ -184,7 +184,7 @@ export default function ProblemList({ result, statusMap = {}, basePath, params, 
         >
           <span />
           <span>Title</span>
-          <span>{category === 'hr' ? 'Group' : 'Topic'}</span>
+          <span>{category === 'hr' || category === 'sql' ? 'Group' : 'Topic'}</span>
           <span>Type</span>
           <span>Time</span>
           <span className="hidden items-center gap-1 @5xl:flex">Asked {!pro && <Lock width={11} height={11} />}</span>

@@ -162,6 +162,7 @@ async function getProblemStub(problemId) {
 function refresh(slug) {
   revalidatePath(`/problems/${slug}`);
   revalidatePath(`/problems/hr/${slug}`); // HR questions open under /problems/hr/
+  revalidatePath(`/problems/sql/${slug}`); // SQL questions open under /problems/sql/
   revalidatePath('/dashboard');
 }
 

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { SITE_URL } from '@/lib/seo';
+import { problemHref } from '@/lib/categories';
 
 // Rebuilt at most once an hour, so new problems show up without hitting the database on every crawl.
 export const revalidate = 3600;
@@ -13,6 +14,8 @@ export default async function sitemap() {
   const entries = [
     { url: `${SITE_URL}/`, lastModified: now, changeFrequency: 'weekly', priority: 1 },
     { url: `${SITE_URL}/problems`, lastModified: now, changeFrequency: 'daily', priority: 0.9 },
+    { url: `${SITE_URL}/problems/hr`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
+    { url: `${SITE_URL}/problems/sql`, lastModified: now, changeFrequency: 'weekly', priority: 0.8 },
     { url: `${SITE_URL}/pricing`, lastModified: now, changeFrequency: 'monthly', priority: 0.6 },
     { url: `${SITE_URL}/terms`, lastModified: TERMS_UPDATED, changeFrequency: 'yearly', priority: 0.3 },
     { url: `${SITE_URL}/privacy`, lastModified: PRIVACY_UPDATED, changeFrequency: 'yearly', priority: 0.3 },
@@ -25,7 +28,7 @@ export default async function sitemap() {
       }),
       prisma.problem.findMany({
         where: { published: true },
-        select: { slug: true, updatedAt: true },
+        select: { slug: true, updatedAt: true, topic: { select: { slug: true } } },
         orderBy: { updatedAt: 'desc' },
       }),
       // Public profiles with at least one solved problem (empty profiles are noindex, so keep them out)
@@ -54,7 +57,7 @@ export default async function sitemap() {
 
     problems.forEach((p) => {
       entries.push({
-        url: `${SITE_URL}/problems/${p.slug}`,
+        url: `${SITE_URL}${problemHref(p.slug, p.topic.slug)}`,
         lastModified: p.updatedAt,
         changeFrequency: 'monthly',
         priority: 0.7,

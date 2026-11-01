@@ -48,6 +48,9 @@ export const Flask = (p) => (
 export const Users = (p) => (
   <svg {...base} {...p}><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.8a3.5 3.5 0 0 1 0 6.4M18 14.2a6.5 6.5 0 0 1 3.5 5.8" /></svg>
 );
+export const Database = (p) => (
+  <svg {...base} {...p}><ellipse cx="12" cy="5.5" rx="7.5" ry="3" /><path d="M4.5 5.5v13c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3v-13M4.5 12c0 1.7 3.4 3 7.5 3s7.5-1.3 7.5-3" /></svg>
+);
 export const Terminal = (p) => (
   <svg {...base} {...p}><path d="M4 6l6 6-6 6M12 19h8" /></svg>
 );

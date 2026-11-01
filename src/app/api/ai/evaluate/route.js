@@ -6,6 +6,7 @@ import { evaluateAnswer, hashContent } from '@/lib/ai/evaluate';
 import { AiUnavailableError } from '@/lib/ai/providers';
 import { AI_EVAL_LIMIT_PER_DAY, AI_EVAL_LIMIT_PER_HOUR } from '@/lib/constants';
 import { assertProblemAccess } from '@/lib/pro-access';
+import { isSqlTopic } from '@/lib/categories';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60; // fallbacks can take a while; raise/lower to match your Vercel plan
@@ -40,7 +41,7 @@ export async function POST(req) {
           steps: true,
           rubric: true,
           scenarioData: true,
-          topic: { select: { name: true } },
+          topic: { select: { name: true, slug: true } },
           expertSolution: { select: { content: true } },
         },
       },
@@ -48,6 +49,11 @@ export async function POST(req) {
   });
   if (!submission || !submission.problem.published) {
     return reply({ ok: false, error: 'Save an answer first.' }, 404);
+  }
+
+  // SQL questions are answered with "All possible answers + optimization", not AI feedback
+  if (isSqlTopic(submission.problem.topic.slug)) {
+    return reply({ ok: false, error: 'AI feedback is not available for SQL questions.' }, 400);
   }
 
   // Pro questions: AI feedback needs an active subscription (checked here, not only in the UI).

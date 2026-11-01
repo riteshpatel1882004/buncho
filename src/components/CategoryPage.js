@@ -30,9 +30,16 @@ const COPY = {
     h1: 'HR interview questions for AI engineers',
     schemaName: 'HR interview questions for AI engineering roles',
   },
+  sql: {
+    metaTitle: 'SQL Interview Questions for AI Engineers',
+    metaDescription:
+      'SQL interview questions for AI, ML and data roles. Read the problem, write your own query, then see every possible answer and how to optimise it.',
+    h1: 'SQL interview questions for AI engineers',
+    schemaName: 'SQL interview questions for AI and data engineering roles',
+  },
 };
 
-/** generateMetadata for /problems, /problems/ai and /problems/hr */
+/** generateMetadata for /problems, /problems/ai, /problems/hr and /problems/sql */
 export async function categoryMetadata(category, searchParams) {
   const copy = COPY[category];
   const path = CATEGORIES[category].path;
@@ -59,7 +66,7 @@ export default async function CategoryPage({ category, searchParams }) {
     category === 'ai' ? getTopics({ category }) : [],
     getProblems({ ...filters, category, pro, userId: user?.id ?? null }),
     getUserStats(user?.id ?? null, category),
-    category === 'ai' ? getLiveAds() : {},
+    getLiveAds(), // the sponsor banners show on every category (AI/ML, HR and SQL)
     getCategoryCounts(),
   ]);
   const statusMap = user ? await getProgressMap(user.id, result.items.map((p) => p.id)) : {};
@@ -71,7 +78,7 @@ export default async function CategoryPage({ category, searchParams }) {
     breadcrumbJsonLd([
       { name: 'Home', path: '/' },
       { name: 'Problems', path: '/problems' },
-      ...(category === 'hr' ? [{ name: cat.label, path: cat.path }] : []),
+      ...(category !== 'ai' ? [{ name: cat.label.trim(), path: cat.path }] : []),
     ]),
     collectionPageJsonLd({
       name: copy.schemaName,
@@ -82,7 +89,7 @@ export default async function CategoryPage({ category, searchParams }) {
     }),
   );
 
-  const navItems = ['ai', 'hr'].map((key) => ({
+  const navItems = ['ai', 'hr', 'sql'].map((key) => ({
     key,
     label: CATEGORIES[key].label,
     href: CATEGORIES[key].path,
@@ -115,9 +122,9 @@ export default async function CategoryPage({ category, searchParams }) {
         )}
       </div>
 
-      <section aria-label="Your stats" className={`mt-3 grid grid-cols-1 gap-3 sm:mt-4 sm:gap-4 ${category === 'ai' ? 'md:grid-cols-[2fr_3fr]' : ''}`}>
+      <section aria-label="Your stats" className="mt-3 grid grid-cols-1 gap-3 sm:mt-4 sm:gap-4 md:grid-cols-[2fr_3fr]">
         <ProgressCard stats={stats} signedIn={Boolean(user)} />
-        {category === 'ai' && <PromoSection ads={ads} />}
+        <PromoSection ads={ads} />
       </section>
 
       <div className="mt-6 sm:mt-8">

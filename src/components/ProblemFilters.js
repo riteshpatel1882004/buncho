@@ -53,11 +53,11 @@ function ChipGroup({ label, value, options, onChange }) {
  * Phones: search box with a "Filters" button that opens a bottom sheet, removable chips for what is active.
  * md and up: search plus inline selects.
  * On /problems the topic chips filter in place. On a topic page (currentTopic is set) they are links to the other topics.
- * category 'hr': no topic chips and no type filter (every HR question shares one topic and type).
+ * category 'hr' or 'sql': no topic chips and no type filter (every question in them shares one topic and type).
  * solved: number | null. When null, only the problem count is shown.
  */
 export default function ProblemFilters({ topics = [], currentTopic, signedIn = false, solved = null, total = 0, category = 'ai' }) {
-  const hr = category === 'hr';
+  const single = category === 'hr' || category === 'sql';
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -94,7 +94,7 @@ export default function ProblemFilters({ topics = [], currentTopic, signedIn = f
 
   const active = [
     difficulty && { key: 'difficulty', label: DIFFICULTY_LABEL[difficulty] },
-    !hr && type && { key: 'type', label: TYPE_LABEL[type] },
+    !single && type && { key: 'type', label: TYPE_LABEL[type] },
     access && { key: 'access', label: access === 'pro' ? 'Pro only' : 'Free only' },
     status && { key: 'status', label: status === 'solved' ? 'Solved' : 'Not solved' },
   ].filter(Boolean);
@@ -117,8 +117,8 @@ export default function ProblemFilters({ topics = [], currentTopic, signedIn = f
 
   return (
     <div className="space-y-3" aria-busy={pending}>
-      {/* Topic chips (AI problems only: HR questions all share one topic) */}
-      {!hr && (
+      {/* Topic chips (AI problems only: HR and SQL questions each share one topic) */}
+      {!single && (
         <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0" role="group" aria-label="Topic">
           {onTopicPage ? (
             <>
@@ -157,7 +157,7 @@ export default function ProblemFilters({ topics = [], currentTopic, signedIn = f
             type="search"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder={hr ? 'Search HR questions' : 'Search questions'}
+            placeholder={category === 'hr' ? 'Search HR questions' : category === 'sql' ? 'Search SQL questions' : 'Search questions'}
             className="h-11 w-full rounded-xl border border-line bg-surface pl-10 pr-3 text-base outline-none transition-colors placeholder:text-muted hover:border-muted focus:border-muted md:h-10 md:text-sm"
           />
         </div>
@@ -185,7 +185,7 @@ export default function ProblemFilters({ topics = [], currentTopic, signedIn = f
                   onChange={(v) => update({ difficulty: v })}
                   options={DIFFICULTIES.map((d) => ({ value: d, label: DIFFICULTY_LABEL[d], dot: DOT[d] }))}
                 />
-                {!hr && (
+                {!single && (
                   <ChipGroup
                     label="Type"
                     value={type}
@@ -241,7 +241,7 @@ export default function ProblemFilters({ topics = [], currentTopic, signedIn = f
             ))}
           </select>
 
-          {!hr && (
+          {!single && (
             <>
               <label htmlFor="type" className="sr-only">Problem type</label>
               <select id="type" value={type} onChange={(e) => update({ type: e.target.value })} className={selectCls}>

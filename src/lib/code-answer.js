@@ -9,8 +9,11 @@ export const LANGUAGE_KEY = 'buncho-answer-language';
 const BY_ID = Object.fromEntries(CODE_LANGUAGES.map((l) => [l.id, l]));
 const ALIASES = { py: 'python', python: 'python', js: 'javascript', javascript: 'javascript', ts: 'javascript', sql: 'sql' };
 
+// Languages the editor can be fixed to for one kind of question (SQL questions) without showing them in the language picker
+const FIXED_COMMENTS = { sql: '-- ' };
+
 export const isLanguage = (id) => Boolean(BY_ID[id]);
-export const commentPrefix = (id) => BY_ID[id]?.comment ?? '';
+export const commentPrefix = (id) => BY_ID[id]?.comment ?? FIXED_COMMENTS[id] ?? '';
 
 /** Code editor text -> stored answer. Markdown mode is stored as it is. */
 export function wrapCode(text, lang) {

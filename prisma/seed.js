@@ -6,10 +6,11 @@ const { neonConfig } = require('@neondatabase/serverless');
 const ws = require('ws');
 const base = require('./seed-data');
 const hr = require('./seed-hr'); // HR interview questions, content in prisma/content/hr/
+const sql = require('./seed-sql'); // SQL interview questions, content in prisma/content/sql/
 
-// HR topic and questions are appended after the AI ones, so existing positions do not change.
-const topics = [...base.topics, ...hr.topics];
-const problems = [...base.problems, ...hr.problems];
+// HR and SQL topics and questions are appended after the AI ones, so existing positions do not change.
+const topics = [...base.topics, ...hr.topics, ...sql.topics];
+const problems = [...base.problems, ...hr.problems, ...sql.problems];
 
 // Prisma 7 needs a driver adapter (same setup as src/lib/prisma.js)
 neonConfig.webSocketConstructor = ws;

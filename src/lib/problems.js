@@ -263,7 +263,7 @@ export function parseFilters(sp = {}) {
 }
 
 // userId is only needed for the solved / not solved filter; signed-out visitors have no progress, so it is ignored.
-// category: 'ai' (default, every non-HR topic) | 'hr' | 'all'
+// category: 'ai' (default, every non-HR / non-SQL topic) | 'hr' | 'sql' | 'all'
 export async function getProblems({ q, topic, difficulty, type, access, status, page, challenge, category = 'ai', pro = false, userId = null }) {
   const topicFilters = [topic && { slug: topic }, topicCategoryWhere(category)].filter(Boolean);
   const where = {
@@ -333,10 +333,10 @@ export async function getTopics({ challenge = false, category = 'ai' } = {}) {
 
 /** Published question counts per category, for the sidebar on /problems. */
 export async function getCategoryCounts() {
-  const [ai, hr] = await Promise.all(
-    ['ai', 'hr'].map((c) => prisma.problem.count({ where: { published: true, topic: topicCategoryWhere(c) } })),
+  const [ai, hr, sql] = await Promise.all(
+    ['ai', 'hr', 'sql'].map((c) => prisma.problem.count({ where: { published: true, topic: topicCategoryWhere(c) } })),
   );
-  return { ai, hr };
+  return { ai, hr, sql };
 }
 
 /** Map of problemId -> 'COMPLETED' for the problems this user has solved (submitted an answer for). */
@@ -377,7 +377,7 @@ export function dayKey(date) {
  * Progress numbers for the rings, bars and streak. Works signed out too
  * (userId null): totals are filled in, everything personal stays at zero.
  */
-// category: 'all' (default, used by the dashboard and profiles) | 'ai' | 'hr'
+// category: 'all' (default, used by the dashboard and profiles) | 'ai' | 'hr' | 'sql'
 export async function getUserStats(userId, category = 'all') {
   const topic = topicCategoryWhere(category);
   const [totals, rows] = await Promise.all([

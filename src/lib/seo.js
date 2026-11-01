@@ -431,7 +431,7 @@ export const problemJsonLd = (problem) => ({
   isPartOf: {
     '@type': 'CollectionPage',
     name: `${problem.topic.name} interview questions`,
-    url: absoluteUrl(categoryOf(problem.topic.slug) === 'hr' ? CATEGORIES.hr.path : `/topics/${problem.topic.slug}`),
+    url: absoluteUrl(categoryOf(problem.topic.slug) !== 'ai' ? CATEGORIES[categoryOf(problem.topic.slug)].path : `/topics/${problem.topic.slug}`),
   },
   publisher: { '@id': `${SITE_URL}/#organization` },
 });

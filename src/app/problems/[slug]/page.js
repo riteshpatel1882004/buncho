@@ -446,14 +446,18 @@ export async function generateMetadata({ params }) {
   });
   if (!p) return { title: 'Problem not found', robots: { index: false, follow: false } };
 
-  const hr = categoryOf(p.topic.slug) === 'hr';
-  const kind = p.isChallenge ? 'production challenge' : hr ? 'HR interview question' : `${p.topic.name} interview question`;
-  const tail = ` Practice this ${DIFFICULTY_LABEL[p.difficulty].toLowerCase()} ${kind} with AI feedback.`;
+  const cat = categoryOf(p.topic.slug);
+  const label = cat === 'hr' ? 'HR interview question' : cat === 'sql' ? 'SQL interview question' : `${p.topic.name} interview question`;
+  const kind = p.isChallenge ? 'production challenge' : label;
+  const tail =
+    cat === 'sql'
+      ? ` Practice this ${DIFFICULTY_LABEL[p.difficulty].toLowerCase()} ${kind} with every possible answer and optimization tips.`
+      : ` Practice this ${DIFFICULTY_LABEL[p.difficulty].toLowerCase()} ${kind} with AI feedback.`;
   const body = plainText(p.description);
   const description = truncate(body, Math.max(60, 158 - tail.length)).replace(/([^.!?\u2026])$/, '$1.') + tail;
 
   return buildMetadata({
-    title: fitTitle(p.title, p.isChallenge ? 'Production challenge' : hr ? 'HR interview question' : `${p.topic.name} interview question`),
+    title: fitTitle(p.title, p.isChallenge ? 'Production challenge' : label),
     description,
     path: problemHref(slug, p.topic.slug),
     image: `/problems/${slug}/opengraph-image`,
@@ -466,7 +470,7 @@ const asArray = (v) => (Array.isArray(v) ? v : []);
 // Four backticks so a log that contains ``` can't break out of the code block
 const fence = (a) => `\`\`\`\`${a.kind === 'json' ? 'json' : 'text'}\n${a.content}\n\`\`\`\``;
 
-// `via` is the URL the page was opened from: 'ai' for /problems/<slug>, 'hr' for /problems/hr/<slug> (set by that route's wrapper).
+// `via` is the URL the page was opened from: 'ai' for /problems/<slug>, 'hr' for /problems/hr/<slug>, 'sql' for /problems/sql/<slug> (set by that route's wrapper).
 export default async function ProblemPage({ params, via = 'ai' }) {
   const { slug } = await params;
 
@@ -479,12 +483,14 @@ export default async function ProblemPage({ params, via = 'ai' }) {
   });
   if (!problem) notFound();
 
-  // One canonical URL per question: HR questions live under /problems/hr/, everything else under /problems/
+  // One canonical URL per question: HR questions live under /problems/hr/, SQL under /problems/sql/, everything else under /problems/
   const category = categoryOf(problem.topic.slug);
   const cat = CATEGORIES[category];
   const selfHref = problemHref(slug, problem.topic.slug);
   if (via !== category) redirect(selfHref);
-  const base = category === 'hr' ? '/problems/hr' : '/problems';
+  const base = cat.path;
+  const isSql = category === 'sql'; // SQL: Description + "Answers & Optimization" tabs, no AI feedback
+  const grouped = category !== 'ai'; // HR and SQL questions are listed by group (subcategory), not by topic
 
   const user = await getOrCreateUser();
   const [neighbors, pro] = await Promise.all([getProblemNeighbors(slug, category), user ? getIsPro(user.id) : false]);
@@ -546,10 +552,10 @@ export default async function ProblemPage({ params, via = 'ai' }) {
         {problem.isChallenge && (
           <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-semibold text-accent">Production challenge</span>
         )}
-        <Link href={category === 'hr' ? cat.path : `/topics/${problem.topic.slug}`} className={`${pill} hover:text-ink`}>
-          {category === 'hr' ? problem.subcategory ?? cat.label : problem.topic.name}
+        <Link href={grouped ? cat.path : `/topics/${problem.topic.slug}`} className={`${pill} hover:text-ink`}>
+          {grouped ? problem.subcategory ?? cat.label : problem.topic.name}
         </Link>
-        <span className={pill}>{category === 'hr' ? 'Behavioural' : TYPE_LABEL[problem.type]}</span>
+        <span className={pill}>{category === 'hr' ? 'Behavioural' : isSql ? 'SQL' : TYPE_LABEL[problem.type]}</span>
         <span className={pill}>{problem.estimatedMinutes} min</span>
         {problem.proOnly && <ProBadge />}
         <BookmarkButton problemId={problem.id} slug={slug} initial={bookmarked} signedIn={Boolean(user)} pill />
@@ -733,9 +739,71 @@ export default async function ProblemPage({ params, via = 'ai' }) {
     </section>
   );
 
+  // SQL questions: no AI feedback. The second section holds all possible answers + optimization.
+  const solutionsPane = (
+    <section aria-labelledby="solutions-heading">
+      <h2 id="solutions-heading" className="text-lg font-semibold">Answers &amp; optimization</h2>
+
+      {locked ? (
+        <div className="mt-4">
+          <ProLock compact signedIn={Boolean(user)} title="Answers and optimization are a Pro feature for this question" />
+        </div>
+      ) : !unlocked ? (
+        <div className="mt-4 flex flex-col items-start gap-3 rounded-lg bg-surface-2 px-5 py-6">
+          <p className="flex items-center gap-2 font-medium">
+            <Lock width={18} height={18} /> Locked until you attempt this problem
+          </p>
+          <p className="text-sm text-muted">
+            {user
+              ? 'Submit your query on the right to unlock every possible answer and the optimization tips.'
+              : 'Log in and submit your query to unlock every possible answer and the optimization tips.'}
+          </p>
+          {user && problem.allowDirectReveal && <RevealButton problemId={problem.id} />}
+        </div>
+      ) : (
+        <div className="mt-4">
+          {solution ? (
+            <>
+              <section aria-label="All possible answers">
+                <h3 className="text-sm font-semibold">All possible answers</h3>
+                <div className="mt-3">
+                  <Markdown>{solution.content}</Markdown>
+                </div>
+              </section>
+              {solution.alternatives && (
+                <section aria-label="Optimization" className="mt-6 border-t border-line pt-4">
+                  <h3 className="text-sm font-semibold">Optimization</h3>
+                  <div className="mt-3">
+                    <Markdown>{solution.alternatives}</Markdown>
+                  </div>
+                </section>
+              )}
+            </>
+          ) : (
+            <p className="text-sm text-muted">No answers have been added for this problem yet.</p>
+          )}
+
+          {/* Report a mistake in the answers */}
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+            <p className="text-xs text-muted">Spotted a mistake in these answers?</p>
+            <Link href={`/report?type=problem&problem=${slug}&issue=incorrect-solution`} className={reportBtn}>
+              <Flag width={14} height={14} /> Report a problem
+            </Link>
+          </div>
+
+          <div className="mt-6 border-t border-line pt-5">
+            <CompleteToggle problemId={problem.id} completed={progress?.status === 'COMPLETED'} />
+          </div>
+        </div>
+      )}
+    </section>
+  );
+
   const tabs = [
     { id: 'description', label: 'Description', icon: <FileText width={16} height={16} />, content: description },
-    { id: 'feedback', label: 'AI Feedback', icon: unlocked ? <Flask width={16} height={16} /> : <Lock width={15} height={15} />, content: feedbackPane },
+    isSql
+      ? { id: 'solutions', label: 'Answers & Optimization', icon: unlocked ? <Code width={16} height={16} /> : <Lock width={15} height={15} />, content: solutionsPane }
+      : { id: 'feedback', label: 'AI Feedback', icon: unlocked ? <Flask width={16} height={16} /> : <Lock width={15} height={15} />, content: feedbackPane },
   ];
 
   const arrow = 'grid h-8 w-8 place-items-center rounded-md text-ink transition-colors hover:bg-surface';
@@ -745,8 +813,8 @@ export default async function ProblemPage({ params, via = 'ai' }) {
     breadcrumbJsonLd([
       { name: 'Home', path: '/' },
       { name: 'Problems', path: '/problems' },
-      category === 'hr'
-        ? { name: cat.label, path: cat.path }
+      grouped
+        ? { name: cat.label.trim(), path: cat.path }
         : { name: problem.topic.name, path: `/topics/${problem.topic.slug}` },
       { name: problem.title, path: selfHref },
     ]),
@@ -788,7 +856,7 @@ export default async function ProblemPage({ params, via = 'ai' }) {
           <>
             <nav aria-label="Breadcrumb" className="sr-only">
               <Link href="/problems">Problems</Link> /{' '}
-              <Link href={category === 'hr' ? cat.path : `/topics/${problem.topic.slug}`}>{category === 'hr' ? cat.label : problem.topic.name}</Link>
+              <Link href={grouped ? cat.path : `/topics/${problem.topic.slug}`}>{grouped ? cat.label : problem.topic.name}</Link>
             </nav>
             <ProblemTabs tabs={tabs} initial="description" />
           </>
@@ -796,7 +864,7 @@ export default async function ProblemPage({ params, via = 'ai' }) {
         right={
           <>
             <div className="flex h-10 shrink-0 items-center gap-2 border-b border-line bg-surface-2 pl-4 pr-20 text-sm font-medium">
-              <Code width={16} height={16} className="text-go" /> Answer
+              <Code width={16} height={16} className="text-go" /> {isSql ? 'SQL query' : 'Answer'}
             </div>
             <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
               {locked ? (
@@ -809,18 +877,20 @@ export default async function ProblemPage({ params, via = 'ai' }) {
                   initialContent={submission?.content ?? ''}
                   hasSubmission={Boolean(submission)}
                   steps={steps.length ? steps : null}
+                  language={isSql ? 'sql' : null}
+                  aiFeedback={!isSql}
                 />
               ) : (
                 <div className="flex min-h-[26rem] flex-[1_0_auto] flex-col">
                   <div className="flex-1 px-4 py-3 font-mono text-[0.85rem] text-muted/70">
-                    Write your answer here. Your answer is private to you.
+                    {isSql ? '-- Write your SQL query here. Your answer is private to you.' : 'Write your answer here. Your answer is private to you.'}
                   </div>
                   <div className="shrink-0 border-t border-line bg-surface-2 px-4 py-3 text-sm">
                     You need to{' '}
                     <Link href={loginHref} className="font-semibold text-accent hover:underline">log in</Link>
                     {' / '}
                     <Link href="/register" className="font-semibold text-accent hover:underline">sign up</Link>
-                    {' '}to submit an answer and get AI feedback.
+                    {' '}{isSql ? 'to submit your query and unlock the answers.' : 'to submit an answer and get AI feedback.'}
                   </div>
                 </div>
               )}

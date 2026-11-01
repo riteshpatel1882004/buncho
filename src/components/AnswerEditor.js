@@ -36,20 +36,23 @@ const CodeEditor = dynamic(() => import('./CodeEditor'), {
 
 const PLACEHOLDER = {
   python: '# Write your code here or explain your approach…',
+  sql: '-- Write your SQL query here…',
 };
 
 const HINT = {
   python: 'Write code and explain your reasoning in # comments or """docstrings""". Dictated text is added as one # comment line.',
+  sql: 'Write your query and explain your reasoning in -- comments. Dictated text is added as one -- comment line.',
 };
 
 // Works out the language and editor text from a saved answer
-function buildInitial(content, stepList) {
+function buildInitial(content, stepList, fixedLang) {
+  const startLang = fixedLang ?? DEFAULT_LANGUAGE;
   if (stepList) {
     const raw = parseSteps(content, stepList);
     const unwrapped = raw.map(unwrapCode);
     const hasText = raw.some((p) => p.trim());
     return {
-      lang: DEFAULT_LANGUAGE,
+      lang: startLang,
       text: '',
       parts: raw.map((p, i) => (unwrapped[i] ? unwrapped[i].code : p)),
       hasContent: hasText,
@@ -57,16 +60,19 @@ function buildInitial(content, stepList) {
   }
   const text = String(content ?? '');
   const unwrapped = unwrapCode(text);
-  if (unwrapped) return { lang: DEFAULT_LANGUAGE, text: unwrapped.code, parts: [], hasContent: true };
-  // Python is the only editor language; older plain-text answers open in it unchanged
-  return { lang: DEFAULT_LANGUAGE, text, parts: [], hasContent: Boolean(text.trim()) };
+  if (unwrapped) return { lang: startLang, text: unwrapped.code, parts: [], hasContent: true };
+  // Python is the only picker language; older plain-text answers open in it unchanged
+  return { lang: startLang, text, parts: [], hasContent: Boolean(text.trim()) };
 }
 
-export default function AnswerEditor({ problemId, initialContent = '', hasSubmission = false, steps = null }) {
+// language: fixes the editor to one language and hides the language picker (SQL questions pass 'sql').
+// aiFeedback: when false, saving only saves the answer and unlocks the 'solutions' tab. No AI feedback is requested.
+export default function AnswerEditor({ problemId, initialContent = '', hasSubmission = false, steps = null, language = null, aiFeedback = true }) {
   const router = useRouter();
   const stepList = Array.isArray(steps) && steps.length ? steps : null;
+  const fixedLang = language ?? null;
 
-  const [init] = useState(() => buildInitial(initialContent, stepList));
+  const [init] = useState(() => buildInitial(initialContent, stepList, fixedLang));
   const [codeLang, setCodeLang] = useState(init.lang);
   const [text, setText] = useState(init.text); // single-editor mode
   const [parts, setParts] = useState(init.parts); // step mode
@@ -90,12 +96,12 @@ export default function AnswerEditor({ problemId, initialContent = '', hasSubmis
 
   // A fresh answer starts in the language the learner used last time
   useEffect(() => {
-    if (init.hasContent) return;
+    if (init.hasContent || fixedLang) return;
     try {
       const stored = localStorage.getItem(LANGUAGE_KEY);
       if (stored && isLanguage(stored)) setCodeLang(stored);
     } catch {}
-  }, [init.hasContent]);
+  }, [init.hasContent, fixedLang]);
 
   function changeLanguage(next) {
     setCodeLang(next);
@@ -180,6 +186,15 @@ export default function AnswerEditor({ problemId, initialContent = '', hasSubmis
 
       setSavedText(content);
       setEverSaved(true);
+
+      // SQL questions: no AI feedback. Saving unlocks the answers and optimization tab.
+      if (!aiFeedback) {
+        setMessage({ type: 'ok', text: 'Answer saved. All possible answers and optimization are unlocked.' });
+        window.dispatchEvent(new CustomEvent('buncho:open-tab', { detail: 'solutions' }));
+        router.refresh();
+        return;
+      }
+
       setMessage({ type: 'ok', text: 'Answer saved. Getting AI feedback…' });
 
       // Ask the server for AI feedback on the answer that was just saved
@@ -232,16 +247,20 @@ export default function AnswerEditor({ problemId, initialContent = '', hasSubmis
           <p className="text-sm text-muted">Voice input isn&rsquo;t available in this browser. Chrome, Edge and Safari support it.</p>
         )}
 
-        <label className="flex items-center gap-2 text-sm text-muted">
-          <span className="text-xs">Language</span>
-          <select value={codeLang} onChange={(e) => changeLanguage(e.target.value)} className={selectCls}>
-            {CODE_LANGUAGES.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        {fixedLang ? (
+          <span className="rounded-md bg-surface-2 px-2 py-1.5 text-sm font-medium uppercase text-ink">{fixedLang}</span>
+        ) : (
+          <label className="flex items-center gap-2 text-sm text-muted">
+            <span className="text-xs">Language</span>
+            <select value={codeLang} onChange={(e) => changeLanguage(e.target.value)} className={selectCls}>
+              {CODE_LANGUAGES.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
 
         <span className="ml-auto text-xs text-muted">{status}</span>
       </div>
@@ -318,7 +337,7 @@ export default function AnswerEditor({ problemId, initialContent = '', hasSubmis
           className="inline-flex items-center gap-2 rounded-md bg-go px-5 py-1.5 text-sm font-semibold text-go-ink transition-opacity hover:opacity-90 disabled:cursor-wait disabled:opacity-50"
         >
           {pending && <Spinner size={14} />}
-          {pending ? (evaluating ? 'Getting feedback…' : 'Saving…') : everSaved ? 'Save & re-evaluate' : 'Submit'}
+          {pending ? (evaluating ? 'Getting feedback…' : 'Saving…') : everSaved ? (aiFeedback ? 'Save & re-evaluate' : 'Save changes') : 'Submit'}
         </button>
       </div>
 

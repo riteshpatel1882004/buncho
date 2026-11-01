@@ -107,7 +107,7 @@ import ProblemFilters from '@/components/ProblemFilters';
 import ProblemList from '@/components/ProblemList';
 import ActivityGrid from '@/components/ActivityGrid';
 import { ContinueCard, StatsCard } from '@/components/StatsCard';
-import { isHrTopic } from '@/lib/categories';
+import { isHrTopic, isSqlTopic } from '@/lib/categories';
 import { getProblems, getProgressMap, getTopics, getUserStats, parseFilters } from '@/lib/problems';
 import { getOrCreateUser } from '@/lib/user';
 import { getIsPro } from '@/lib/subscription';
@@ -149,6 +149,8 @@ export default async function TopicPage({ params, searchParams }) {
   if (!topic) notFound();
   // HR questions have their own list under /problems/hr
   if (isHrTopic(slug)) redirect('/problems/hr');
+  // SQL questions have their own list under /problems/sql
+  if (isSqlTopic(slug)) redirect('/problems/sql');
 
   const filters = { ...parseFilters(await searchParams), topic: slug };
   const user = await getOrCreateUser();
