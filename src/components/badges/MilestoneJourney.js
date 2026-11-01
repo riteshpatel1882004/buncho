@@ -29,7 +29,7 @@ function BadgeTile({ badge, solved }) {
  * The line fills up to the user's progress, earned medals pop in one after another with a slow light sweep,
  * and the next medal shows a progress ring that draws itself. Everything is CSS, so it works as a server component.
  */
-export default function MilestoneJourney({ solved, badges }) {
+export default function MilestoneJourney({ solved, badges, title = 'Your milestones', publicView = false }) {
   const milestones = badges.filter((b) => b.kind === 'milestone');
   const achievements = badges.filter((b) => b.kind === 'achievement');
   const earnedCount = badges.filter((b) => b.earned).length;
@@ -42,7 +42,11 @@ export default function MilestoneJourney({ solved, badges }) {
   const RING_R = 46;
   const RING_C = 2 * Math.PI * RING_R;
 
-  const headline = p.next
+  const headline = publicView
+    ? p.next
+      ? `${solved} solved. Next milestone: ${p.next.name} at ${p.next.threshold} problems.`
+      : 'Every milestone unlocked. Legendary.'
+    : p.next
     ? solved === 0
       ? 'Solve your first problem to light up the path.'
       : `${solved} solved. ${p.toNext} more to unlock ${p.next.name} (${p.next.threshold}).`
@@ -54,7 +58,7 @@ export default function MilestoneJourney({ solved, badges }) {
 
       <div className="relative flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 id="journey-h" className="text-lg font-semibold tracking-tight">Your milestones</h2>
+          <h2 id="journey-h" className="text-lg font-semibold tracking-tight">{title}</h2>
           <p className="mt-1 text-sm text-muted">{headline}</p>
         </div>
         <div className="flex items-center gap-3">

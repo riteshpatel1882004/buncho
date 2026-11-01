@@ -13,6 +13,7 @@ import { dayKey } from '@/lib/problems';
 import JsonLd from '@/components/JsonLd';
 import { Crown } from '@/components/ProBadge';
 import StatTile from '@/components/dashboard/StatTile';
+import MilestoneJourney from '@/components/badges/MilestoneJourney';
 import BadgeGrid from '@/components/profile/BadgeGrid';
 import BadgeArt from '@/components/badges/BadgeArt';
 import ShareProfile from '@/components/profile/ShareProfile';
@@ -358,6 +359,13 @@ export default async function PublicProfilePage({ params }) {
           <StatTile label="Day streak" value={stats.streak} sub={stats.streak ? 'Practising daily' : 'Starts with one day'} icon={<Icon name="fire" size={16} />} />
           <StatTile label="Avg AI score" value={data.avgScore ?? '–'} sub={data.avgScore != null ? `over ${data.evals} answer${data.evals === 1 ? '' : 's'}` : 'No AI feedback yet'} icon={<Icon name="spark" size={16} />} />
           <StatTile label="Days practised" value={Object.keys(stats.activeDays).length} sub="different days with activity" icon={<Icon name="days" size={16} />} />
+        </div>
+      )}
+
+      {/* Animated milestone path: the same one the owner sees on their dashboard */}
+      {stats && (
+        <div className="mt-6">
+          <MilestoneJourney solved={stats.solved} badges={data.badges} title={`${name}'s milestones`} publicView />
         </div>
       )}
 

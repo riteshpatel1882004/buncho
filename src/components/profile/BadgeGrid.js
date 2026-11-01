@@ -19,9 +19,11 @@ export default function BadgeGrid({ badges }) {
       </div>
 
       <ul className="mt-4 grid grid-cols-3 gap-x-2 gap-y-4">
-        {shown.map((b) => (
+        {shown.map((b, i) => (
           <li key={b.id} title={`${b.name}: ${b.desc}`} className="flex flex-col items-center text-center">
-            <BadgeArt badge={b} size={64} />
+            <span className="badge-pop block" style={{ '--d': `${200 + i * 120}ms` }}>
+              <BadgeArt badge={b} size={64} animate delay={200 + i * 120} />
+            </span>
             <span className="mt-2 text-[0.72rem] font-semibold leading-tight">{b.name}</span>
           </li>
         ))}
