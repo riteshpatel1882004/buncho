@@ -7,7 +7,7 @@ export const HR_TOPIC_SLUGS = ['hr'];
 export const CATEGORIES = {
   ai: {
     key: 'ai',
-    label: 'AI problems',
+    label: 'AI/ML problems',
     short: 'AI',
     path: '/problems',
     title: 'AI, ML and GenAI interview questions',

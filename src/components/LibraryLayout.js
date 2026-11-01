@@ -52,7 +52,7 @@ export default function LibraryLayout({ topics = [], rail, children }) {
       <aside className="hidden w-56 shrink-0 lg:block">
         <div className="sticky top-[4.5rem] max-h-[calc(100dvh-5.5rem)] space-y-4 overflow-y-auto pr-1">
           <nav aria-label="Library" className="panel space-y-1 p-2">
-            <SideLink href="/problems" exact icon={<Book width={18} height={18} />}>AI problems</SideLink>
+            <SideLink href="/problems" exact icon={<Book width={18} height={18} />}>AI/ML problems</SideLink>
             <SideLink href="/problems/hr" icon={<Users width={18} height={18} />}>HR questions</SideLink>
             <SideLink href="/dashboard" icon={<Grid width={18} height={18} />}>Dashboard</SideLink>
             <SideLink href="/dashboard#saved" exact icon={<Bookmark width={18} height={18} />}>Saved for later</SideLink>
