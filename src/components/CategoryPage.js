@@ -14,25 +14,20 @@ import { getLiveAds } from '@/lib/ads';
 import { Bookmark } from '@/components/icons';
 import JsonLd from '@/components/JsonLd';
 import { buildMetadata, collectionPageJsonLd, breadcrumbJsonLd, graph, hasActiveFilters } from '@/lib/seo';
-import { ProBadge } from '@/components/ProBadge';
 
 const COPY = {
   ai: {
     metaTitle: 'AI, ML & GenAI Interview Questions',
     metaDescription:
       'Curated AI, ML and GenAI interview questions on LLMs, RAG, deep learning, MLOps and system design. Answer in your own words, then get AI feedback and a reference solution.',
-    eyebrow: 'Practice library',
     h1: 'AI, ML and GenAI interview questions',
-    intro: 'Curated AI, ML and GenAI interview questions. Answer in your own words, then get instant AI feedback.',
     schemaName: 'AI, ML and GenAI interview questions',
   },
   hr: {
     metaTitle: 'HR Interview Questions for AI Engineers',
     metaDescription:
       'Behavioural and HR interview questions for AI engineering roles, with an expert answer for each. Practise your own answer, then get AI feedback.',
-    eyebrow: 'HR round',
     h1: 'HR interview questions for AI engineers',
-    intro: 'The behavioural questions AI teams ask, each with the interviewer’s intent and an expert answer. Write yours, then get instant AI feedback.',
     schemaName: 'HR interview questions for AI engineering roles',
   },
 };
@@ -53,7 +48,7 @@ export async function categoryMetadata(category, searchParams) {
   });
 }
 
-/** The full list page for one category: sidebar shell + header + filters + list. */
+/** The full list page for one category: sidebar shell + pace/saved row + stats + filters + list. */
 export default async function CategoryPage({ category, searchParams }) {
   const copy = COPY[category];
   const cat = CATEGORIES[category];
@@ -98,29 +93,26 @@ export default async function CategoryPage({ category, searchParams }) {
   return (
     <ProblemsShell items={navItems}>
       <JsonLd data={jsonLd} />
-      <header className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="flex items-center gap-2 text-[0.7rem] font-semibold uppercase tracking-widest text-accent sm:text-xs">
-            {copy.eyebrow} {pro && <ProBadge />}
-          </p>
-          <h1 className="mt-1 text-[1.65rem] font-semibold leading-tight tracking-tight sm:text-4xl">{copy.h1}</h1>
-          <p className="mt-1.5 line-clamp-2 max-w-xl text-sm text-muted sm:mt-2 sm:line-clamp-none">{copy.intro}</p>
+
+      {/* Not shown on screen, but kept so the page still has its H1 for search engines and screen readers */}
+      <h1 className="sr-only">{copy.h1}</h1>
+
+      {/* Pace planner with the Saved shortcut beside it */}
+      <div className="flex items-stretch gap-2.5">
+        <div className="min-w-0 flex-1">
+          <PacePlanner remaining={Math.max(0, stats.total - stats.solved)} total={stats.total} signedIn={Boolean(user)} />
         </div>
         {user && (
           <Link
             href="/dashboard#saved"
             aria-label="Saved for later"
             title="Saved for later"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-line bg-surface text-sm font-medium transition-colors hover:border-muted sm:w-auto sm:gap-2 sm:px-4"
+            className="flex w-12 shrink-0 items-center justify-center rounded-2xl border border-line bg-surface text-sm font-medium transition-colors hover:border-muted sm:w-auto sm:gap-2 sm:px-4"
           >
-            <Bookmark width={16} height={16} />
+            <Bookmark width={18} height={18} />
             <span className="hidden sm:inline">Saved for later</span>
           </Link>
         )}
-      </header>
-
-      <div className="mt-5 sm:mt-6">
-        <PacePlanner remaining={Math.max(0, stats.total - stats.solved)} total={stats.total} signedIn={Boolean(user)} />
       </div>
 
       <section aria-label="Your stats" className={`mt-3 grid grid-cols-1 gap-3 sm:mt-4 sm:gap-4 ${category === 'ai' ? 'md:grid-cols-[2fr_3fr]' : ''}`}>

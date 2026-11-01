@@ -180,13 +180,13 @@ export default function PacePlanner({ remaining, total, signedIn }) {
     </div>
   );
 
-    return (
+      return (
     <section
       aria-label="Daily pace planner"
-      className="flex items-center justify-between gap-3 rounded-2xl border border-line bg-gradient-to-br from-accent-soft via-surface to-surface px-4 py-3 sm:px-5"
+      className="flex h-full items-center justify-between gap-3 rounded-2xl border border-line bg-surface px-4 py-3 sm:px-5"
     >
       <div className="min-w-0">
-        <p className="text-[0.65rem] font-semibold uppercase tracking-widest text-accent sm:text-xs">Pace planner</p>
+        <p className="hidden text-xs font-semibold uppercase tracking-widest text-accent sm:block">Pace planner</p>
         <h2 className="text-sm font-semibold leading-snug tracking-tight sm:text-lg">How fast do you want to finish?</h2>
       </div>
 
