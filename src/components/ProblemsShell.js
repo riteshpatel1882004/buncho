@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Book, ChevronLeft, ChevronRight, Database, Users } from './icons';
 
 const KEY = 'buncho-problems-nav';
@@ -20,12 +20,18 @@ const ICONS = { ai: Book, hr: Users, sql: Database };
 export default function ProblemsShell({ items, children }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const activeRef = useRef(null); // the active pill in the phone switch
 
   useEffect(() => {
     try {
       if (localStorage.getItem(KEY) === '1') setCollapsed(true);
     } catch {}
   }, []);
+
+  // Keep the active pill visible when the row is wider than the screen
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }, [pathname]);
 
   function toggle() {
     setCollapsed((c) => {
@@ -44,33 +50,46 @@ export default function ProblemsShell({ items, children }) {
 
   return (
     <div className="mx-auto flex w-full max-w-[96rem] flex-col gap-4 px-4 pb-16 pt-4 sm:px-6 sm:pt-6 lg:flex-row lg:gap-5">
-      {/* Mobile and tablet: segmented switch */}
-      <nav aria-label="Question type" className={`grid gap-1 rounded-2xl bg-surface-2 p-1 lg:hidden ${items.length >= 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
-        {items.map((it) => {
-          const on = isOn(it);
-          const Icon = ICONS[it.key] ?? Book;
-          return (
-            <Link
-              key={it.key}
-              href={it.href}
-              aria-current={on ? 'page' : undefined}
-              className={`flex h-11 min-w-0 items-center justify-center gap-2 rounded-xl px-2 text-sm font-semibold transition-all ${
-                on ? 'bg-surface text-ink shadow-sm ring-1 ring-line' : 'text-muted hover:text-ink'
-              }`}
-            >
-              <Icon width={16} height={16} className={`shrink-0 ${on ? 'text-accent' : ''}`} />
-              <span className="truncate">{it.label}</span>
-              <span
-                className={`shrink-0 rounded-full px-1.5 py-0.5 text-[0.7rem] font-semibold tabular-nums ${
-                  on ? 'bg-accent-soft text-accent' : 'bg-line/60 text-muted'
+      {/* Mobile and tablet: scrollable pills. Every item keeps its full label, so more links can be added later
+          and the row just scrolls sideways instead of squeezing them. The active pill scrolls into view. */}
+      <div className="relative -mx-4 sm:-mx-6 lg:hidden">
+        <nav
+          aria-label="Question type"
+          className="no-scrollbar flex snap-x gap-2 overflow-x-auto scroll-smooth px-4 py-1 sm:px-6"
+        >
+          {items.map((it) => {
+            const on = isOn(it);
+            const Icon = ICONS[it.key] ?? Book;
+            return (
+              <Link
+                key={it.key}
+                ref={on ? activeRef : undefined}
+                href={it.href}
+                aria-current={on ? 'page' : undefined}
+                className={`flex h-11 shrink-0 snap-start items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors active:scale-[0.97] ${
+                  on
+                    ? 'border-accent/50 bg-accent-soft text-ink shadow-sm'
+                    : 'border-line bg-surface text-muted hover:border-muted hover:text-ink'
                 }`}
               >
-                {it.count}
-              </span>
-            </Link>
-          );
-        })}
-      </nav>
+                <Icon width={16} height={16} className={`shrink-0 ${on ? 'text-accent' : ''}`} />
+                <span className="whitespace-nowrap">{it.label.trim()}</span>
+                <span
+                  className={`rounded-full px-1.5 py-0.5 text-[0.7rem] font-semibold tabular-nums ${
+                    on ? 'bg-accent/15 text-accent' : 'bg-line/60 text-muted'
+                  }`}
+                >
+                  {it.count}
+                </span>
+              </Link>
+            );
+          })}
+          {/* Spacer so the last pill can scroll clear of the edge fade */}
+          <span aria-hidden="true" className="w-4 shrink-0" />
+        </nav>
+        {/* Soft fade on the right edge hints that the row scrolls */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-canvas to-transparent" />
+      </div>
 
       {/* Desktop: collapsible sidebar, 20% wide when open */}
       <aside
