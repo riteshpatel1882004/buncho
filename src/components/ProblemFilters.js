@@ -226,7 +226,7 @@ export default function ProblemFilters({ topics = [], currentTopic, signedIn = f
         <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1 pb-1" role="group" aria-label="Topic">
           {onTopicPage ? (
             <>
-              <Link href="/problems/ai" className={pillCls(false)}>
+              <Link href="/problems" className={pillCls(false)}>
                 All topics<span className={countCls(false)}>{allCount}</span>
               </Link>
               {topics.map((t) => (

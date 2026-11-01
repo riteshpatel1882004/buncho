@@ -105,7 +105,7 @@ import { InsightsInline } from './Insights';
 import { ProBadge } from './ProBadge';
 import { problemHref } from '@/lib/categories';
 
-export default function ProblemListPopup({ items, remaining, signedIn, pro = false, viewAllHref = '/problems/ai' }) {
+export default function ProblemListPopup({ items, remaining, signedIn, pro = false, viewAllHref = '/problems' }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 

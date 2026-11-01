@@ -1,5 +1,5 @@
 // The question library has two categories:
-//   ai -> /problems/ai   (every topic except the ones listed below)
+//   ai -> /problems      (every topic except the ones listed below; /problems/ai shows the same list)
 //   hr -> /problems/hr   (behavioural / HR questions, content in prisma/content/hr/)
 // A topic belongs to HR when its slug is in HR_TOPIC_SLUGS. To add another HR-style topic, add its slug here.
 export const HR_TOPIC_SLUGS = ['hr'];
@@ -9,7 +9,7 @@ export const CATEGORIES = {
     key: 'ai',
     label: 'AI problems',
     short: 'AI',
-    path: '/problems/ai',
+    path: '/problems',
     title: 'AI, ML and GenAI interview questions',
     description: 'Technical questions on LLMs, RAG, deep learning, MLOps and system design.',
   },

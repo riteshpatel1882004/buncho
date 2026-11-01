@@ -103,16 +103,10 @@
 // }
 
 
-import { redirect } from 'next/navigation';
+import CategoryPage, { categoryMetadata } from '@/components/CategoryPage';
 
-// /problems is now the entry point for two lists: /problems/ai and /problems/hr.
-// Old links, search from the navbar (/problems?q=...) and filters keep working: the query string is passed on.
-export default async function ProblemsIndex({ searchParams }) {
-  const sp = await searchParams;
-  const qs = new URLSearchParams();
-  Object.entries(sp ?? {}).forEach(([k, v]) => {
-    if (typeof v === 'string' && v) qs.set(k, v);
-  });
-  const s = qs.toString();
-  redirect(s ? `/problems/ai?${s}` : '/problems/ai');
+export const generateMetadata = ({ searchParams }) => categoryMetadata('ai', searchParams);
+
+export default function ProblemsPage({ searchParams }) {
+  return <CategoryPage category="ai" searchParams={searchParams} />;
 }
