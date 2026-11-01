@@ -24,7 +24,7 @@ const formatDate = (d) => d.toLocaleDateString('en-IN', { dateStyle: 'medium', t
 
 const BOT = /bot|crawl|spider|slurp|preview|facebookexternalhit|whatsapp|telegram|discord|slack|embed|headless/i;
 
-// Main colour of each badge tier (same palette as BadgeArt), used to tint the badge chip and card.
+// Main colour of each badge tier 
 const TIER_COLOR = {
   bronze: '#cd7f32',
   silver: '#aab4c3',
