@@ -33,7 +33,7 @@ export const usd = (cents) =>
 
 /**
  * FALLBACK site numbers only. The real numbers now live in the database (SiteStats), are filled from
- * Vercel Analytics automatically and can be edited in /admin/ads (Traffic numbers tab).
+ * Google Analytics automatically and can be edited in /admin/ads (Traffic numbers tab).
  * These values are shown only until the first fetch or save works, or if the database cannot be read.
  */
 export const AD_STATS = {

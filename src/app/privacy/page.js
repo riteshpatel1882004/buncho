@@ -84,7 +84,7 @@ export default function PrivacyPage() {
           <strong>Neon</strong> for database hosting.
         </li>
         <li>
-          <strong>Vercel</strong> for hosting, Vercel Analytics and Speed
+          <strong>Google</strong> for hosting, Google Analytics and Speed
           Insights (traffic and performance measurement).
         </li>
         <li>

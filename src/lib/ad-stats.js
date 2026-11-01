@@ -43,7 +43,7 @@ export function countryInfo(code) {
 
 async function query({ since, until, by, limit }) {
   // The aggregate endpoint answers 400 "missing required property `by`" without a grouping.
-  if (!by) throw new Error('Vercel Analytics queries need a "by" grouping');
+  if (!by) throw new Error('Google Analytics queries need a "by" grouping');
 
   const params = new URLSearchParams({
     projectId: process.env.VERCEL_ANALYTICS_PROJECT.trim(),
@@ -60,7 +60,7 @@ async function query({ since, until, by, limit }) {
     cache: 'no-store',
     signal: AbortSignal.timeout(10_000),
   });
-  if (!res.ok) throw new Error(`Vercel Analytics answered ${res.status}: ${(await res.text()).slice(0, 160)}`);
+  if (!res.ok) throw new Error(`Google Analytics answered ${res.status}: ${(await res.text()).slice(0, 160)}`);
   const json = await res.json();
   const data = json?.data;
   return Array.isArray(data) ? data : data ? [data] : [];

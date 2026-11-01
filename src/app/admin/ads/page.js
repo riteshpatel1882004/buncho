@@ -89,8 +89,8 @@ function TrafficPanel({ stats, configured }) {
         </div>
         <p className="mt-3 text-sm text-muted">
           {manual
-            ? 'You edited these numbers by hand, so they are not overwritten. Press the button below to go back to numbers from Vercel Analytics.'
-            : 'These numbers come from Vercel Analytics and refresh by themselves when a visitor opens /advertise and they are over 6 hours old. If you edit and save them, automatic updates pause.'}
+            ? 'You edited these numbers by hand, so they are not overwritten. Press the button below to go back to numbers from Google Analytics.'
+            : 'These numbers come from Google Analytics and refresh by themselves when a visitor opens /advertise and they are over 6 hours old. If you edit and save them, automatic updates pause.'}
         </p>
         {!configured && (
           <p role="status" className="mt-3 rounded-xl bg-medium/10 px-4 py-3 text-sm">

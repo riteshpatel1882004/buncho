@@ -37,7 +37,7 @@ export default async function AdvertisePage({ searchParams }) {
   const [user, availability, stats] = await Promise.all([
     getOrCreateUser(),
     getSlotAvailability(),
-    getAdStats({ refresh: true }), // fills itself from Vercel Analytics when the stored numbers are old
+    getAdStats({ refresh: true }), // fills itself from Google Analytics when the stored numbers are old
   ]);
 
   const other = stats.countries.reduce((sum, c) => sum + c.share, 0);
@@ -69,7 +69,7 @@ export default async function AdvertisePage({ searchParams }) {
       <section aria-labelledby="numbers-h" className="mt-10">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 id="numbers-h" className="text-lg font-semibold">Our traffic</h2>
-          <p className="text-xs text-muted">{stats.site} · {stats.periodLabel} · as of {stats.asOf} · Vercel Analytics</p>
+          <p className="text-xs text-muted">{stats.site} · {stats.periodLabel} · as of {stats.asOf} · Google Analytics</p>
         </div>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <Stat label="Monthly visitors" hint="Unique visitors" value={n(stats.monthlyVisitors)} growth={stats.monthlyVisitorsGrowth} />

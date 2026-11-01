@@ -99,13 +99,13 @@ function int(formData, key, { min = 0, max = 1_000_000_000, nullable = false } =
   return Math.min(max, Math.max(min, v));
 }
 
-/** Fetches fresh numbers from Vercel Analytics and turns automatic updates back on. */
+/** Fetches fresh numbers from Google Analytics and turns automatic updates back on. */
 export async function syncAdStatsNow() {
   await requireAdmin();
   const result = await syncAdStats({ takeOver: true });
   refreshStats();
   if (!result.ok) return go('traffic', 'error', `Could not fetch from Vercel. ${result.error}`);
-  return go('traffic', 'ok', 'Numbers updated from Vercel Analytics. Automatic updates are on.');
+  return go('traffic', 'ok', 'Numbers updated from Google Analytics. Automatic updates are on.');
 }
 
 /** Saves numbers typed by the admin. This switches to manual mode, so automatic updates stop overwriting them. */
