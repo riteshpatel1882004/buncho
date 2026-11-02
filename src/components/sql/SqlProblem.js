@@ -16,7 +16,7 @@ import { problemHref } from '@/lib/categories';
 import { ChevronLeft, ChevronRight, Code, Database, FileText, Flag, Lock } from '@/components/icons';
 
 // SQL question page. There is no editor (nothing is executed).
-// Large screens: two columns, the question on the left (it stays in view) and its answers on the right.
+// Large screens: two panes in a horizontal scroller (question on the left, answers on the right).
 // Smaller screens: two tabs, Description and "Answers & Optimization".
 
 // Level badge + left edge colour for each approach. Keys match the "<level> |" prefix in the answers markdown.
@@ -252,8 +252,6 @@ export default function SqlProblem({
       splitLabel: 'Question',
       icon: <FileText width={16} height={16} />,
       content: description,
-      // Two-column layout: keep the question on screen while the answers scroll
-      splitClassName: 'lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1',
     },
     {
       id: 'answers',
