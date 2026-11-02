@@ -20,6 +20,7 @@ import SavedCard from '@/components/dashboard/SavedCard';
 import ActivityChart from '@/components/dashboard/ActivityChart';
 import StreakCalendar from '@/components/dashboard/StreakCalendar';
 import DashboardTabs from '@/components/dashboard/DashboardTabs';
+import MobileHero from '@/components/dashboard/MobileHero';
 import MilestoneJourney from '@/components/badges/MilestoneJourney';
 import ShareProfile from '@/components/profile/ShareProfile';
 import { SITE_URL } from '@/lib/seo';
@@ -64,6 +65,7 @@ export default async function DashboardPage() {
       id: 'solved',
       label: 'Problems solved',
       icon: 'solved',
+      hint: 'Your progress',
       summary: `${stats.solved}/${stats.total}`,
       content: <StatsCard stats={stats} signedIn roomy />,
     },
@@ -71,6 +73,7 @@ export default async function DashboardPage() {
       id: 'streak',
       label: 'Streak',
       icon: 'streak',
+      hint: 'Daily calendar',
       summary: `${stats.streak}d`,
       content: <StreakCalendar activeDays={stats.activeDays} todayKey={todayKey} streak={stats.streak} />,
     },
@@ -78,12 +81,14 @@ export default async function DashboardPage() {
       id: 'activity',
       label: 'Activity',
       icon: 'activity',
+      hint: 'Solved over time',
       content: <ActivityChart activeDays={stats.activeDays} todayKey={todayKey} />,
     },
     {
       id: 'jobs',
       label: 'Job preparation',
       icon: 'jobs',
+      hint: 'Role-wise prep',
       summary: jobs.length,
       content: <JobPrepCard jobs={jobs.slice(0, 3)} />,
     },
@@ -91,6 +96,7 @@ export default async function DashboardPage() {
       id: 'saved',
       label: 'Saved for later',
       icon: 'saved',
+      hint: 'Revisit anytime',
       summary: savedList.length,
       content: <SavedCard items={savedList} pro={pro} />,
     },
@@ -98,12 +104,14 @@ export default async function DashboardPage() {
       id: 'milestones',
       label: 'Your milestones',
       icon: 'milestones',
+      hint: 'Badges and levels',
       content: <MilestoneJourney solved={stats.solved} badges={badgeData.badges} />,
     },
     {
       id: 'readiness',
       label: 'AI Engineering Readiness',
       icon: 'readiness',
+      hint: 'Skill breakdown',
       content: <ReadinessCard readiness={insights.readiness} competencies={insights.competencies} />,
     },
     // Pro members see their plan in the "Plan details" popup on the banner above
@@ -113,6 +121,7 @@ export default async function DashboardPage() {
             id: 'plan',
             label: 'Your plan',
             icon: 'plan',
+            hint: 'Upgrade options',
             content: <PlanCard ent={ent} />,
           },
         ]
@@ -121,6 +130,7 @@ export default async function DashboardPage() {
       id: 'share',
       label: 'Share your achievements',
       icon: 'share',
+      hint: 'Cards and profile',
       content: (
         <ShareCards
           name={publicName(user)}
@@ -135,66 +145,82 @@ export default async function DashboardPage() {
     },
   ];
 
+  // Everything above the menu: profile links / claim banner + greeting header
+  const top = (
+    <>
+      {/* Public profile links + share, at the very top (or a prompt to claim a username) */}
+      {user.username ? (
+        <div className="mb-5 hidden flex-wrap items-center justify-between gap-x-4 gap-y-3 lg:flex">
+          <p className="flex items-center gap-2 text-sm">
+            <Link href={`/user/${user.username}`} className="font-semibold text-accent hover:underline">
+              View public profile
+            </Link>
+            <span className="text-muted" aria-hidden="true">·</span>
+            <Link href="/settings/profile" className="font-medium text-muted hover:text-ink">
+              Edit
+            </Link>
+          </p>
+          <ShareProfile url={`${SITE_URL}/user/${user.username}`} name={user.profileName || firstName || 'my'} compact />
+        </div>
+      ) : (
+        <Link
+          href="/settings/profile"
+          className="group mb-5 flex items-center justify-between gap-3 rounded-2xl border border-accent/40 bg-accent-soft px-4 py-3.5 transition hover:border-accent sm:px-5 sm:py-4"
+        >
+          <span className="min-w-0">
+            <span className="block text-sm font-semibold sm:text-base">Claim your username</span>
+            <span className="mt-0.5 block text-xs text-muted sm:text-sm">Get a shareable profile at buncho.live/user/your-name.</span>
+          </span>
+          <span className="shrink-0 rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-accent-ink group-hover:opacity-90">Claim</span>
+        </Link>
+      )}
+
+      {/* Header: greeting + Pro banner in ONE row (stacks on phones) */}
+      <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
+        <div className="flex min-w-0 shrink-0 items-center gap-3.5 sm:gap-4">
+          <span className={`shrink-0 ${avatarRing}`}>
+            {user.imageUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={user.imageUrl} alt="" width={56} height={56} className="h-12 w-12 rounded-full object-cover sm:h-14 sm:w-14" />
+            ) : (
+              <span className="grid h-12 w-12 place-items-center rounded-full bg-accent-soft text-xl font-semibold text-accent sm:h-14 sm:w-14">
+                {(user.name ?? '?').charAt(0).toUpperCase()}
+              </span>
+            )}
+          </span>
+          <Greeting name={firstName} pro={pro} />
+        </div>
+
+        {/* Phones: quick actions right under the greeting (desktop has the text links bar above) */}
+        {user.username && (
+          <ProfileTiles
+            username={user.username}
+            url={`${SITE_URL}/user/${user.username}`}
+            name={user.profileName || firstName || 'my'}
+          />
+        )}
+
+        {pro && <ProBanner periodEnd={ent.periodEnd} className="min-w-0 lg:flex-1" />}
+      </header>
+    </>
+  );
+
   return (
     <div className="relative mx-auto w-full max-w-[84rem] overflow-x-clip px-4 py-5 sm:px-6 lg:px-8 lg:py-10">
       <div className="relative">
-        {/* Public profile links + share, at the very top (or a prompt to claim a username) */}
-        {user.username ? (
-          <div className="mb-5 hidden flex-wrap items-center justify-between gap-x-4 gap-y-3 lg:flex">
-            <p className="flex items-center gap-2 text-sm">
-              <Link href={`/user/${user.username}`} className="font-semibold text-accent hover:underline">
-                View public profile
-              </Link>
-              <span className="text-muted" aria-hidden="true">·</span>
-              <Link href="/settings/profile" className="font-medium text-muted hover:text-ink">
-                Edit
-              </Link>
-            </p>
-            <ShareProfile url={`${SITE_URL}/user/${user.username}`} name={user.profileName || firstName || 'my'} compact />
-          </div>
-        ) : (
-          <Link
-            href="/settings/profile"
-            className="group mb-5 flex items-center justify-between gap-4 rounded-2xl border border-accent/40 bg-accent-soft px-5 py-4 transition hover:border-accent"
-          >
-            <span>
-              <span className="block font-semibold">Claim your username and get a shareable profile</span>
-              <span className="mt-0.5 block text-sm text-muted">Show your level, streak and badges at buncho.live/user/your-name.</span>
-            </span>
-            <span className="shrink-0 rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-accent-ink group-hover:opacity-90">Claim it</span>
-          </Link>
-        )}
-
-        {/* Header: greeting + Pro banner in ONE row (stacks on phones) */}
-        <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
-          <div className="flex min-w-0 shrink-0 items-center gap-3.5 sm:gap-4">
-            <span className={`shrink-0 ${avatarRing}`}>
-              {user.imageUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={user.imageUrl} alt="" width={56} height={56} className="h-12 w-12 rounded-full object-cover sm:h-14 sm:w-14" />
-              ) : (
-                <span className="grid h-12 w-12 place-items-center rounded-full bg-accent-soft text-xl font-semibold text-accent sm:h-14 sm:w-14">
-                  {(user.name ?? '?').charAt(0).toUpperCase()}
-                </span>
-              )}
-            </span>
-            <Greeting name={firstName} pro={pro} />
-          </div>
-
-          {/* Phones: quick actions right under the greeting (desktop has the text links bar above) */}
-          {user.username && (
-            <ProfileTiles
-              username={user.username}
-              url={`${SITE_URL}/user/${user.username}`}
-              name={user.profileName || firstName || 'my'}
+        <DashboardTabs
+          items={items}
+          initial="solved"
+          top={top}
+          mobileTop={
+            <MobileHero
+              solved={stats.solved}
+              total={stats.total}
+              streak={stats.streak}
+              saved={savedList.length}
             />
-          )}
-
-          {pro && <ProBanner periodEnd={ent.periodEnd} className="min-w-0 lg:flex-1" />}
-        </header>
-
-        {/* Left: menu with every section. Right: content of the clicked section. */}
-        <DashboardTabs items={items} initial="solved" />
+          }
+        />
       </div>
     </div>
   );
