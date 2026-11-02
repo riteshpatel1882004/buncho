@@ -218,7 +218,7 @@
 import { prisma } from './prisma';
 import { DIFFICULTIES, PROBLEM_TYPES, PAGE_SIZE, TOPIC_ORDER } from './constants';
 import { attachInsights, insightSelect } from './subscription';
-import { topicCategoryWhere } from './categories';
+import { topicCategoryWhere, categoryOf } from './categories';
 
 // One fixed, shuffled order used everywhere a problem list or "next problem" is shown (list pages,
 // previous / next arrows, Problem List popup). It is not sorted by difficulty. Each problem's position comes
@@ -382,14 +382,16 @@ export async function getUserStats(userId, category = 'all') {
   const topic = topicCategoryWhere(category);
   const [totals, rows] = await Promise.all([
     prisma.problem.groupBy({ by: ['difficulty'], where: { published: true, ...(topic && { topic }) }, _count: { _all: true } }),
+    // Rows from EVERY category are read on purpose: the streak and activity days are shared by the AI/ML, HR and SQL
+    // pages. Only the solved counts below are limited to `category`.
     userId
       ? prisma.problemProgress.findMany({
-          where: { userId, ...(topic && { problem: { topic } }) },
+          where: { userId },
           orderBy: { lastActivityAt: 'desc' },
           select: {
             status: true,
             lastActivityAt: true,
-            problem: { select: { difficulty: true, published: true } },
+            problem: { select: { difficulty: true, published: true, topic: { select: { slug: true } } } },
           },
         })
       : [],
@@ -404,10 +406,12 @@ export async function getUserStats(userId, category = 'all') {
   const activeDays = {};
 
   rows.forEach((r) => {
-    if (r.status === 'COMPLETED' && r.problem.published) {
+    const inCategory = category === 'all' || categoryOf(r.problem.topic.slug) === category;
+    if (inCategory && r.status === 'COMPLETED' && r.problem.published) {
       solved += 1;
       if (byDifficulty[r.problem.difficulty]) byDifficulty[r.problem.difficulty].solved += 1;
     }
+    // Any activity in any category keeps the shared streak alive
     if (r.lastActivityAt) {
       const k = dayKey(r.lastActivityAt);
       activeDays[k] = (activeDays[k] ?? 0) + 1;

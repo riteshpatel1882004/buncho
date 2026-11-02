@@ -36,4 +36,4 @@ Write a query that returns the **second highest distinct salary in each departme
 | 20            | 5000                  |
 | 30            | NULL                  |
 
-Write your query in the editor on the right. Then open the **Answers & Optimization** tab to compare it with every approach and see how to make it fast on a large table.
+Work out your query on your own, then open **Answers & Optimization** to compare every approach.

@@ -431,6 +431,7 @@ import { CompleteToggle, RevealButton } from '@/components/SolutionControls';
 import ProblemTabs from '@/components/ProblemTabs';
 import Workspace from '@/components/Workspace';
 import Timer from '@/components/Timer';
+import SqlProblem from '@/components/sql/SqlProblem';
 import { getProblemNeighbors, getUpNext } from '@/lib/problems';
 import { CATEGORIES, categoryOf, problemHref } from '@/lib/categories';
 import JsonLd from '@/components/JsonLd';
@@ -489,7 +490,7 @@ export default async function ProblemPage({ params, via = 'ai' }) {
   const selfHref = problemHref(slug, problem.topic.slug);
   if (via !== category) redirect(selfHref);
   const base = cat.path;
-  const isSql = category === 'sql'; // SQL: Description + "Answers & Optimization" tabs, no AI feedback
+  const isSql = category === 'sql'; // SQL has its own page (components/sql/SqlProblem): no editor, no AI feedback
   const grouped = category !== 'ai'; // HR and SQL questions are listed by group (subcategory), not by topic
 
   const user = await getOrCreateUser();
@@ -531,13 +532,49 @@ export default async function ProblemPage({ params, via = 'ai' }) {
 
   // The reference answer is only queried once the user has earned access,
   // so it never reaches the browser of someone who hasn't unlocked it.
-  const unlocked = Boolean(user && !locked && (submission || progress?.solutionRevealed));
+  // SQL has no editor to unlock them with, so its answers are open unless the question is Pro-only.
+  const unlocked = isSql ? !locked : Boolean(user && !locked && (submission || progress?.solutionRevealed));
   const solution = unlocked ? await prisma.expertSolution.findUnique({ where: { problemId: problem.id } }) : null;
 
   // True when the user edited their answer after the feedback was generated
   const stale = Boolean(evaluation && submission && evaluation.contentHash !== hashContent(submission.content));
 
   const loginHref = `/login?redirect_url=${encodeURIComponent(selfHref)}`;
+
+  const jsonLd = graph(
+    breadcrumbJsonLd([
+      { name: 'Home', path: '/' },
+      { name: 'Problems', path: '/problems' },
+      grouped
+        ? { name: cat.label.trim(), path: cat.path }
+        : { name: problem.topic.name, path: `/topics/${problem.topic.slug}` },
+      { name: problem.title, path: selfHref },
+    ]),
+    problemJsonLd(locked ? { ...problem, description: teaser.text } : problem),
+  );
+
+  if (isSql) {
+    return (
+      <>
+        <JsonLd data={jsonLd} />
+        <SqlProblem
+          problem={problem}
+          slug={slug}
+          cat={cat}
+          neighbors={neighbors}
+          upNext={upNext}
+          user={user}
+          pro={pro}
+          locked={locked}
+          teaser={teaser}
+          solution={solution}
+          progress={progress}
+          bookmarked={bookmarked}
+          loginHref={loginHref}
+        />
+      </>
+    );
+  }
 
   const pill = 'rounded-full bg-surface-2 px-2.5 py-0.5 text-xs font-medium text-muted';
   const sectionTitle = 'cursor-pointer list-none text-sm font-semibold marker:hidden [&::-webkit-details-marker]:hidden';
@@ -555,7 +592,7 @@ export default async function ProblemPage({ params, via = 'ai' }) {
         <Link href={grouped ? cat.path : `/topics/${problem.topic.slug}`} className={`${pill} hover:text-ink`}>
           {grouped ? problem.subcategory ?? cat.label : problem.topic.name}
         </Link>
-        <span className={pill}>{category === 'hr' ? 'Behavioural' : isSql ? 'SQL' : TYPE_LABEL[problem.type]}</span>
+        <span className={pill}>{category === 'hr' ? 'Behavioural' : TYPE_LABEL[problem.type]}</span>
         <span className={pill}>{problem.estimatedMinutes} min</span>
         {problem.proOnly && <ProBadge />}
         <BookmarkButton problemId={problem.id} slug={slug} initial={bookmarked} signedIn={Boolean(user)} pill />
@@ -739,87 +776,14 @@ export default async function ProblemPage({ params, via = 'ai' }) {
     </section>
   );
 
-  // SQL questions: no AI feedback. The second section holds all possible answers + optimization.
-  const solutionsPane = (
-    <section aria-labelledby="solutions-heading">
-      <h2 id="solutions-heading" className="text-lg font-semibold">Answers &amp; optimization</h2>
-
-      {locked ? (
-        <div className="mt-4">
-          <ProLock compact signedIn={Boolean(user)} title="Answers and optimization are a Pro feature for this question" />
-        </div>
-      ) : !unlocked ? (
-        <div className="mt-4 flex flex-col items-start gap-3 rounded-lg bg-surface-2 px-5 py-6">
-          <p className="flex items-center gap-2 font-medium">
-            <Lock width={18} height={18} /> Locked until you attempt this problem
-          </p>
-          <p className="text-sm text-muted">
-            {user
-              ? 'Submit your query on the right to unlock every possible answer and the optimization tips.'
-              : 'Log in and submit your query to unlock every possible answer and the optimization tips.'}
-          </p>
-          {user && problem.allowDirectReveal && <RevealButton problemId={problem.id} />}
-        </div>
-      ) : (
-        <div className="mt-4">
-          {solution ? (
-            <>
-              <section aria-label="All possible answers">
-                <h3 className="text-sm font-semibold">All possible answers</h3>
-                <div className="mt-3">
-                  <Markdown>{solution.content}</Markdown>
-                </div>
-              </section>
-              {solution.alternatives && (
-                <section aria-label="Optimization" className="mt-6 border-t border-line pt-4">
-                  <h3 className="text-sm font-semibold">Optimization</h3>
-                  <div className="mt-3">
-                    <Markdown>{solution.alternatives}</Markdown>
-                  </div>
-                </section>
-              )}
-            </>
-          ) : (
-            <p className="text-sm text-muted">No answers have been added for this problem yet.</p>
-          )}
-
-          {/* Report a mistake in the answers */}
-          <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-            <p className="text-xs text-muted">Spotted a mistake in these answers?</p>
-            <Link href={`/report?type=problem&problem=${slug}&issue=incorrect-solution`} className={reportBtn}>
-              <Flag width={14} height={14} /> Report a problem
-            </Link>
-          </div>
-
-          <div className="mt-6 border-t border-line pt-5">
-            <CompleteToggle problemId={problem.id} completed={progress?.status === 'COMPLETED'} />
-          </div>
-        </div>
-      )}
-    </section>
-  );
-
   const tabs = [
     { id: 'description', label: 'Description', icon: <FileText width={16} height={16} />, content: description },
-    isSql
-      ? { id: 'solutions', label: 'Answers & Optimization', icon: unlocked ? <Code width={16} height={16} /> : <Lock width={15} height={15} />, content: solutionsPane }
-      : { id: 'feedback', label: 'AI Feedback', icon: unlocked ? <Flask width={16} height={16} /> : <Lock width={15} height={15} />, content: feedbackPane },
+    { id: 'feedback', label: 'AI Feedback', icon: unlocked ? <Flask width={16} height={16} /> : <Lock width={15} height={15} />, content: feedbackPane },
   ];
 
   const arrow = 'grid h-8 w-8 place-items-center rounded-md text-ink transition-colors hover:bg-surface';
   const arrowOff = 'grid h-8 w-8 place-items-center rounded-md text-muted opacity-40';
 
-  const jsonLd = graph(
-    breadcrumbJsonLd([
-      { name: 'Home', path: '/' },
-      { name: 'Problems', path: '/problems' },
-      grouped
-        ? { name: cat.label.trim(), path: cat.path }
-        : { name: problem.topic.name, path: `/topics/${problem.topic.slug}` },
-      { name: problem.title, path: selfHref },
-    ]),
-    problemJsonLd(locked ? { ...problem, description: teaser.text } : problem),
-  );
 
   return (
     <div data-workspace className="flex flex-col bg-canvas px-2 pb-2 lg:h-[calc(100dvh-4rem)]">
@@ -864,7 +828,7 @@ export default async function ProblemPage({ params, via = 'ai' }) {
         right={
           <>
             <div className="flex h-10 shrink-0 items-center gap-2 border-b border-line bg-surface-2 pl-4 pr-20 text-sm font-medium">
-              <Code width={16} height={16} className="text-go" /> {isSql ? 'SQL query' : 'Answer'}
+              <Code width={16} height={16} className="text-go" /> Answer
             </div>
             <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
               {locked ? (
@@ -877,20 +841,20 @@ export default async function ProblemPage({ params, via = 'ai' }) {
                   initialContent={submission?.content ?? ''}
                   hasSubmission={Boolean(submission)}
                   steps={steps.length ? steps : null}
-                  language={isSql ? 'sql' : null}
-                  aiFeedback={!isSql}
+                  language={null}
+                  aiFeedback
                 />
               ) : (
                 <div className="flex min-h-[26rem] flex-[1_0_auto] flex-col">
                   <div className="flex-1 px-4 py-3 font-mono text-[0.85rem] text-muted/70">
-                    {isSql ? '-- Write your SQL query here. Your answer is private to you.' : 'Write your answer here. Your answer is private to you.'}
+                    Write your answer here. Your answer is private to you.
                   </div>
                   <div className="shrink-0 border-t border-line bg-surface-2 px-4 py-3 text-sm">
                     You need to{' '}
                     <Link href={loginHref} className="font-semibold text-accent hover:underline">log in</Link>
                     {' / '}
                     <Link href="/register" className="font-semibold text-accent hover:underline">sign up</Link>
-                    {' '}{isSql ? 'to submit your query and unlock the answers.' : 'to submit an answer and get AI feedback.'}
+                    {' '}to submit an answer and get AI feedback.
                   </div>
                 </div>
               )}

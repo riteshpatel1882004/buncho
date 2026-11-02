@@ -144,6 +144,7 @@ import { prisma } from '@/lib/prisma';
 import { getOrCreateUser } from '@/lib/user';
 import { MAX_ANSWER_LENGTH, MIN_ANSWER_LENGTH } from '@/lib/constants';
 import { assertProblemAccess } from '@/lib/pro-access';
+import { isSqlTopic } from '@/lib/categories';
 
 async function requireUser() {
   const user = await getOrCreateUser();
@@ -155,7 +156,7 @@ async function getProblemStub(problemId) {
   if (typeof problemId !== 'string') return null;
   return prisma.problem.findFirst({
     where: { id: problemId, published: true },
-    select: { id: true, slug: true, allowDirectReveal: true, proOnly: true },
+    select: { id: true, slug: true, allowDirectReveal: true, proOnly: true, topic: { select: { slug: true } } },
   });
 }
 
@@ -242,15 +243,25 @@ export async function setCompleted(problemId, completed) {
     prisma.problemProgress.findUnique({ where: key }),
     prisma.submission.findUnique({ where: key, select: { id: true } }),
   ]);
-  if (!progress || !(progress.solutionRevealed || submission)) {
+  // SQL questions have no editor and their answers are always visible, so they can be marked completed directly.
+  const sql = isSqlTopic(problem.topic.slug);
+  if (!sql && (!progress || !(progress.solutionRevealed || submission))) {
     return { ok: false, error: 'Attempt the problem before marking it completed.' };
   }
 
-  await prisma.problemProgress.update({
+  const now = new Date();
+  await prisma.problemProgress.upsert({
     where: key,
-    data: completed
-      ? { status: 'COMPLETED', completedAt: new Date(), lastActivityAt: new Date() }
-      : { status: 'ATTEMPTED', completedAt: null, lastActivityAt: new Date() },
+    update: completed
+      ? { status: 'COMPLETED', completedAt: now, lastActivityAt: now }
+      : { status: 'ATTEMPTED', completedAt: null, lastActivityAt: now },
+    create: {
+      userId: user.id,
+      problemId: problem.id,
+      status: completed ? 'COMPLETED' : 'ATTEMPTED',
+      completedAt: completed ? now : null,
+      lastActivityAt: now,
+    },
   });
 
   refresh(problem.slug);
