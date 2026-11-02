@@ -5,6 +5,7 @@ import { getOrCreateUser } from '@/lib/user';
 import ReadinessCard from '@/components/ReadinessCard';
 import { StatsCard } from '@/components/StatsCard';
 import { getUserStats, dayKey } from '@/lib/problems';
+import { getDayTopics } from '@/lib/day-topics';
 import { getInsights } from '@/lib/insights';
 import { getUserBadges, publicName } from '@/lib/profile';
 import { profileTheme } from '@/lib/profile-theme';
@@ -37,7 +38,7 @@ export default async function DashboardPage() {
   // Stats are needed by both the dashboard and the badges, so fetch them once and share the promise
   const statsPromise = getUserStats(user.id);
 
-  const [bookmarks, stats, insights, jobs, badgeData] = await Promise.all([
+  const [bookmarks, stats, insights, jobs, badgeData, dayTopics] = await Promise.all([
     prisma.bookmark.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
@@ -48,6 +49,8 @@ export default async function DashboardPage() {
     getInsights(user.id),
     listJobs(user.id),
     statsPromise.then((s) => getUserBadges(user.id, { pro, stats: s })),
+    // Topics solved per day, shown in the Activity chart hover card
+    getDayTopics(user.id),
   ]);
 
   const savedList = await attachInsights(bookmarks.map((b) => b.problem), pro);
@@ -82,7 +85,7 @@ export default async function DashboardPage() {
       label: 'Activity',
       icon: 'activity',
       hint: 'Solved over time',
-      content: <ActivityChart activeDays={stats.activeDays} todayKey={todayKey} />,
+      content: <ActivityChart activeDays={stats.activeDays} dayTopics={dayTopics} todayKey={todayKey} />,
     },
     {
       id: 'jobs',
