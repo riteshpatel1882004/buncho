@@ -62,8 +62,9 @@ function smoothPath(pts) {
 }
 
 const W = 640;
-const H = 250;
-const PAD = { l: 34, r: 14, t: 14, b: 30 };
+const H = 360;
+// PAD.t is empty headroom above the highest gridline, so the hover card can always sit above the point
+const PAD = { l: 34, r: 14, t: 120, b: 30 };
 
 /**
  * Line graph of problems solved over time (7 days, 30 days, 3 months, 6 months).
@@ -94,10 +95,10 @@ export default function ActivityChart({ activeDays, todayKey, title = 'Activity'
   const showDots = series.length <= 31;
   const active = hover !== null ? series[hover] : null;
 
-  // Hover card position (percent of the chart box, which matches the SVG viewBox)
+  // Hover card position (percent of the chart box, which matches the SVG viewBox).
+  // The card is always placed ABOVE the point, so it never covers the line, the green fill or the previous dot.
   const tipLeft = hover !== null ? (pts[hover].x / W) * 100 : 0;
   const tipTop = hover !== null ? (pts[hover].y / H) * 100 : 0;
-  const tipBelow = tipTop < 40;
   const tipShiftX = tipLeft < 16 ? '-12%' : tipLeft > 84 ? '-88%' : '-50%';
 
   const unit = range.bucket === 1 ? 'day' : 'week';
@@ -213,14 +214,14 @@ export default function ActivityChart({ activeDays, todayKey, title = 'Activity'
             );
           })}
 
-          {/* full-height hit areas for hover / touch */}
+          {/* full-height hit areas for hover / touch (include the headroom above the chart) */}
           {series.map((s, i) => (
             <rect
               key={i}
               x={PAD.l + slot * i}
-              y={PAD.t}
+              y={0}
               width={slot}
-              height={innerH}
+              height={H - PAD.b}
               fill="transparent"
               onMouseEnter={() => setHover(i)}
               onTouchStart={() => setHover(i)}
@@ -236,7 +237,7 @@ export default function ActivityChart({ activeDays, todayKey, title = 'Activity'
             style={{
               left: `${tipLeft}%`,
               top: `${tipTop}%`,
-              transform: `translate(${tipShiftX}, ${tipBelow ? '16px' : 'calc(-100% - 16px)'})`,
+              transform: `translate(${tipShiftX}, calc(-100% - 20px))`, // always above the dot
               transition: 'left 120ms ease-out, top 120ms ease-out',
             }}
           >
