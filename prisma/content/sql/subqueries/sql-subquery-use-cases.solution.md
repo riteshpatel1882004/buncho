@@ -1,8 +1,7 @@
-- A **subquery** is a `SELECT` nested inside another statement (in `WHERE`, `FROM` or `SELECT`).
-- **Uncorrelated:** independent of the outer query, runs once.
-- **Correlated:** refers to the outer row, so it is conceptually evaluated per outer row.
-- Typical uses: filter by another table (`IN` / `EXISTS`), compare with an aggregate, build a derived table.
-- `NOT IN` returns nothing if the subquery contains a `NULL`. Use `NOT EXISTS`.
+- A subquery is a query nested inside another SQL query (such as SELECT, INSERT, UPDATE, or DELETE) to handle multi-step data operations and dynamic filtering. 
+- **Scalar Subquery:** Returns a single row and a single column (one value).
+- **Multi-Row Subquery:** Returns a single column with multiple rows, often used with operators like IN, ANY, or ALL.
+- **Correlated Subquery:** References one or more columns from the outer query. It re-evaluates for each row processed by the main query.
 
 ### Basic | IN with an uncorrelated subquery
 
@@ -10,9 +9,12 @@
 SELECT *
 FROM customers
 WHERE city = 'London'
-  AND customer_id IN (SELECT customer_id
-                      FROM orders
-                      WHERE order_date >= CURRENT_DATE - INTERVAL '1 month');
+AND customer_id IN (
+      SELECT customer_id
+      FROM orders
+      WHERE order_date >= DATE '2025-05-01'
+            AND order_date < DATE '2025-06-01'
+  );
 ```
 
 **SQL Server:** use DATEADD(month, -1, GETDATE()) instead of the INTERVAL expression

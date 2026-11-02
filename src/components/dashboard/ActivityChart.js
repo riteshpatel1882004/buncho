@@ -4,6 +4,7 @@ import { useId, useMemo, useState } from 'react';
 
 const DAY = 86400000;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 // bucket = days per point (7 = one point per week)
 const RANGES = [
@@ -22,6 +23,7 @@ const fmt = (ms) => {
   const d = new Date(ms);
   return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
 };
+const fmtYear = (ms) => `${fmt(ms)}, ${new Date(ms).getUTCFullYear()}`;
 
 function buildSeries(activeDays, todayKey, range) {
   const end = parse(todayKey);
@@ -34,7 +36,15 @@ function buildSeries(activeDays, todayKey, range) {
     for (let j = from; j <= to; j += 1) value += activeDays[keyOf(dateAt(j))] ?? 0;
     const start = dateAt(from);
     const last = dateAt(to);
-    return { value, label: fmt(start), full: from === to ? fmt(start) : `${fmt(start)} – ${fmt(last)}` };
+    const single = from === to;
+    return {
+      value,
+      label: fmt(start),
+      full: single ? fmt(start) : `${fmt(start)} – ${fmt(last)}`,
+      // Used by the hover card
+      eyebrow: single ? (last === end ? 'Today' : WEEKDAYS[new Date(start).getUTCDay()]) : last === end ? 'This week' : 'Week',
+      dateLine: single ? fmtYear(start) : `${fmt(start)} – ${fmtYear(last)}`,
+    };
   });
 }
 
@@ -84,6 +94,16 @@ export default function ActivityChart({ activeDays, todayKey, title = 'Activity'
   const showDots = series.length <= 31;
   const active = hover !== null ? series[hover] : null;
 
+  // Hover card position (percent of the chart box, which matches the SVG viewBox)
+  const tipLeft = hover !== null ? (pts[hover].x / W) * 100 : 0;
+  const tipTop = hover !== null ? (pts[hover].y / H) * 100 : 0;
+  const tipBelow = tipTop < 40;
+  const tipShiftX = tipLeft < 16 ? '-12%' : tipLeft > 84 ? '-88%' : '-50%';
+
+  const unit = range.bucket === 1 ? 'day' : 'week';
+  const prev = hover !== null && hover > 0 ? series[hover - 1] : null;
+  const diff = active && prev ? active.value - prev.value : null;
+
   return (
     <section aria-label={title} className="card p-4 sm:p-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -121,13 +141,12 @@ export default function ActivityChart({ activeDays, todayKey, title = 'Activity'
         </div>
       </div>
 
-      <div className="relative mt-4 sm:mt-5">
+      <div className="relative mt-4 sm:mt-5" onMouseLeave={() => setHover(null)}>
         <svg
           viewBox={`0 0 ${W} ${H}`}
           className="h-auto w-full"
           role="img"
           aria-label={`Line graph: ${total} problems solved in the ${range.long}`}
-          onMouseLeave={() => setHover(null)}
         >
           <defs>
             <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
@@ -180,15 +199,17 @@ export default function ActivityChart({ activeDays, todayKey, title = 'Activity'
             const isActive = hover === i;
             if (!showDots && !isActive) return null;
             return (
-              <circle
-                key={i}
-                cx={x(i)}
-                cy={y(s.value)}
-                r={isActive ? 6 : series.length > 14 ? 2.5 : 4}
-                fill={isActive ? color : 'var(--surface)'}
-                stroke={color}
-                strokeWidth={isActive ? 3 : 2}
-              />
+              <g key={i}>
+                {isActive && <circle cx={x(i)} cy={y(s.value)} r="12" fill={color} fillOpacity="0.16" />}
+                <circle
+                  cx={x(i)}
+                  cy={y(s.value)}
+                  r={isActive ? 6 : series.length > 14 ? 2.5 : 4}
+                  fill={isActive ? color : 'var(--surface)'}
+                  stroke={color}
+                  strokeWidth={isActive ? 3 : 2}
+                />
+              </g>
             );
           })}
 
@@ -203,11 +224,42 @@ export default function ActivityChart({ activeDays, todayKey, title = 'Activity'
               fill="transparent"
               onMouseEnter={() => setHover(i)}
               onTouchStart={() => setHover(i)}
-            >
-              <title>{`${s.full}: ${s.value} ${s.value === 1 ? 'problem' : 'problems'}`}</title>
-            </rect>
+            />
           ))}
         </svg>
+
+        {/* Hover card (replaces the browser's plain black tooltip) */}
+        {active && (
+          <div
+            role="status"
+            className="pointer-events-none absolute z-10 w-max min-w-[10.5rem] max-w-[15rem] rounded-xl border border-line bg-surface/95 px-3.5 py-3 shadow-xl shadow-black/10 backdrop-blur-md dark:shadow-black/50"
+            style={{
+              left: `${tipLeft}%`,
+              top: `${tipTop}%`,
+              transform: `translate(${tipShiftX}, ${tipBelow ? '16px' : 'calc(-100% - 16px)'})`,
+              transition: 'left 120ms ease-out, top 120ms ease-out',
+            }}
+          >
+            <div className="flex items-center justify-between gap-4">
+              <span className="text-[11px] font-semibold uppercase tracking-wider text-muted">{active.eyebrow}</span>
+              <span className="text-[11px] font-medium text-muted">{active.dateLine}</span>
+            </div>
+
+            <div className="mt-2 flex items-center gap-2.5">
+              <span aria-hidden="true" className="h-8 w-1 shrink-0 rounded-full" style={{ background: color }} />
+              <div className="leading-tight">
+                <p className="text-2xl font-semibold tabular-nums tracking-tight">{active.value}</p>
+                <p className="text-xs text-muted">{active.value === 1 ? 'problem solved' : 'problems solved'}</p>
+              </div>
+            </div>
+
+            {diff !== null && (
+              <p className="mt-2.5 border-t border-line pt-2 text-xs font-medium" style={{ color: diff > 0 ? color : 'var(--muted)' }}>
+                {diff > 0 ? `▲ ${diff} more` : diff < 0 ? `▼ ${Math.abs(diff)} fewer` : 'No change'} than previous {unit}
+              </p>
+            )}
+          </div>
+        )}
 
         {total === 0 && (
           <p className="pointer-events-none absolute inset-0 grid place-items-center pb-8 text-sm text-muted">

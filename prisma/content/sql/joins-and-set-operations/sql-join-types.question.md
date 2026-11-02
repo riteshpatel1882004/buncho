@@ -23,4 +23,4 @@ You are given two tables, `employees` and `departments`.
 2. Write one query per join type that returns the employee name and the department name.
 3. Say how many rows each query returns for this data.
 
-Answer in your own words first, then open **Answers & Optimization** to compare.
+

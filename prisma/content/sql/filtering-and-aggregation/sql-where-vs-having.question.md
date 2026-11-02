@@ -23,4 +23,3 @@ You work with two tables.
 2. Return the average price per `product_type` for products priced above 100.
 3. Return each customer's total spend, only for customers who spent more than 1000 since `2025-01-01`.
 
-Answer in your own words first, then open **Answers & Optimization** to compare.

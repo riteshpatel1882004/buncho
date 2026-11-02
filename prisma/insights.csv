@@ -325,3 +325,19 @@ kv-cache-and-single-step-decode,38,Google|Adobe|Amazon|Sarvam AI
 bpe-tokenizer-from-scratch,51,Sarvam AI|Google|Amazon
 sampling-top-k-top-p-temperature-code,54,Meta|Microsoft
 lru-cache-with-ttl,36,Flipkart|Infosys
+sql-join-types,78,Amazon|Microsoft|Google|Flipkart|TCS|Infosys
+sql-inner-join-matching-rows,64,Amazon|Flipkart|Swiggy|Zoho|Infosys
+sql-union-vs-union-all,42,Microsoft|Zomato|TCS|Infosys
+sql-where-vs-having,71,Amazon|Google|Swiggy|Freshworks|TCS
+sql-distinct-values,38,Zoho|Infosys|TCS
+sql-group-by,66,Microsoft|Flipkart|Zomato|Paytm
+sql-aggregate-functions,55,Amazon|Swiggy|Meesho|Infosys
+sql-subquery-use-cases,58,Google|Atlassian|Flipkart|Razorpay
+sql-indexes-and-ml,44,Google|Microsoft|PhonePe|Uber
+sql-optimize-slow-query,67,Amazon|Google|Uber|Razorpay|PhonePe
+sql-handle-missing-values,49,Microsoft|Flipkart|Meesho|Salesforce
+sql-pivot-rows-to-columns,52,Amazon|Salesforce|Zomato|Adobe
+sql-second-highest-salary,82,Amazon|Google|Microsoft|Flipkart|Swiggy|Uber
+sql-window-functions-for-ml,69,Google|Amazon|Uber|Swiggy|Meesho
+sql-normalization-for-ml,33,Microsoft|Adobe|Freshworks
+sql-time-features-for-ml,40,Uber|Swiggy|Zomato|Razorpay

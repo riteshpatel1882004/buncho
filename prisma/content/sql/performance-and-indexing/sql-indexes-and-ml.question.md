@@ -7,4 +7,3 @@ A feature-extraction query on a table with 200 million `events` rows is slow. A 
 3. What does an index cost?
 4. Where do indexes matter in a machine learning workflow?
 
-Answer in your own words first, then open **Answers & Optimization** to compare.

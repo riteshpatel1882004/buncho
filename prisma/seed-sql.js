@@ -9,8 +9,10 @@
 // `subcategory` is the topic chip on /problems/sql. Questions with the same subcategory are grouped under one chip, and the
 // chips follow the order of the first question of each subcategory in the list below.
 // `type`: CONCEPTUAL = "explain" questions, PRACTICAL = "write a query" questions (the Type filter on /problems/sql).
+// `proOnly: true` makes the question open only for Buncho Pro members (free users see a teaser). Remove it to make the question free again.
 // The topic slug 'sql' is also listed in SQL_TOPIC_SLUGS (lib/categories.js), which is what puts these questions
 // under /problems/sql. SQL questions have no AI feedback.
+// "Asked %" and "Companies" for each question come from prisma/insights.csv (node prisma/seed-insights.js).
 
 const ROLES = { ai: 'AI Engineer', ml: 'ML Engineer', genai: 'GenAI Engineer', data: 'Data Engineer' };
 const ALL_ROLES = [ROLES.ai, ROLES.ml, ROLES.genai, ROLES.data];
@@ -127,7 +129,7 @@ const problems = [
     slug: 'sql-optimize-slow-query',
     title: 'How would you optimize a SQL query that runs slowly?',
     topic: 'sql', subcategory: 'Performance and indexing', difficulty: 'MEDIUM', type: 'CONCEPTUAL', estimatedMinutes: 6,
-    roles: ALL_ROLES, allowDirectReveal: true,
+    roles: ALL_ROLES, allowDirectReveal: true, proOnly: true,
     hints: [
       'What do you check before changing anything?',
       'Why does a function on an indexed column hurt?',
@@ -149,7 +151,7 @@ const problems = [
     slug: 'sql-pivot-rows-to-columns',
     title: 'Write a SQL query to pivot a table, turning rows into columns',
     topic: 'sql', subcategory: 'Data cleaning and reshaping', difficulty: 'MEDIUM', type: 'PRACTICAL', estimatedMinutes: 8,
-    roles: ALL_ROLES, allowDirectReveal: true,
+    roles: ALL_ROLES, allowDirectReveal: true, proOnly: true,
     hints: [
       'Which aggregate combines with CASE to pick one product?',
       'What if the list of products is not known in advance?',
@@ -160,7 +162,7 @@ const problems = [
     slug: 'sql-second-highest-salary',
     title: 'Find the second highest salary in each department',
     topic: 'sql', subcategory: 'Window functions and ranking', difficulty: 'MEDIUM', type: 'PRACTICAL', estimatedMinutes: 10,
-    roles: ALL_ROLES, allowDirectReveal: true,
+    roles: ALL_ROLES, allowDirectReveal: true, proOnly: true,
     hints: [
       'What should happen when two people share the highest salary?',
       'Think about ranking rows inside each department instead of across the whole table.',
@@ -171,7 +173,7 @@ const problems = [
     slug: 'sql-window-functions-for-ml',
     title: 'What are SQL window functions, and how do you use them for ML feature engineering?',
     topic: 'sql', subcategory: 'Window functions and ranking', difficulty: 'MEDIUM', type: 'PRACTICAL', estimatedMinutes: 10,
-    roles: ALL_ROLES, allowDirectReveal: true,
+    roles: ALL_ROLES, allowDirectReveal: true, proOnly: true,
     hints: [
       'How is a window function different from GROUP BY?',
       'Which frame keeps the current row out of a rolling feature?',

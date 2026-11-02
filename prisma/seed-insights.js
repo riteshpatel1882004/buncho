@@ -1,7 +1,7 @@
 // Loads interview insights into the Problem table.
-//   node prisma/seed-insights.js         reads prisma/insights.csv (not part of `prisma db seed`)
-//   node prisma/seed-insights.js --dry   prints what would change, writes nothing
-//   node prisma/seed-insights.js --demo  PLACEHOLDER values for local UI testing. Refuses to run in production.
+//   node --env-file=.env prisma/seed-insights.js         reads prisma/insights.csv (not part of `prisma db seed`)
+//   node --env-file=.env prisma/seed-insights.js --dry   prints what would change, writes nothing
+//   node --env-file=.env prisma/seed-insights.js --demo  PLACEHOLDER values for local UI testing. Refuses to run in production.
 //
 // insights.csv columns (header required):   slug,frequency,companies
 //   bias-variance-tradeoff,62,Google|Amazon|Flipkart
@@ -11,8 +11,16 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const { PrismaClient } = require('@prisma/client');
+const { PrismaNeon } = require('@prisma/adapter-neon');
+const { neonConfig } = require('@neondatabase/serverless');
+const ws = require('ws');
 
-const prisma = new PrismaClient();
+// Prisma 7 needs a driver adapter (same setup as prisma/seed.js)
+neonConfig.webSocketConstructor = ws;
+const prisma = new PrismaClient({
+  adapter: new PrismaNeon({ connectionString: process.env.DATABASE_URL }),
+});
+
 const args = process.argv.slice(2);
 const DRY = args.includes('--dry');
 const DEMO = args.includes('--demo');
@@ -37,6 +45,8 @@ function parseCsv(text) {
 }
 
 async function main() {
+  if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is not set. Run with: node --env-file=.env prisma/seed-insights.js');
+
   let rows;
   if (DEMO) {
     if (process.env.NODE_ENV === 'production') throw new Error('--demo is for local development only.');

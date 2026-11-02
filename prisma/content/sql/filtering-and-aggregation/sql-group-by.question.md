@@ -16,4 +16,4 @@ You have a `sales` table.
 2. Return the total revenue per region.
 3. Return the total revenue per region and product, with a subtotal per region and a grand total.
 
-Answer in your own words first, then open **Answers & Optimization** to compare.
+

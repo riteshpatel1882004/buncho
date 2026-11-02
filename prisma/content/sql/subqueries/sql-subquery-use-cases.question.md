@@ -27,4 +27,3 @@ You have two tables.
 | ----------- | ---- | ------ |
 | 1           | Ana  | London |
 
-Answer in your own words first, then open **Answers & Optimization** to compare.

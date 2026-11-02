@@ -22,7 +22,7 @@ import StreakCalendar from '@/components/dashboard/StreakCalendar';
 import DashboardTabs from '@/components/dashboard/DashboardTabs';
 import MobileHero from '@/components/dashboard/MobileHero';
 import MilestoneJourney from '@/components/badges/MilestoneJourney';
-import ShareProfile from '@/components/profile/ShareProfile';
+import ProfileBar from '@/components/dashboard/ProfileBar';
 import { SITE_URL } from '@/lib/seo';
 
 export const metadata = { title: 'Dashboard' };
@@ -148,20 +148,13 @@ export default async function DashboardPage() {
   // Everything above the menu: profile links / claim banner + greeting header
   const top = (
     <>
-      {/* Public profile links + share, at the very top (or a prompt to claim a username) */}
+      {/* Public profile bar at the very top (or a prompt to claim a username) */}
       {user.username ? (
-        <div className="mb-5 hidden flex-wrap items-center justify-between gap-x-4 gap-y-3 lg:flex">
-          <p className="flex items-center gap-2 text-sm">
-            <Link href={`/user/${user.username}`} className="font-semibold text-accent hover:underline">
-              View public profile
-            </Link>
-            <span className="text-muted" aria-hidden="true">·</span>
-            <Link href="/settings/profile" className="font-medium text-muted hover:text-ink">
-              Edit
-            </Link>
-          </p>
-          <ShareProfile url={`${SITE_URL}/user/${user.username}`} name={user.profileName || firstName || 'my'} compact />
-        </div>
+        <ProfileBar
+          username={user.username}
+          url={`${SITE_URL}/user/${user.username}`}
+          name={user.profileName || firstName || 'my'}
+        />
       ) : (
         <Link
           href="/settings/profile"
@@ -191,7 +184,7 @@ export default async function DashboardPage() {
           <Greeting name={firstName} pro={pro} />
         </div>
 
-        {/* Phones: quick actions right under the greeting (desktop has the text links bar above) */}
+        {/* Phones: quick actions right under the greeting (desktop has the profile bar above) */}
         {user.username && (
           <ProfileTiles
             username={user.username}
