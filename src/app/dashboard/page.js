@@ -19,27 +19,12 @@ import Greeting from '@/components/dashboard/Greeting';
 import SavedCard from '@/components/dashboard/SavedCard';
 import ActivityChart from '@/components/dashboard/ActivityChart';
 import StreakCalendar from '@/components/dashboard/StreakCalendar';
+import DashboardTabs from '@/components/dashboard/DashboardTabs';
 import MilestoneJourney from '@/components/badges/MilestoneJourney';
 import ShareProfile from '@/components/profile/ShareProfile';
 import { SITE_URL } from '@/lib/seo';
 
 export const metadata = { title: 'Dashboard' };
-
-// One of the two big framed panels. Gives each half of the dashboard its own surface, title and spacing.
-const panelClass =
-  'min-w-0 rounded-3xl border border-line bg-surface-2/40 p-3 shadow-sm sm:p-5 lg:p-6';
-
-function PanelHeader({ title, hint }) {
-  return (
-    <div className="mb-4 flex items-center justify-between gap-3 px-1 sm:mb-5">
-      <div className="flex min-w-0 items-center gap-2.5">
-        <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full bg-accent shadow-[0_0_0_4px_var(--accent-soft)]" />
-        <h2 className="truncate text-sm font-semibold uppercase tracking-[0.14em] text-muted">{title}</h2>
-      </div>
-      {hint && <span className="hidden shrink-0 text-xs text-muted sm:block">{hint}</span>}
-    </div>
-  );
-}
 
 export default async function DashboardPage() {
   const user = await getOrCreateUser();
@@ -72,6 +57,83 @@ export default async function DashboardPage() {
   const avatarRing = pro
     ? 'rounded-full bg-gradient-to-br from-amber-300 via-amber-400 to-amber-600 p-[3px] shadow-md shadow-amber-500/30'
     : 'rounded-full bg-gradient-to-br from-accent/60 to-accent/10 p-[3px]';
+
+  // Every dashboard section. The left menu lists them, the right side shows the one that is clicked.
+  const items = [
+    {
+      id: 'solved',
+      label: 'Problems solved',
+      icon: 'solved',
+      summary: `${stats.solved}/${stats.total}`,
+      content: <StatsCard stats={stats} signedIn roomy />,
+    },
+    {
+      id: 'streak',
+      label: 'Streak',
+      icon: 'streak',
+      summary: `${stats.streak}d`,
+      content: <StreakCalendar activeDays={stats.activeDays} todayKey={todayKey} streak={stats.streak} />,
+    },
+    {
+      id: 'activity',
+      label: 'Activity',
+      icon: 'activity',
+      content: <ActivityChart activeDays={stats.activeDays} todayKey={todayKey} />,
+    },
+    {
+      id: 'jobs',
+      label: 'Job preparation',
+      icon: 'jobs',
+      summary: jobs.length,
+      content: <JobPrepCard jobs={jobs.slice(0, 3)} />,
+    },
+    {
+      id: 'saved',
+      label: 'Saved for later',
+      icon: 'saved',
+      summary: savedList.length,
+      content: <SavedCard items={savedList} pro={pro} />,
+    },
+    {
+      id: 'milestones',
+      label: 'Your milestones',
+      icon: 'milestones',
+      content: <MilestoneJourney solved={stats.solved} badges={badgeData.badges} />,
+    },
+    {
+      id: 'readiness',
+      label: 'AI Engineering Readiness',
+      icon: 'readiness',
+      content: <ReadinessCard readiness={insights.readiness} competencies={insights.competencies} />,
+    },
+    // Pro members see their plan in the "Plan details" popup on the banner above
+    ...(!pro
+      ? [
+          {
+            id: 'plan',
+            label: 'Your plan',
+            icon: 'plan',
+            content: <PlanCard ent={ent} />,
+          },
+        ]
+      : []),
+    {
+      id: 'share',
+      label: 'Share your achievements',
+      icon: 'share',
+      content: (
+        <ShareCards
+          name={publicName(user)}
+          username={user.username ?? null}
+          url={user.username ? `${SITE_URL}/user/${user.username}` : null}
+          metrics={badgeData.metrics}
+          badges={badgeData.badges}
+          total={stats.total}
+          defaultColor={profileTheme(user.username ?? user.name ?? 'buncho').a}
+        />
+      ),
+    },
+  ];
 
   return (
     <div className="relative mx-auto w-full max-w-[84rem] overflow-x-clip px-4 py-5 sm:px-6 lg:px-8 lg:py-10">
@@ -131,55 +193,8 @@ export default async function DashboardPage() {
           {pro && <ProBanner periodEnd={ent.periodEnd} className="min-w-0 lg:flex-1" />}
         </header>
 
-        {/* TWO DIVIDED SECTIONS: main overview (left) and side panel (right). On phones they stack. */}
-        <div className="mt-5 grid gap-5 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start lg:gap-6 xl:grid-cols-[minmax(0,1fr)_25rem]">
-          {/* SECTION 1: Progress overview */}
-          <section aria-label="Progress overview" className={panelClass}>
-            <PanelHeader title="Progress overview" hint="Your practice at a glance" />
-
-            <div className="space-y-4 sm:space-y-5">
-              {/* Problems solved + stat tiles */}
-              <StatsCard stats={stats} signedIn roomy />
-
-              {/* Activity line graph */}
-              <ActivityChart activeDays={stats.activeDays} todayKey={todayKey} />
-
-              {/* Milestones: animated badge path */}
-              <MilestoneJourney solved={stats.solved} badges={badgeData.badges} />
-
-              {/* Interview readiness */}
-              <ReadinessCard readiness={insights.readiness} competencies={insights.competencies} />
-            </div>
-          </section>
-
-          {/* SECTION 2: Streak & tools side panel */}
-          <aside aria-label="Streak and tools" className={panelClass}>
-            <PanelHeader title="Streak & tools" />
-
-            <div className="space-y-4 sm:space-y-5">
-              <StreakCalendar activeDays={stats.activeDays} todayKey={todayKey} streak={stats.streak} />
-
-              {/* Pro members see their plan in the "Plan details" popup on the banner above */}
-              {!pro && <PlanCard ent={ent} />}
-
-              <JobPrepCard jobs={jobs.slice(0, 3)} />
-              <SavedCard items={savedList} pro={pro} />
-            </div>
-          </aside>
-        </div>
-
-        {/* Share cards: a banner at the very bottom that opens a popup with every card */}
-        <div className="mt-6 lg:mt-8">
-          <ShareCards
-            name={publicName(user)}
-            username={user.username ?? null}
-            url={user.username ? `${SITE_URL}/user/${user.username}` : null}
-            metrics={badgeData.metrics}
-            badges={badgeData.badges}
-            total={stats.total}
-            defaultColor={profileTheme(user.username ?? user.name ?? 'buncho').a}
-          />
-        </div>
+        {/* Left: menu with every section. Right: content of the clicked section. */}
+        <DashboardTabs items={items} initial="solved" />
       </div>
     </div>
   );
