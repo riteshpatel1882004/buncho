@@ -5,6 +5,8 @@ import { useId, useMemo, useState } from 'react';
 const DAY = 86400000;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+const MAX_TOPICS = 4; // topic chips shown in the hover card before "+N more"
+const NO_TOPICS = {}; // stable reference so useMemo does not re-run on every render
 
 // bucket = days per point (7 = one point per week)
 const RANGES = [
@@ -25,7 +27,7 @@ const fmt = (ms) => {
 };
 const fmtYear = (ms) => `${fmt(ms)}, ${new Date(ms).getUTCFullYear()}`;
 
-function buildSeries(activeDays, todayKey, range) {
+function buildSeries(activeDays, dayTopics, todayKey, range) {
   const end = parse(todayKey);
   const n = Math.ceil(range.days / range.bucket);
   const dateAt = (j) => end - (range.days - 1 - j) * DAY; // j = 0 is the oldest day shown
@@ -33,12 +35,23 @@ function buildSeries(activeDays, todayKey, range) {
     const from = i * range.bucket;
     const to = Math.min(range.days - 1, from + range.bucket - 1);
     let value = 0;
-    for (let j = from; j <= to; j += 1) value += activeDays[keyOf(dateAt(j))] ?? 0;
+    const counts = {};
+    for (let j = from; j <= to; j += 1) {
+      const key = keyOf(dateAt(j));
+      value += activeDays[key] ?? 0;
+      // dayTopics[key] is a list of topic names, one per solved problem
+      for (const t of dayTopics[key] ?? []) counts[t] = (counts[t] ?? 0) + 1;
+    }
+    // Most-solved topic first, then alphabetical
+    const topics = Object.entries(counts)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .map(([name, count]) => ({ name, count }));
     const start = dateAt(from);
     const last = dateAt(to);
     const single = from === to;
     return {
       value,
+      topics,
       label: fmt(start),
       full: single ? fmt(start) : `${fmt(start)} – ${fmt(last)}`,
       // Used by the hover card
@@ -62,21 +75,23 @@ function smoothPath(pts) {
 }
 
 const W = 640;
-const H = 360;
-// PAD.t is empty headroom above the highest gridline, so the hover card can always sit above the point
-const PAD = { l: 34, r: 14, t: 120, b: 30 };
+const H = 430;
+// PAD.t is empty headroom above the highest gridline, so the (taller) hover card always fits above the point.
+// The plot area itself stays about 210px tall.
+const PAD = { l: 34, r: 14, t: 190, b: 30 };
 
 /**
  * Line graph of problems solved over time (7 days, 30 days, 3 months, 6 months).
  * activeDays: { 'YYYY-MM-DD': count }, todayKey: today in the same format (India time).
+ * dayTopics (optional): { 'YYYY-MM-DD': ['Arrays', 'Arrays', 'Dynamic Programming'] }, one topic name per solved problem.
  */
-export default function ActivityChart({ activeDays, todayKey, title = 'Activity', color = 'var(--accent)' }) {
+export default function ActivityChart({ activeDays, dayTopics = NO_TOPICS, todayKey, title = 'Activity', color = 'var(--accent)' }) {
   const gradId = `area-${useId().replace(/:/g, '')}`;
   const [rangeId, setRangeId] = useState('7d');
   const [hover, setHover] = useState(null);
   const range = RANGES.find((r) => r.id === rangeId);
 
-  const series = useMemo(() => buildSeries(activeDays, todayKey, range), [activeDays, todayKey, range]);
+  const series = useMemo(() => buildSeries(activeDays, dayTopics, todayKey, range), [activeDays, dayTopics, todayKey, range]);
   const total = series.reduce((a, s) => a + s.value, 0);
   const max = Math.max(0, ...series.map((s) => s.value));
   const yMax = max <= 4 ? 4 : Math.ceil(max / 4) * 4;
@@ -104,6 +119,9 @@ export default function ActivityChart({ activeDays, todayKey, title = 'Activity'
   const unit = range.bucket === 1 ? 'day' : 'week';
   const prev = hover !== null && hover > 0 ? series[hover - 1] : null;
   const diff = active && prev ? active.value - prev.value : null;
+
+  const shownTopics = active ? active.topics.slice(0, MAX_TOPICS) : [];
+  const extraTopics = active ? Math.max(0, active.topics.length - MAX_TOPICS) : 0;
 
   return (
     <section aria-label={title} className="card p-4 sm:p-6">
@@ -233,7 +251,7 @@ export default function ActivityChart({ activeDays, todayKey, title = 'Activity'
         {active && (
           <div
             role="status"
-            className="pointer-events-none absolute z-10 w-max min-w-[10.5rem] max-w-[15rem] rounded-xl border border-line bg-surface/95 px-3.5 py-3 shadow-xl shadow-black/10 backdrop-blur-md dark:shadow-black/50"
+            className="pointer-events-none absolute z-10 w-max min-w-[10.5rem] max-w-[16rem] rounded-xl border border-line bg-surface/95 px-3.5 py-3 shadow-xl shadow-black/10 backdrop-blur-md dark:shadow-black/50"
             style={{
               left: `${tipLeft}%`,
               top: `${tipTop}%`,
@@ -253,6 +271,29 @@ export default function ActivityChart({ activeDays, todayKey, title = 'Activity'
                 <p className="text-xs text-muted">{active.value === 1 ? 'problem solved' : 'problems solved'}</p>
               </div>
             </div>
+
+            {/* Topics solved on this day / week */}
+            {shownTopics.length > 0 && (
+              <div className="mt-2.5 border-t border-line pt-2">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted">Topics solved</p>
+                <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                  {shownTopics.map((t) => (
+                    <li
+                      key={t.name}
+                      className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-semibold text-accent"
+                    >
+                      {t.name}
+                      {t.count > 1 && <span className="tabular-nums opacity-70">×{t.count}</span>}
+                    </li>
+                  ))}
+                  {extraTopics > 0 && (
+                    <li className="inline-flex items-center rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-semibold text-muted">
+                      +{extraTopics} more
+                    </li>
+                  )}
+                </ul>
+              </div>
+            )}
 
             {diff !== null && (
               <p className="mt-2.5 border-t border-line pt-2 text-xs font-medium" style={{ color: diff > 0 ? color : 'var(--muted)' }}>
