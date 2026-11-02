@@ -152,40 +152,11 @@ export default function SqlProblem({
                           <h3 className="text-[15px] font-semibold leading-snug">{a.title}</h3>
                         </header>
 
-                        {/* Two sections: the query on the left, the details on the right (stacked on small screens) */}
-                        <div className={`mt-3.5 grid gap-4 ${a.chips.length > 0 ? 'lg:grid-cols-[minmax(0,1fr)_15rem]' : ''}`}>
-                          {a.code && (
-                            <div className="min-w-0">
-                              <SqlCode code={a.code} label={`answer-${a.n}.sql`} />
-                            </div>
-                          )}
-
-                          {a.chips.length > 0 && (
-                            <aside aria-label="Details" className="rounded-xl bg-surface-2 p-4">
-                              <dl className="space-y-3 text-sm">
-                                {a.chips
-                                  .filter((c) => c.key)
-                                  .map((c, i) => (
-                                    <div key={i}>
-                                      <dt className="text-[0.7rem] font-semibold uppercase tracking-wider text-muted">{c.key}</dt>
-                                      <dd className="mt-0.5 font-semibold leading-snug">{c.value}</dd>
-                                    </div>
-                                  ))}
-                              </dl>
-                              {a.chips.some((c) => !c.key) && (
-                                <ul className="mt-4 space-y-1.5">
-                                  {a.chips
-                                    .filter((c) => !c.key)
-                                    .map((c, i) => (
-                                      <li key={i} className="rounded-md bg-accent-soft px-2.5 py-1.5 text-xs font-semibold leading-snug text-accent">
-                                        {c.value}
-                                      </li>
-                                    ))}
-                                </ul>
-                              )}
-                            </aside>
-                          )}
-                        </div>
+                        {a.code && (
+                          <div className="mt-3.5 min-w-0">
+                            <SqlCode code={a.code} label={`answer-${a.n}.sql`} />
+                          </div>
+                        )}
                       </article>
                     </li>
                   );
@@ -253,7 +224,7 @@ export default function SqlProblem({
 
   return (
     <div className="bg-canvas">
-      <div className="mx-auto w-full max-w-5xl px-4 pb-20 pt-3 sm:px-6">
+      <div className="mx-auto w-full max-w-[96rem] px-4 pb-20 pt-3 sm:px-6">
         {/* Top bar: problem list, previous / next, timer */}
         <div className="flex h-12 items-center justify-between gap-2">
           <div className="flex items-center gap-1">
