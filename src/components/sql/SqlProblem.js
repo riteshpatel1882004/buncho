@@ -152,27 +152,40 @@ export default function SqlProblem({
                           <h3 className="text-[15px] font-semibold leading-snug">{a.title}</h3>
                         </header>
 
-                        {a.code && (
-                          <div className="mt-3.5">
-                            <SqlCode code={a.code} label={`answer-${a.n}.sql`} />
-                          </div>
-                        )}
+                        {/* Two sections: the query on the left, the details on the right (stacked on small screens) */}
+                        <div className={`mt-3.5 grid gap-4 ${a.chips.length > 0 ? 'lg:grid-cols-[minmax(0,1fr)_15rem]' : ''}`}>
+                          {a.code && (
+                            <div className="min-w-0">
+                              <SqlCode code={a.code} label={`answer-${a.n}.sql`} />
+                            </div>
+                          )}
 
-                        {a.chips.length > 0 && (
-                          <ul className="mt-3 flex flex-wrap gap-2">
-                            {a.chips.map((c, i) => (
-                              <li
-                                key={i}
-                                className={`rounded-md px-2.5 py-1 text-xs ${
-                                  c.key ? 'bg-surface-2 text-muted' : 'bg-accent-soft font-semibold text-accent'
-                                }`}
-                              >
-                                {c.key && <span>{c.key}: </span>}
-                                <span className={c.key ? 'font-semibold text-ink' : ''}>{c.value}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        )}
+                          {a.chips.length > 0 && (
+                            <aside aria-label="Details" className="rounded-xl bg-surface-2 p-4">
+                              <dl className="space-y-3 text-sm">
+                                {a.chips
+                                  .filter((c) => c.key)
+                                  .map((c, i) => (
+                                    <div key={i}>
+                                      <dt className="text-[0.7rem] font-semibold uppercase tracking-wider text-muted">{c.key}</dt>
+                                      <dd className="mt-0.5 font-semibold leading-snug">{c.value}</dd>
+                                    </div>
+                                  ))}
+                              </dl>
+                              {a.chips.some((c) => !c.key) && (
+                                <ul className="mt-4 space-y-1.5">
+                                  {a.chips
+                                    .filter((c) => !c.key)
+                                    .map((c, i) => (
+                                      <li key={i} className="rounded-md bg-accent-soft px-2.5 py-1.5 text-xs font-semibold leading-snug text-accent">
+                                        {c.value}
+                                      </li>
+                                    ))}
+                                </ul>
+                              )}
+                            </aside>
+                          )}
+                        </div>
                       </article>
                     </li>
                   );
