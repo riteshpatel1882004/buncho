@@ -1,36 +1,45 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 // Segmented tab switch for the SQL question page: Description | Answers & Optimization.
 // Both panes are rendered on the server and passed in, so switching tabs never refetches anything.
 // tabs: [{ id, label, splitLabel?, icon, badge?, content }]
 //
-// split: on large screens (lg and up) the tab bar is hidden and the two panes sit in one
-// horizontally scrollable row (scroll-snap). Each pane is ~65% wide, so you always see a peek
-// of the other one. Scroll / swipe / drag left or right to move between the question and the answers,
-// or use the arrow button in each column header to jump to the other pane.
+// split: on large screens (lg and up) the tab bar is hidden and the panes sit side by side with a
+// draggable divider between them. Drag it to make the question or the answers wider or narrower.
+//   - Double-click the divider to reset to 50 / 50.
+//   - Focus the divider and use the left / right arrow keys (Home resets).
+//   - The width you choose is remembered in this browser.
 // Each pane scrolls vertically on its own, so the question stays in view while you read the answers.
 // Below lg it is the normal tab switch.
 
-const iconProps = { viewBox: '0 0 24 24', width: 16, height: 16, fill: 'none', stroke: 'currentColor', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true };
-const ArrowLeftIcon = () => (
-  <svg {...iconProps}>
-    <path d="M19 12H5M12 19l-7-7 7-7" />
-  </svg>
-);
-const ArrowRightIcon = () => (
-  <svg {...iconProps}>
-    <path d="M5 12h14M12 5l7 7-7 7" />
-  </svg>
-);
+const MIN = 25; // smallest width (%) either pane can shrink to
+const MAX = 75;
+const DEFAULT = 50;
+const STORAGE_KEY = 'sql-split-left';
 
-const ctl = 'inline-flex h-8 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-muted transition-colors hover:bg-surface-2 hover:text-ink';
+const clamp = (n) => Math.min(MAX, Math.max(MIN, n));
 
 export default function SqlTabs({ tabs, initial, split = false }) {
   const [active, setActive] = useState(initial ?? tabs[0].id);
-  const scrollerRef = useRef(null);
-  const paneRefs = useRef([]);
+  const [left, setLeft] = useState(DEFAULT); // width of the left pane, in %
+  const [dragging, setDragging] = useState(false);
+  const wrapRef = useRef(null);
+
+  // Restore the saved width after mount (avoids a hydration mismatch)
+  useEffect(() => {
+    try {
+      const saved = Number(localStorage.getItem(STORAGE_KEY));
+      if (saved) setLeft(clamp(saved));
+    } catch {}
+  }, []);
+
+  function save(value) {
+    try {
+      localStorage.setItem(STORAGE_KEY, String(Math.round(value * 10) / 10));
+    } catch {}
+  }
 
   function onKeyDown(e) {
     const i = tabs.findIndex((t) => t.id === active);
@@ -38,12 +47,36 @@ export default function SqlTabs({ tabs, initial, split = false }) {
     else if (e.key === 'ArrowLeft') setActive(tabs[(i - 1 + tabs.length) % tabs.length].id);
   }
 
-  // Large screens: smoothly scroll the row so the chosen pane is at the left edge (clamped at the end)
-  function scrollToPane(index) {
-    const scroller = scrollerRef.current;
-    const pane = paneRefs.current[index];
-    if (!scroller || !pane) return;
-    scroller.scrollTo({ left: index === 0 ? 0 : pane.offsetLeft, behavior: 'smooth' });
+  // ---- Divider: drag, double-click and keyboard ----
+  function onPointerDown(e) {
+    e.preventDefault();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDragging(true);
+  }
+  function onPointerMove(e) {
+    if (!dragging || !wrapRef.current) return;
+    const rect = wrapRef.current.getBoundingClientRect();
+    setLeft(clamp(((e.clientX - rect.left) / rect.width) * 100));
+  }
+  function onPointerUp(e) {
+    if (!dragging) return;
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    setDragging(false);
+    save(left);
+  }
+  function reset() {
+    setLeft(DEFAULT);
+    save(DEFAULT);
+  }
+  function onDividerKey(e) {
+    let next = null;
+    if (e.key === 'ArrowLeft') next = clamp(left - 3);
+    else if (e.key === 'ArrowRight') next = clamp(left + 3);
+    else if (e.key === 'Home') next = DEFAULT;
+    if (next == null) return;
+    e.preventDefault();
+    setLeft(next);
+    save(next);
   }
 
   return (
@@ -88,56 +121,72 @@ export default function SqlTabs({ tabs, initial, split = false }) {
         </div>
       </div>
 
-      {/* On lg+ this is the horizontal scroller. It has a fixed height so each pane scrolls vertically inside it. */}
+      {/* lg+: grid of [left pane | divider | right pane]. Fixed height so each pane scrolls inside it. */}
       <div
-        ref={scrollerRef}
+        ref={wrapRef}
+        style={{ '--left': `${left}%` }}
         className={
           split
-            ? 'lg:relative lg:mt-4 lg:flex lg:h-[calc(100vh-9rem)] lg:snap-x lg:snap-mandatory lg:gap-4 lg:overflow-x-auto lg:overflow-y-hidden lg:scroll-smooth lg:pb-2'
+            ? `lg:sticky lg:top-20 lg:mt-4 lg:grid lg:h-[calc(100vh-6rem)] lg:grid-cols-[minmax(0,var(--left))_1rem_minmax(0,1fr)] lg:items-stretch ${
+                dragging ? 'lg:select-none' : ''
+              }`
             : ''
         }
       >
         {tabs.map((t, i) => {
           const label = t.splitLabel ?? t.label;
-          const other = tabs[i === 0 ? 1 : 0];
-          const otherLabel = other.splitLabel ?? other.label;
-          const goesRight = i === 0;
 
           return (
-            <div
-              key={t.id}
-              ref={(el) => (paneRefs.current[i] = el)}
-              role="tabpanel"
-              id={`sql-pane-${t.id}`}
-              aria-labelledby={`sql-tab-${t.id}`}
-              className={`mt-1 ${t.id === active ? '' : 'hidden'} ${
-                split ? 'min-w-0 lg:mt-0 lg:block lg:h-full lg:w-[65%] lg:shrink-0 lg:snap-start lg:overflow-y-auto lg:pr-1' : ''
-              }`}
-            >
-              {/* Column header (large screens): title + button that scrolls to the other pane */}
-              {split && (
-                <div className="sticky top-0 z-10 mb-2 hidden items-center justify-between gap-2 bg-canvas py-1 lg:flex">
-                  <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">{label}</h2>
-                  <button
-                    type="button"
-                    onClick={() => scrollToPane(i === 0 ? 1 : 0)}
-                    className={ctl}
-                    aria-label={`Scroll to ${otherLabel}`}
+            <div key={t.id} className="contents">
+              <div
+                role="tabpanel"
+                id={`sql-pane-${t.id}`}
+                aria-labelledby={`sql-tab-${t.id}`}
+                className={`mt-1 ${t.id === active ? '' : 'hidden'} ${
+                  split ? 'min-w-0 lg:mt-0 lg:block lg:h-full lg:overflow-y-auto lg:pr-1' : ''
+                }`}
+              >
+                {split && (
+                  <div className="sticky top-0 z-10 mb-2 hidden bg-canvas py-1 lg:block">
+                    <h2 className="text-xs font-semibold uppercase tracking-wider text-muted">{label}</h2>
+                  </div>
+                )}
+                <div>{t.content}</div>
+              </div>
+
+              {/* Divider sits between the two panes (large screens only) */}
+              {split && i === 0 && (
+                <div
+                  role="separator"
+                  aria-orientation="vertical"
+                  aria-label="Resize question and answers"
+                  aria-valuemin={MIN}
+                  aria-valuemax={MAX}
+                  aria-valuenow={Math.round(left)}
+                  tabIndex={0}
+                  title="Drag to resize. Double-click to reset."
+                  onPointerDown={onPointerDown}
+                  onPointerMove={onPointerMove}
+                  onPointerUp={onPointerUp}
+                  onPointerCancel={onPointerUp}
+                  onDoubleClick={reset}
+                  onKeyDown={onDividerKey}
+                  className="group hidden cursor-col-resize touch-none items-center justify-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-accent lg:flex"
+                >
+                  <span
+                    className={`h-full w-px transition-colors ${dragging ? 'bg-accent' : 'bg-line group-hover:bg-accent/60'}`}
+                    aria-hidden="true"
+                  />
+                  <span
+                    className={`absolute grid h-10 w-3 place-items-center rounded-full border bg-surface transition-colors ${
+                      dragging ? 'border-accent' : 'border-line group-hover:border-accent/60'
+                    }`}
+                    aria-hidden="true"
                   >
-                    {goesRight ? (
-                      <>
-                        {otherLabel} <ArrowRightIcon />
-                      </>
-                    ) : (
-                      <>
-                        <ArrowLeftIcon /> {otherLabel}
-                      </>
-                    )}
-                  </button>
+                    <span className="h-4 w-px bg-muted" />
+                  </span>
                 </div>
               )}
-
-              <div>{t.content}</div>
             </div>
           );
         })}
