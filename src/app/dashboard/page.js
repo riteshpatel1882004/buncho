@@ -14,16 +14,13 @@ import PlanCard from '@/components/billing/PlanCard';
 import ProBanner from '@/components/ProBanner';
 import { listJobs } from '@/lib/jobs/progress';
 import JobPrepCard from '@/components/jobs/JobPrepCard';
-import MobileHero from '@/components/dashboard/MobileHero';
 import ProfileTiles from '@/components/dashboard/ProfileTiles';
-import StatTile from '@/components/dashboard/StatTile';
 import Greeting from '@/components/dashboard/Greeting';
 import SavedCard from '@/components/dashboard/SavedCard';
 import ActivityChart from '@/components/dashboard/ActivityChart';
 import StreakCalendar from '@/components/dashboard/StreakCalendar';
 import MilestoneJourney from '@/components/badges/MilestoneJourney';
 import ShareProfile from '@/components/profile/ShareProfile';
-import { Check, Flame, Grid, Bookmark } from '@/components/icons';
 import { SITE_URL } from '@/lib/seo';
 
 export const metadata = { title: 'Dashboard' };
@@ -54,7 +51,6 @@ export default async function DashboardPage() {
   const savedList = await attachInsights(bookmarks.map((b) => b.problem), pro);
 
   const firstName = user.name?.split(' ')[0];
-  const completion = stats.total ? Math.round((stats.solved / stats.total) * 100) : 0;
   const todayKey = dayKey(new Date()); // YYYY-MM-DD in India time, same key format as stats.activeDays
 
   const avatarRing = pro
@@ -119,18 +115,37 @@ export default async function DashboardPage() {
           {pro && <ProBanner periodEnd={ent.periodEnd} className="min-w-0 lg:flex-1" />}
         </header>
 
-        {/* Phones: one summary card (desktop shows the four stat tiles below instead) */}
-        <div className="mt-5 lg:hidden">
-          <MobileHero solved={stats.solved} total={stats.total} streak={stats.streak} saved={bookmarks.length} />
+        {/* 1. Problems solved + activity (left), streak calendar (right). On phones: solved, activity, calendar. */}
+        <div className="mt-5 grid gap-5 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
+          <div className="min-w-0 space-y-5 lg:space-y-8">
+            <StatsCard stats={stats} signedIn roomy />
+            <ActivityChart activeDays={stats.activeDays} todayKey={todayKey} />
+          </div>
+          <div className="min-w-0">
+            <StreakCalendar activeDays={stats.activeDays} todayKey={todayKey} streak={stats.streak} />
+          </div>
         </div>
 
-        {/* Milestones: animated badge path, right at the top */}
-        <div className="mt-5 lg:mt-6">
+        {/* 2. Milestones: animated badge path */}
+        <div className="mt-5 lg:mt-8">
           <MilestoneJourney solved={stats.solved} badges={badgeData.badges} />
         </div>
 
-        {/* Share cards: downloadable / shareable achievement images, with locked previews of what is next */}
-        <div className="mt-6">
+        {/* 3. Readiness, plan, job prep and saved questions */}
+        <div className="mt-5 grid gap-5 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
+          <div className="min-w-0">
+            <ReadinessCard readiness={insights.readiness} competencies={insights.competencies} />
+          </div>
+          <div className="min-w-0 space-y-5 lg:space-y-8">
+            {/* Pro members see their plan in the "Plan details" popup on the banner above */}
+            {!pro && <PlanCard ent={ent} />}
+            <JobPrepCard jobs={jobs.slice(0, 3)} />
+            <SavedCard items={savedList} pro={pro} />
+          </div>
+        </div>
+
+        {/* 4. Share cards: a banner at the very bottom that opens a popup with every card */}
+        <div className="mt-8">
           <ShareCards
             name={publicName(user)}
             username={user.username ?? null}
@@ -140,55 +155,6 @@ export default async function DashboardPage() {
             total={stats.total}
             defaultColor={profileTheme(user.username ?? user.name ?? 'buncho').a}
           />
-        </div>
-
-        {/* Key numbers */}
-        <dl className="mt-6 hidden grid-cols-4 gap-6 lg:grid">
-          <StatTile label="Solved" value={stats.solved} sub={`of ${stats.total} problems`} accent icon={<Check width={16} height={16} />} />
-          <StatTile
-            label="Day streak"
-            value={stats.streak}
-            sub={stats.streak ? 'Keep it going' : 'Practice today to start one'}
-            icon={<Flame width={16} height={16} />}
-          />
-          <StatTile label="Completion" value={`${completion}%`} sub="of the question bank" icon={<Grid width={16} height={16} />} />
-          <StatTile label="Saved" value={bookmarks.length} sub="for later" icon={<Bookmark width={16} height={16} />} />
-        </dl>
-
-        {/* On phones both columns "dissolve" (contents) and the cards follow the order-* classes,
-            so Readiness lands right below the calendar. From lg up it is the normal 2-column layout. */}
-        <div className="mt-5 grid gap-5 lg:mt-8 lg:gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_24rem]">
-          {/* Main column */}
-          <div className="contents min-w-0 lg:block lg:space-y-8">
-            <div className="order-1 min-w-0">
-              <ActivityChart activeDays={stats.activeDays} todayKey={todayKey} />
-            </div>
-            <div className="order-2 min-w-0">
-              <StatsCard stats={stats} signedIn roomy />
-            </div>
-            <div className="order-5 min-w-0">
-              <ReadinessCard readiness={insights.readiness} competencies={insights.competencies} />
-            </div>
-          </div>
-
-          {/* Sidebar */}
-          <aside className="contents min-w-0 lg:block lg:space-y-8">
-            {/* Pro members see their plan in the "Plan details" popup on the banner above */}
-            {!pro && (
-              <div className="order-3 min-w-0">
-                <PlanCard ent={ent} />
-              </div>
-            )}
-            <div className="order-4 min-w-0">
-              <StreakCalendar activeDays={stats.activeDays} todayKey={todayKey} streak={stats.streak} />
-            </div>
-            <div className="order-6 min-w-0">
-              <JobPrepCard jobs={jobs.slice(0, 3)} />
-            </div>
-            <div className="order-7 min-w-0">
-              <SavedCard items={savedList} pro={pro} />
-            </div>
-          </aside>
         </div>
       </div>
     </div>

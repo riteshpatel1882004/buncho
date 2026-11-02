@@ -441,7 +441,8 @@ function Icon({ name, size = 18, className = '' }) {
 /* --------------------------------- the UI --------------------------------- */
 
 export default function ShareCards({ name, username, url, metrics, badges, total, defaultColor }) {
-  const [active, setActive] = useState(null); // index into items, or null when the popup is closed
+  const [open, setOpen] = useState(false); // the popup
+  const [active, setActive] = useState(null); // index of the card being previewed, or null while browsing the gallery
   const [design, setDesign] = useState('aurora');
   const [fmt, setFmt] = useState('landscape');
   const [color, setColor] = useState(defaultColor);
@@ -503,15 +504,20 @@ export default function ShareCards({ name, username, url, metrics, badges, total
   useEffect(() => {
     const dialog = dialogRef.current;
     if (!dialog) return undefined;
-    if (active != null && !dialog.open) dialog.showModal();
-    if (active == null && dialog.open) dialog.close();
-    if (active == null) return undefined;
+    if (open && !dialog.open) dialog.showModal();
+    if (!open && dialog.open) dialog.close();
+    if (!open) return undefined;
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [active]);
+  }, [open]);
+
+  const closeAll = () => {
+    setOpen(false);
+    setActive(null);
+  };
 
   const step = (dir) => setActive((i) => (i == null ? i : (i + dir + items.length) % items.length));
   const flash = (msg) => {
@@ -607,15 +613,19 @@ export default function ShareCards({ name, username, url, metrics, badges, total
     );
   };
 
-  return (
-    <section aria-labelledby="share-h" className="card overflow-hidden p-5 sm:p-6">
-      <div className="flex flex-wrap items-end justify-between gap-2">
+  const previewBadges = (earned.length ? earned : badges.filter((b) => b.kind === 'milestone')).slice(0, 3);
+
+  // The gallery (shown inside the popup)
+  const gallery = (
+    <div className="p-4 sm:p-6">
+      <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 id="share-h" className="text-lg font-semibold tracking-tight">Share your achievements</h2>
+          <h3 className="text-lg font-semibold tracking-tight">Share your achievements</h3>
           <p className="mt-1 text-sm text-muted">Pick a card, choose one of 5 designs and any colour, then download or post it. Locked cards show what is coming next.</p>
         </div>
-        <span className="rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent">{unlocked.length} unlocked · {upcoming.length} upcoming</span>
+        <button type="button" onClick={closeAll} aria-label="Close" className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-line hover:border-accent"><Icon name="close" /></button>
       </div>
+      <span className="mt-3 inline-block rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent">{unlocked.length} unlocked · {upcoming.length} upcoming</span>
 
       {!username && (
         <p className="mt-4 rounded-xl border border-amber-400/50 bg-amber-400/10 px-4 py-3 text-sm">
@@ -624,7 +634,7 @@ export default function ShareCards({ name, username, url, metrics, badges, total
         </p>
       )}
 
-      <h3 className="mt-6 text-xs font-semibold uppercase tracking-wider text-muted">Your cards</h3>
+      <h4 className="mt-6 text-xs font-semibold uppercase tracking-wider text-muted">Your cards</h4>
       {unlocked.length ? (
         <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
           {unlocked.map(tile)}
@@ -633,7 +643,7 @@ export default function ShareCards({ name, username, url, metrics, badges, total
         <p className="mt-3 rounded-xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">Solve your first problem to unlock your first card.</p>
       )}
 
-      <h3 className="mt-8 text-xs font-semibold uppercase tracking-wider text-muted">Upcoming (locked)</h3>
+      <h4 className="mt-8 text-xs font-semibold uppercase tracking-wider text-muted">Upcoming (locked)</h4>
       {upcoming.length ? (
         <ul className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-6">
           {upcoming.map(tile)}
@@ -641,19 +651,51 @@ export default function ShareCards({ name, username, url, metrics, badges, total
       ) : (
         <p className="mt-3 text-sm text-muted">Everything is unlocked. Legendary.</p>
       )}
+    </div>
+  );
+
+  return (
+    <section aria-labelledby="share-h" className="relative overflow-hidden rounded-3xl border border-line bg-surface">
+      <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-accent/15 blur-3xl" />
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        aria-haspopup="dialog"
+        className="group relative flex w-full flex-col gap-5 p-5 text-left transition hover:bg-surface-2/40 sm:flex-row sm:items-center sm:justify-between sm:p-6"
+      >
+        <span className="flex min-w-0 items-center gap-4">
+          <span className="flex shrink-0 -space-x-4">
+            {previewBadges.map((b, i) => (
+              <span key={b.id} className="rounded-full bg-surface p-0.5 transition group-hover:-translate-y-0.5" style={{ zIndex: 3 - i }}>
+                <BadgeArt badge={b} size={52} animate={false} earned={b.earned} />
+              </span>
+            ))}
+          </span>
+          <span className="min-w-0">
+            <span id="share-h" className="block text-lg font-semibold tracking-tight">Share your achievements</span>
+            <span className="mt-0.5 block text-sm text-muted">Download or post cards for your solves, streak and badges. {unlocked.length} unlocked · {upcoming.length} coming up.</span>
+          </span>
+        </span>
+        <span className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-sm font-bold text-accent-ink shadow-sm transition group-hover:opacity-90">
+          View all cards
+          <Icon name="next" size={16} />
+        </span>
+      </button>
 
       {/* popup */}
       <dialog
         ref={dialogRef}
-        onClose={() => setActive(null)}
-        onClick={(e) => e.target === dialogRef.current && setActive(null)}
-        aria-label="Card preview"
+        onClose={closeAll}
+        onClick={(e) => e.target === dialogRef.current && closeAll()}
+        aria-label="Share your achievements"
         className="m-auto max-h-[94dvh] w-[min(calc(100vw-1rem),66rem)] overflow-y-auto rounded-2xl border border-line bg-surface p-0 text-ink shadow-2xl backdrop:bg-black/70"
       >
-        {item && (
+        {open && !item && gallery}
+        {open && item && (
           <div className="p-4 sm:p-6">
             <div className="flex items-center justify-between gap-3">
               <div className="flex min-w-0 items-center gap-2">
+                <button type="button" onClick={() => setActive(null)} className="mr-1 inline-flex h-9 items-center gap-1 rounded-full border border-line px-3 text-xs font-semibold hover:border-accent"><Icon name="prev" size={14} />All cards</button>
                 <button type="button" onClick={() => step(-1)} aria-label="Previous card" className="grid h-9 w-9 place-items-center rounded-full border border-line hover:border-accent"><Icon name="prev" /></button>
                 <button type="button" onClick={() => step(1)} aria-label="Next card" className="grid h-9 w-9 place-items-center rounded-full border border-line hover:border-accent"><Icon name="next" /></button>
                 <div className="ml-1 min-w-0">
@@ -661,7 +703,7 @@ export default function ShareCards({ name, username, url, metrics, badges, total
                   <p className="text-xs text-muted">{item.locked ? `Locked · ${item.hint}` : 'Unlocked'}</p>
                 </div>
               </div>
-              <button type="button" onClick={() => setActive(null)} aria-label="Close" className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-line hover:border-accent"><Icon name="close" /></button>
+              <button type="button" onClick={closeAll} aria-label="Close" className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-line hover:border-accent"><Icon name="close" /></button>
             </div>
 
             <div className="mt-4 grid gap-6 lg:grid-cols-[minmax(0,1fr)_19rem]">

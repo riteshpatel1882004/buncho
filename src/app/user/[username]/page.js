@@ -13,7 +13,6 @@ import { dayKey } from '@/lib/problems';
 import JsonLd from '@/components/JsonLd';
 import { Crown } from '@/components/ProBadge';
 import StatTile from '@/components/dashboard/StatTile';
-import MilestoneJourney from '@/components/badges/MilestoneJourney';
 import BadgeGrid from '@/components/profile/BadgeGrid';
 import BadgeArt from '@/components/badges/BadgeArt';
 import ShareProfile from '@/components/profile/ShareProfile';
@@ -119,88 +118,73 @@ function Pill({ href, icon, children, external = true }) {
   );
 }
 
-/** Chip shown under the username: the highest badge the user has earned right now. */
-function BadgeChip({ badge, fallback }) {
-  if (!badge) {
-    return (
-      <span className="inline-flex items-center gap-2 rounded-full border border-dashed border-line px-3 py-1 text-xs font-semibold uppercase tracking-wider text-muted">
-        <span className="h-2 w-2 rounded-full bg-muted/50" />
-        {fallback ? 'No badge yet' : 'Badge locked'}
-      </span>
-    );
-  }
-  const color = TIER_COLOR[badge.tier] ?? TIER_COLOR.bronze;
-  return (
-    <span
-      className="inline-flex items-center gap-2 rounded-full border py-0.5 pl-1 pr-3.5 text-xs font-bold uppercase tracking-wider"
-      style={{
-        color: 'var(--ink)',
-        borderColor: `color-mix(in srgb, ${color} 55%, transparent)`,
-        background: `linear-gradient(135deg, color-mix(in srgb, ${color} 22%, transparent), color-mix(in srgb, ${color} 6%, transparent))`,
-      }}
-      title={`Current badge: ${badge.name}. ${badge.desc}`}
-    >
-      <BadgeArt badge={badge} size={28} animate={false} />
-      <span>
-        <span className="mr-1.5 font-semibold opacity-60">Badge</span>
-        {badge.name}
-      </span>
-    </span>
-  );
-}
-
-/** Sidebar card: the current badge, large, with progress to the next milestone badge. */
-function CurrentBadgeCard({ badge, progress, solved }) {
+/**
+ * Hero panel: the user's current badge (the highest one earned), animated exactly like on their dashboard
+ * (pop-in + glow + overlay effect), with progress towards the next milestone badge.
+ */
+function BadgeShowcase({ badge, progress, solved, earnedCount }) {
   const shown = badge ?? progress.next;
   if (!shown) return null;
-  const color = TIER_COLOR[shown.tier] ?? TIER_COLOR.bronze;
   const earned = Boolean(badge);
+  const color = TIER_COLOR[shown.tier] ?? TIER_COLOR.bronze;
   const pct = Math.round(progress.fraction * 100);
 
   return (
-    <section aria-label="Current badge" className="card relative overflow-hidden p-5">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 -top-10 h-48"
-        style={{ background: `radial-gradient(60% 70% at 50% 0%, color-mix(in srgb, ${color} 30%, transparent), transparent 70%)` }}
-      />
-      <p className="relative text-xs font-medium uppercase tracking-wider text-muted">Current badge</p>
+    <div
+      className="relative mt-7 overflow-hidden rounded-2xl border p-4 sm:p-5"
+      style={{
+        borderColor: `color-mix(in srgb, ${color} 35%, var(--line))`,
+        background: `linear-gradient(120deg, color-mix(in srgb, ${color} 12%, var(--surface)), var(--surface) 65%)`,
+      }}
+    >
+      <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-6">
+        {/* The medal, animated like on the dashboard */}
+        <div className="relative grid h-24 w-24 shrink-0 place-items-center self-start sm:self-auto">
+          <span aria-hidden="true" className="absolute inset-0 rounded-full blur-2xl" style={{ background: `radial-gradient(closest-side, color-mix(in srgb, ${color} ${earned ? 45 : 15}%, transparent), transparent)` }} />
+          {earned ? (
+            <span className="badge-pop relative block" style={{ '--d': '250ms' }}>
+              <BadgeArt badge={shown} size={88} animate delay={250} />
+            </span>
+          ) : (
+            <span className="relative block">
+              <BadgeArt badge={shown} size={80} earned={false} />
+            </span>
+          )}
+        </div>
 
-      <div className="relative mt-4 flex flex-col items-center text-center">
-        <BadgeArt badge={shown} size={112} earned={earned} />
-        <p className="mt-3 text-xl font-semibold tracking-tight">{earned ? shown.name : `Next: ${shown.name}`}</p>
-        <p className="mt-0.5 text-sm text-muted">{earned ? shown.desc : `Solve ${shown.threshold} problems to earn it`}</p>
-        {earned && shown.stars > 0 && (
-          <span
-            className="mt-2 rounded-full px-2.5 py-0.5 text-[0.7rem] font-bold uppercase tracking-wider"
-            style={{ background: `color-mix(in srgb, ${color} 18%, transparent)`, color }}
-          >
-            Level {shown.stars} of 3
-          </span>
-        )}
-      </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-muted">{earned ? 'Current badge' : 'First badge in progress'}</p>
+          <p className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">{shown.name}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs font-semibold">
+            {earned && shown.stars > 0 && (
+              <span className="rounded-full px-2.5 py-1 uppercase tracking-wider" style={{ background: `color-mix(in srgb, ${color} 18%, transparent)`, color }}>
+                Level {shown.stars} of 3
+              </span>
+            )}
+            <span className="rounded-full bg-surface-2 px-2.5 py-1 text-muted">{earnedCount} badge{earnedCount === 1 ? '' : 's'} earned</span>
+            <span className="rounded-full bg-surface-2 px-2.5 py-1 text-muted">{solved} solved</span>
+          </div>
+        </div>
 
-      <div className="relative mt-5 border-t border-line pt-4">
-        {progress.next && earned ? (
-          <>
-            <div className="flex items-baseline justify-between gap-3 text-sm">
-              <span className="font-medium">Next: {progress.next.name}</span>
-              <span className="tabular-nums text-muted">{solved}/{progress.next.threshold}</span>
-            </div>
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Progress to the next badge">
-              <div className="h-full rounded-full" style={{ width: `${Math.max(4, pct)}%`, background: `linear-gradient(90deg, ${color}, color-mix(in srgb, ${color} 55%, white))` }} />
-            </div>
-            <p className="mt-2 text-xs text-muted">
-              {progress.toNext} more solve{progress.toNext === 1 ? '' : 's'} to unlock it.
-            </p>
-          </>
-        ) : progress.next ? (
-          <p className="text-sm text-muted">{progress.toNext} more solve{progress.toNext === 1 ? '' : 's'} to unlock your first milestone badge.</p>
-        ) : (
-          <p className="text-sm text-muted">Every milestone badge unlocked with {solved} solved.</p>
-        )}
+        {/* Progress to the next milestone */}
+        <div className="w-full sm:w-60 sm:shrink-0">
+          {progress.next ? (
+            <>
+              <div className="flex items-baseline justify-between gap-3 text-sm">
+                <span className="font-semibold">Next: {progress.next.name}</span>
+                <span className="tabular-nums text-muted">{solved}/{progress.next.threshold}</span>
+              </div>
+              <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Progress to the next badge">
+                <div className="h-full rounded-full" style={{ width: `${Math.max(4, pct)}%`, background: `linear-gradient(90deg, ${color}, color-mix(in srgb, ${color} 55%, white))` }} />
+              </div>
+              <p className="mt-2 text-xs text-muted">{progress.toNext} more solve{progress.toNext === 1 ? '' : 's'} to unlock it</p>
+            </>
+          ) : (
+            <p className="text-sm font-medium text-muted">Every milestone badge unlocked.</p>
+          )}
+        </div>
       </div>
-    </section>
+    </div>
   );
 }
 
@@ -283,10 +267,9 @@ export default async function PublicProfilePage({ params }) {
 
       {/* Hero: banner colours are derived from the username, so every profile looks different */}
       <header className="card overflow-hidden !p-0">
-        <div className="relative h-36 overflow-hidden sm:h-52" style={{ background: theme.banner }}>
-          <div aria-hidden="true" className="absolute inset-0 opacity-60" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
-          <div aria-hidden="true" className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/15 blur-3xl" />
-          <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/45 to-transparent" />
+        <div className="relative h-32 overflow-hidden sm:h-44" style={{ background: theme.banner }}>
+          <div aria-hidden="true" className="absolute inset-0 opacity-50" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
+          <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-[var(--surface)] via-[var(--surface)]/30 to-transparent" />
           {data.pro && (
             <span className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-black/50 px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-300 ring-1 ring-amber-300/30 backdrop-blur">
               <Crown width={12} height={12} /> Pro member
@@ -295,22 +278,22 @@ export default async function PublicProfilePage({ params }) {
         </div>
 
         <div className="relative px-5 pb-6 sm:px-8 sm:pb-8">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex items-end justify-between gap-4">
             <span
-              className={`relative -mt-14 inline-block w-fit rounded-full p-1 shadow-xl sm:-mt-16 ${ring}`}
+              className={`relative -mt-14 inline-block shrink-0 rounded-full p-1 shadow-xl sm:-mt-16 ${ring}`}
               style={data.pro ? undefined : { background: `linear-gradient(135deg, ${theme.a}, ${theme.c})` }}
             >
               {user.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={user.imageUrl} alt={`${name}'s avatar`} width={128} height={128} className="h-28 w-28 rounded-full border-4 border-[var(--surface)] object-cover sm:h-32 sm:w-32" />
+                <img src={user.imageUrl} alt={`${name}'s avatar`} width={128} height={128} className="h-24 w-24 rounded-full border-4 border-[var(--surface)] object-cover sm:h-32 sm:w-32" />
               ) : (
-                <span className="grid h-28 w-28 place-items-center rounded-full border-4 border-[var(--surface)] bg-accent-soft text-4xl font-bold text-accent sm:h-32 sm:w-32">
+                <span className="grid h-24 w-24 place-items-center rounded-full border-4 border-[var(--surface)] bg-accent-soft text-4xl font-bold text-accent sm:h-32 sm:w-32">
                   {name.charAt(0).toUpperCase()}
                 </span>
               )}
             </span>
 
-            <div className="flex flex-wrap items-center gap-2 sm:pb-1">
+            <div className="flex flex-wrap items-center justify-end gap-2 pb-1">
               {isOwner && (
                 <Link href="/settings/profile" className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-accent-ink shadow-sm transition hover:opacity-90">
                   Edit profile
@@ -322,24 +305,20 @@ export default async function PublicProfilePage({ params }) {
 
           <div className="mt-4">
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{name}</h1>
-            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-2">
-              <span className="font-mono text-base text-muted">@{user.username}</span>
-              {stats && <BadgeChip badge={currentBadge} fallback />}
-            </div>
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-muted">
+              <span className="font-mono text-base">@{user.username}</span>
+              <span aria-hidden="true">·</span>
+              <span className="inline-flex items-center gap-1.5"><Icon name="calendar" size={14} /> Joined {formatDate(user.createdAt)}</span>
+              {user.location && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span className="inline-flex items-center gap-1.5"><Icon name="pin" size={14} /> {user.location}</span>
+                </>
+              )}
+            </p>
 
             {user.headline && <p className="mt-4 text-lg font-medium leading-snug">{user.headline}</p>}
             {user.bio && <p className="mt-2 max-w-2xl whitespace-pre-line text-[0.95rem] leading-relaxed text-muted">{user.bio}</p>}
-
-            <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2.5 text-sm text-muted">
-              {user.location && (
-                <span className="inline-flex items-center gap-1.5">
-                  <Icon name="pin" size={15} /> {user.location}
-                </span>
-              )}
-              <span className="inline-flex items-center gap-1.5">
-                <Icon name="calendar" size={15} /> Joined {formatDate(user.createdAt)}
-              </span>
-            </div>
 
             {links.length > 0 && (
               <div className="mt-4 flex flex-wrap gap-2">
@@ -347,6 +326,10 @@ export default async function PublicProfilePage({ params }) {
                   <Pill key={l.href} href={l.href} icon={linkIcon(l.label)}>{l.label}</Pill>
                 ))}
               </div>
+            )}
+
+            {stats && badgeProgress && (
+              <BadgeShowcase badge={currentBadge} progress={badgeProgress} solved={stats.solved} earnedCount={sortEarned(data.badges).length} />
             )}
           </div>
         </div>
@@ -362,18 +345,9 @@ export default async function PublicProfilePage({ params }) {
         </div>
       )}
 
-      {/* Animated milestone path: the same one the owner sees on their dashboard */}
-      {stats && (
-        <div className="mt-6">
-          <MilestoneJourney solved={stats.solved} badges={data.badges} title={`${name}'s milestones`} publicView />
-        </div>
-      )}
-
       {hasAnything ? (
         <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem]">
-          {/* On mobile the badge comes first, it is the headline of the profile */}
-          <aside className="order-first min-w-0 space-y-6 lg:order-last">
-            {badgeProgress && <CurrentBadgeCard badge={currentBadge} progress={badgeProgress} solved={stats.solved} />}
+          <aside className="order-last min-w-0 space-y-6">
             <BadgeGrid badges={data.badges} showLocked={isOwner} />
             {isOwner && (
               <section className="card flex items-center justify-between gap-4 p-5">
@@ -427,18 +401,47 @@ export default async function PublicProfilePage({ params }) {
         <p className="card mt-6 p-8 text-center text-sm text-muted">{name} keeps the details private for now.</p>
       )}
 
-      {/* Call to action */}
+      {/* Call to action: brand colours, the whole card is a link */}
       {!isOwner && (
-        <section className="relative mt-10 overflow-hidden rounded-3xl p-6 text-white sm:p-10" style={{ background: theme.banner }}>
-          <div aria-hidden="true" className="absolute inset-0 bg-black/40" />
-          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-xl font-bold tracking-tight sm:text-2xl">Build your own AI interview profile</h2>
-              <p className="mt-1.5 max-w-xl text-sm text-white/85">Practise real AI, ML and GenAI interview questions, get AI feedback, earn badges and share your progress with a link like this one.</p>
+        <section className="group relative mt-10 overflow-hidden rounded-3xl text-accent-ink shadow-lg ring-1 ring-black/5 transition duration-200 hover:-translate-y-0.5 hover:shadow-xl" style={{ background: 'linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 45%, #04140a))' }}>
+          <div aria-hidden="true" className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-white/15 blur-2xl" />
+          <div aria-hidden="true" className="absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-black/15 blur-2xl" />
+          <div aria-hidden="true" className="absolute inset-0 opacity-[0.12]" style={{ backgroundImage: 'radial-gradient(currentColor 1px, transparent 1px)', backgroundSize: '20px 20px' }} />
+
+          <div className="relative flex flex-col gap-7 p-6 sm:p-9 lg:flex-row lg:items-center lg:justify-between">
+            <div className="max-w-xl">
+              <span className="inline-flex items-center gap-2 rounded-full bg-black/20 px-3 py-1 text-[0.7rem] font-bold uppercase tracking-[0.16em]">
+                <span className="grid h-5 w-5 place-items-center rounded-md bg-[var(--ink)] text-[0.7rem] font-black text-[var(--bg)]">B</span>
+                Buncho
+              </span>
+              <h2 className="mt-4 text-2xl font-extrabold leading-tight tracking-tight sm:text-3xl">Build your own AI interview profile</h2>
+              <ul className="mt-4 space-y-2 text-sm font-medium sm:text-[0.95rem]">
+                {['Real AI, ML and GenAI interview questions', 'Instant AI feedback on every answer', 'Badges and a profile page you can share'].map((t) => (
+                  <li key={t} className="flex items-start gap-2.5">
+                    <span className="mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full bg-black/20"><Icon name="check" size={12} /></span>
+                    {t}
+                  </li>
+                ))}
+              </ul>
             </div>
-            <Link href={viewer ? '/settings/profile' : '/register'} className="shrink-0 rounded-full bg-white px-6 py-3 text-center text-sm font-bold text-black shadow-lg transition hover:-translate-y-px hover:opacity-95">
-              {viewer ? 'Claim your username' : 'Start free'}
-            </Link>
+
+            <div className="flex shrink-0 flex-col items-stretch gap-3 sm:items-start lg:items-center">
+              <Link
+                href={viewer ? '/settings/profile' : '/register'}
+                className="inline-flex items-center justify-center gap-2 rounded-full bg-[var(--ink)] px-8 py-3.5 text-base font-bold text-[var(--bg)] shadow-lg transition group-hover:scale-[1.03] after:absolute after:inset-0 after:content-[''] focus-visible:outline-offset-4"
+              >
+                {viewer ? 'Claim your username' : 'Start free'}
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="transition group-hover:translate-x-1"><path d="M5 12h14m-6-6 6 6-6 6" /></svg>
+              </Link>
+              {!viewer ? (
+                <p className="relative z-10 text-center text-sm font-medium">
+                  Free to start. Already have an account?{' '}
+                  <Link href="/login" className="font-bold underline underline-offset-2 hover:opacity-80">Log in</Link>
+                </p>
+              ) : (
+                <p className="text-center text-sm font-medium">Pick a username and get a link like this one.</p>
+              )}
+            </div>
           </div>
         </section>
       )}
