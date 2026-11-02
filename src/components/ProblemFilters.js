@@ -53,11 +53,16 @@ function ChipGroup({ label, value, options, onChange }) {
  * Phones: search box with a "Filters" button that opens a bottom sheet, removable chips for what is active.
  * md and up: search plus inline selects.
  * On /problems the topic chips filter in place. On a topic page (currentTopic is set) they are links to the other topics.
- * category 'hr' or 'sql': no topic chips and no type filter (every question in them shares one topic and type).
+ * category 'hr': no topic chips and no type filter (every question in it shares one topic and type).
+ * category 'sql': topic chips come from `subcategories` ([{ name, count }], filter param `sub`), plus the type filter
+ * (Conceptual = explain questions, Practical = write-a-query questions).
  * solved: number | null. When null, only the problem count is shown.
  */
-export default function ProblemFilters({ topics = [], currentTopic, signedIn = false, solved = null, total = 0, category = 'ai' }) {
-  const single = category === 'hr' || category === 'sql';
+export default function ProblemFilters({ topics = [], subcategories = [], currentTopic, signedIn = false, solved = null, total = 0, category = 'ai' }) {
+  const single = category === 'hr' || category === 'sql'; // no chips built from the Topic table
+  const noType = category === 'hr';
+  const useSubs = category === 'sql' && subcategories.length > 0;
+  const subTotal = subcategories.reduce((sum, s) => sum + s.count, 0);
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -89,12 +94,13 @@ export default function ProblemFilters({ topics = [], currentTopic, signedIn = f
   const type = sp.get('type') ?? '';
   const access = sp.get('access') ?? '';
   const status = sp.get('status') ?? '';
+  const sub = sp.get('sub') ?? '';
   const activeTopic = onTopicPage ? currentTopic : sp.get('topic') ?? '';
-  const hasFilters = Boolean(sp.get('q') || difficulty || type || access || status || (!onTopicPage && sp.get('topic')));
+  const hasFilters = Boolean(sp.get('q') || difficulty || type || access || status || sub || (!onTopicPage && sp.get('topic')));
 
   const active = [
     difficulty && { key: 'difficulty', label: DIFFICULTY_LABEL[difficulty] },
-    !single && type && { key: 'type', label: TYPE_LABEL[type] },
+    !noType && type && { key: 'type', label: TYPE_LABEL[type] },
     access && { key: 'access', label: access === 'pro' ? 'Pro only' : 'Free only' },
     status && { key: 'status', label: status === 'solved' ? 'Solved' : 'Not solved' },
   ].filter(Boolean);
@@ -146,6 +152,20 @@ export default function ProblemFilters({ topics = [], currentTopic, signedIn = f
         </div>
       )}
 
+      {/* SQL topic chips: one per subcategory, filter in place with ?sub= */}
+      {useSubs && (
+        <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0" role="group" aria-label="Topic">
+          <button type="button" aria-pressed={!sub} onClick={() => update({ sub: '' })} className={chipCls(!sub)}>
+            All topics <span className={countCls(!sub)}>{subTotal}</span>
+          </button>
+          {subcategories.map((s) => (
+            <button key={s.name} type="button" aria-pressed={sub === s.name} onClick={() => update({ sub: s.name })} className={chipCls(sub === s.name)}>
+              {s.name} <span className={countCls(sub === s.name)}>{s.count}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Search + filters */}
       <div className="flex flex-wrap items-center gap-2.5">
         <div className="relative min-w-0 flex-1 md:min-w-52 md:max-w-sm md:flex-none lg:flex-1">
@@ -185,7 +205,7 @@ export default function ProblemFilters({ topics = [], currentTopic, signedIn = f
                   onChange={(v) => update({ difficulty: v })}
                   options={DIFFICULTIES.map((d) => ({ value: d, label: DIFFICULTY_LABEL[d], dot: DOT[d] }))}
                 />
-                {!single && (
+                {!noType && (
                   <ChipGroup
                     label="Type"
                     value={type}
@@ -241,7 +261,7 @@ export default function ProblemFilters({ topics = [], currentTopic, signedIn = f
             ))}
           </select>
 
-          {!single && (
+          {!noType && (
             <>
               <label htmlFor="type" className="sr-only">Problem type</label>
               <select id="type" value={type} onChange={(e) => update({ type: e.target.value })} className={selectCls}>

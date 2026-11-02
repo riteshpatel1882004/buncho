@@ -4,8 +4,11 @@ import { useState } from 'react';
 
 // Segmented tab switch for the SQL question page: Description | Answers & Optimization.
 // Both panes are rendered on the server and passed in, so switching tabs never refetches anything.
-// tabs: [{ id, label, icon, badge?, content }]
-export default function SqlTabs({ tabs, initial }) {
+// tabs: [{ id, label, icon, badge?, content, splitClassName? }]
+// split: on large screens (lg and up) the tab bar is hidden and the panes sit side by side, question on the left and
+// answers on the right. Below lg it is the normal tab switch. splitClassName styles one pane in that layout
+// (the question pane uses it to stay in view while the answers scroll).
+export default function SqlTabs({ tabs, initial, split = false }) {
   const [active, setActive] = useState(initial ?? tabs[0].id);
 
   function onKeyDown(e) {
@@ -16,7 +19,7 @@ export default function SqlTabs({ tabs, initial }) {
 
   return (
     <div>
-      <div className="sticky top-16 z-20 -mx-4 bg-canvas/85 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6">
+      <div className={`sticky top-16 z-20 -mx-4 bg-canvas/85 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 ${split ? 'lg:hidden' : ''}`}>
         <div
           role="tablist"
           aria-label="Question sections"
@@ -56,18 +59,19 @@ export default function SqlTabs({ tabs, initial }) {
         </div>
       </div>
 
-      {tabs.map((t) => (
-        <div
-          key={t.id}
-          role="tabpanel"
-          id={`sql-pane-${t.id}`}
-          aria-labelledby={`sql-tab-${t.id}`}
-          hidden={t.id !== active}
-          className="mt-1"
-        >
-          {t.content}
-        </div>
-      ))}
+      <div className={split ? 'lg:mt-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6' : ''}>
+        {tabs.map((t) => (
+          <div
+            key={t.id}
+            role="tabpanel"
+            id={`sql-pane-${t.id}`}
+            aria-labelledby={`sql-tab-${t.id}`}
+            className={`mt-1 ${t.id === active ? '' : 'hidden'} ${split ? `min-w-0 lg:mt-0 lg:block ${t.splitClassName ?? ''}` : ''}`}
+          >
+            {t.content}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

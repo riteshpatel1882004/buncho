@@ -28,8 +28,16 @@ const onlyArg = args.find((a) => a.startsWith('--only='));
 const ONLY = onlyArg ? new Set(onlyArg.slice(7).split(',').map((s) => s.trim()).filter(Boolean)) : null;
 
 // Files live in prisma/content/<topic-slug>/<slug>.<kind>.md
+// If the question has a subcategory, prisma/content/<topic-slug>/<subcategory-folder>/<slug>.<kind>.md is checked first
+// (e.g. content/sql/joins-and-set-operations/). The folder name is the subcategory in lowercase with dashes.
 // For backward compatibility, a flat prisma/content/<slug>.<kind>.md is used if the topic folder copy does not exist.
+const subFolder = (p) => (p.subcategory ? p.subcategory.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') : null);
 const file = (p, kind) => {
+  const sub = subFolder(p);
+  if (sub) {
+    const inSub = path.join(__dirname, 'content', p.topic, sub, `${p.slug}.${kind}.md`);
+    if (fs.existsSync(inSub)) return inSub;
+  }
   const inTopic = path.join(__dirname, 'content', p.topic, `${p.slug}.${kind}.md`);
   if (fs.existsSync(inTopic)) return inTopic;
   const flat = path.join(__dirname, 'content', `${p.slug}.${kind}.md`);

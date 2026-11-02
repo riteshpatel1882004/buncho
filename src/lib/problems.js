@@ -254,6 +254,7 @@ export function parseFilters(sp = {}) {
   return {
     q: str(sp.q, 100),
     topic: str(sp.topic, 80),
+    sub: str(sp.sub, 80), // SQL topic chip (the question's subcategory)
     difficulty: DIFFICULTIES.includes(sp.difficulty) ? sp.difficulty : '',
     type: PROBLEM_TYPES.includes(sp.type) ? sp.type : '',
     access: ACCESS_FILTERS.includes(sp.access) ? sp.access : '',
@@ -264,12 +265,13 @@ export function parseFilters(sp = {}) {
 
 // userId is only needed for the solved / not solved filter; signed-out visitors have no progress, so it is ignored.
 // category: 'ai' (default, every non-HR / non-SQL topic) | 'hr' | 'sql' | 'all'
-export async function getProblems({ q, topic, difficulty, type, access, status, page, challenge, category = 'ai', pro = false, userId = null }) {
+export async function getProblems({ q, topic, sub, difficulty, type, access, status, page, challenge, category = 'ai', pro = false, userId = null }) {
   const topicFilters = [topic && { slug: topic }, topicCategoryWhere(category)].filter(Boolean);
   const where = {
     published: true,
     ...(challenge && { isChallenge: true }),
     ...(topicFilters.length && { topic: { AND: topicFilters } }),
+    ...(sub && { subcategory: sub }),
     ...(difficulty && { difficulty }),
     ...(type && { type }),
     ...(access === 'pro' && { proOnly: true }),
@@ -329,6 +331,22 @@ export async function getTopics({ challenge = false, category = 'ai' } = {}) {
     .map((t, i) => ({ t, i }))
     .sort((a, b) => rank(a.t.slug) - rank(b.t.slug) || a.i - b.i)
     .map(({ t }) => t);
+}
+
+/**
+ * Topic chips for the SQL list: one per subcategory, with the number of published questions.
+ * Chips follow the order of the first question of each subcategory in prisma/seed-sql.js (its `position`).
+ */
+export async function getSubcategories({ category = 'sql' } = {}) {
+  const rows = await prisma.problem.groupBy({
+    by: ['subcategory'],
+    where: { published: true, subcategory: { not: null }, topic: topicCategoryWhere(category) },
+    _count: { _all: true },
+    _min: { position: true },
+  });
+  return rows
+    .map((r) => ({ name: r.subcategory, count: r._count._all, order: r._min.position ?? 0 }))
+    .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
 }
 
 /** Published question counts per category, for the sidebar on /problems. */

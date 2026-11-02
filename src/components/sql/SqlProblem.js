@@ -11,15 +11,18 @@ import { CompleteToggle } from '@/components/SolutionControls';
 import Timer from '@/components/Timer';
 import SqlTabs from './SqlTabs';
 import SqlCode from './SqlCode';
-import { parseAnswers } from '@/lib/sql-answers';
+import { parseAnswers, parseIntro } from '@/lib/sql-answers';
 import { problemHref } from '@/lib/categories';
 import { ChevronLeft, ChevronRight, Code, Database, FileText, Flag, Lock } from '@/components/icons';
 
-// SQL question page. There is no editor (nothing is executed): the page has two tabs,
-// Description and "Answers & Optimization", laid out as a normal scrolling page.
+// SQL question page. There is no editor (nothing is executed).
+// Large screens: two columns, the question on the left (it stays in view) and its answers on the right.
+// Smaller screens: two tabs, Description and "Answers & Optimization".
 
 // Level badge + left edge colour for each approach. Keys match the "<level> |" prefix in the answers markdown.
+// New questions use "Basic" and "Optimized"; the older "Brute force" and "Better" levels still work.
 const LEVELS = {
+  basic: { badge: 'bg-accent-soft text-accent', edge: 'border-l-accent', node: 'border-accent text-accent' },
   'brute force': { badge: 'bg-hard/12 text-hard', edge: 'border-l-hard', node: 'border-hard text-hard' },
   better: { badge: 'bg-medium/12 text-medium', edge: 'border-l-medium', node: 'border-medium text-medium' },
   optimized: { badge: 'bg-easy/12 text-easy', edge: 'border-l-easy', node: 'border-easy text-easy' },
@@ -56,6 +59,15 @@ export default function SqlProblem({
   loginHref,
 }) {
   const answers = !locked && solution ? parseAnswers(solution.content) : [];
+  const intro = !locked && solution ? parseIntro(solution.content) : '';
+  const hasBasic = answers.some((a) => /^basic$/i.test(a.level ?? ''));
+  // Legend: only the levels this question actually uses
+  const legend = [
+    { key: 'basic', dot: 'bg-accent', text: 'Basic' },
+    { key: 'brute force', dot: 'bg-hard', text: 'Brute force' },
+    { key: 'better', dot: 'bg-medium', text: 'Better' },
+    { key: 'optimized', dot: 'bg-easy', text: 'Optimized' },
+  ].filter((l) => answers.some((a) => String(a.level ?? '').toLowerCase() === l.key));
   const completed = progress?.status === 'COMPLETED';
 
   const description = (
@@ -121,31 +133,41 @@ export default function SqlProblem({
                   <h2 className="text-lg font-semibold tracking-tight">
                     {answers.length} {answers.length === 1 ? 'way' : 'ways'} to solve it
                   </h2>
-                  <p className="text-sm text-muted">Ordered from brute force to optimized.</p>
+                  <p className="text-sm text-muted">{hasBasic ? 'A basic answer first, then the optimized one.' : 'Ordered from brute force to optimized.'}</p>
                 </div>
                 <ul className="flex flex-wrap items-center gap-3 text-xs font-medium text-muted" aria-label="Legend">
-                  <li className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-hard" /> Brute force</li>
-                  <li className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-medium" /> Better</li>
-                  <li className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-easy" /> Optimized</li>
+                  {legend.map((l) => (
+                    <li key={l.key} className="inline-flex items-center gap-1.5"><span className={`h-2 w-2 rounded-full ${l.dot}`} /> {l.text}</li>
+                  ))}
                 </ul>
               </div>
 
+              {/* Short interview-ready points (text before the first "###" in the answers file) */}
+              {intro && (
+                <section aria-label="Quick answer" className={`${card} mt-5 p-4 sm:p-5`}>
+                  <h3 className={label}>Quick answer</h3>
+                  <div className="mt-3">
+                    <Markdown>{intro}</Markdown>
+                  </div>
+                </section>
+              )}
+
               <ol className="relative mt-5 space-y-5">
                 {/* The line that joins the numbered nodes (wide screens) */}
-                <span aria-hidden="true" className="absolute bottom-4 left-[1.1rem] top-4 hidden w-px bg-line sm:block" />
+                <span aria-hidden="true" className="absolute bottom-4 left-[1.1rem] top-4 hidden w-px bg-line sm:block lg:hidden" />
                 {answers.map((a) => {
                   const lv = levelOf(a.level);
                   return (
-                    <li key={a.n} className="relative sm:pl-14">
+                    <li key={a.n} className="relative sm:pl-14 lg:pl-0">
                       <span
                         aria-hidden="true"
-                        className={`absolute left-0 top-3 hidden h-9 w-9 place-items-center rounded-full border-2 bg-surface text-sm font-semibold tabular-nums sm:grid ${lv.node}`}
+                        className={`absolute left-0 top-3 hidden h-9 w-9 place-items-center rounded-full border-2 bg-surface text-sm font-semibold tabular-nums sm:grid lg:hidden ${lv.node}`}
                       >
                         {a.n}
                       </span>
                       <article className={`${card} border-l-4 p-4 sm:p-5 ${lv.edge}`}>
                         <header className="flex flex-wrap items-center gap-2.5">
-                          <span className="grid h-6 min-w-6 place-items-center rounded-md bg-surface-2 px-1.5 text-xs font-semibold tabular-nums text-muted sm:hidden">
+                          <span className="grid h-6 min-w-6 place-items-center rounded-md bg-surface-2 px-1.5 text-xs font-semibold tabular-nums text-muted sm:hidden lg:grid">
                             {a.n}
                           </span>
                           {a.level && <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${lv.badge}`}>{a.level}</span>}
@@ -156,6 +178,18 @@ export default function SqlProblem({
                           <div className="mt-3.5 min-w-0">
                             <SqlCode code={a.code} label={`answer-${a.n}.sql`} />
                           </div>
+                        )}
+
+                        {/* Short notes under the query: "Key: value" chips from the line after the code block */}
+                        {a.chips.length > 0 && (
+                          <ul className="mt-3 flex flex-wrap gap-2">
+                            {a.chips.map((c, i) => (
+                              <li key={i} className="rounded-lg bg-surface-2 px-2.5 py-1 text-xs leading-snug text-muted">
+                                {c.key && <span className="font-semibold text-ink">{c.key}: </span>}
+                                {c.value}
+                              </li>
+                            ))}
+                          </ul>
                         )}
                       </article>
                     </li>
@@ -212,7 +246,14 @@ export default function SqlProblem({
   );
 
   const tabs = [
-    { id: 'description', label: 'Description', icon: <FileText width={16} height={16} />, content: description },
+    {
+      id: 'description',
+      label: 'Description',
+      icon: <FileText width={16} height={16} />,
+      content: description,
+      // Two-column layout: keep the question on screen while the answers scroll
+      splitClassName: 'lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto lg:pr-1',
+    },
     {
       id: 'answers',
       label: 'Answers & Optimization',
@@ -274,7 +315,7 @@ export default function SqlProblem({
           </div>
         </header>
 
-        <SqlTabs tabs={tabs} initial="description" />
+        <SqlTabs tabs={tabs} initial="description" split />
       </div>
     </div>
   );

@@ -7,7 +7,7 @@ import PromoSection from '@/components/PromoSection';
 import JsonLd from '@/components/JsonLd';
 import SqlCode from './SqlCode';
 import SqlList from './SqlList';
-import { getCategoryCounts, getProblems, getProgressMap, getUserStats, parseFilters } from '@/lib/problems';
+import { getCategoryCounts, getProblems, getProgressMap, getSubcategories, getUserStats, parseFilters } from '@/lib/problems';
 import { CATEGORIES } from '@/lib/categories';
 import { getOrCreateUser } from '@/lib/user';
 import { getIsPro } from '@/lib/subscription';
@@ -37,11 +37,12 @@ export default async function SqlLibrary({ searchParams }) {
   const filters = parseFilters(await searchParams);
   const user = await getOrCreateUser();
   const pro = user ? await getIsPro(user.id) : false;
-  const [result, stats, ads, counts] = await Promise.all([
+  const [result, stats, ads, counts, subcategories] = await Promise.all([
     getProblems({ ...filters, category: CATEGORY, pro, userId: user?.id ?? null }),
     getUserStats(user?.id ?? null, CATEGORY), // solved counts are SQL only; the streak is shared by every category
     getLiveAds(),
     getCategoryCounts(),
+    getSubcategories({ category: CATEGORY }), // topic chips
   ]);
   const statusMap = user ? await getProgressMap(user.id, result.items.map((p) => p.id)) : {};
 
@@ -89,11 +90,11 @@ export default async function SqlLibrary({ searchParams }) {
               Write the query. <span className="text-accent">Then make it fast.</span>
             </h2>
             <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-muted">
-              Interview-style SQL for AI, ML and data roles. Every question lists each approach from brute force to optimized, with indexing and tuning notes.
+              Interview-style SQL for AI, ML and data roles. Pick a topic, then see a basic and an optimized answer next to the question, with short notes for the theory ones.
             </p>
             <ul className="mt-5 flex flex-wrap gap-2 text-xs font-semibold">
               <li className="rounded-full border border-line bg-surface px-3 py-1.5">{counts.sql} {counts.sql === 1 ? 'question' : 'questions'}</li>
-              <li className="rounded-full border border-line bg-surface px-3 py-1.5">Brute force → Optimized</li>
+              <li className="rounded-full border border-line bg-surface px-3 py-1.5">Basic → Optimized</li>
               <li className="rounded-full border border-line bg-surface px-3 py-1.5">Copy-ready queries</li>
             </ul>
             {user && (
@@ -121,6 +122,7 @@ export default async function SqlLibrary({ searchParams }) {
         <Suspense fallback={<div className="h-24" />}>
           <ProblemFilters
             topics={[]}
+            subcategories={subcategories}
             category={CATEGORY}
             signedIn={Boolean(user)}
             solved={user ? stats.solved : null}

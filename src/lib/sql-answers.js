@@ -10,8 +10,19 @@
 //
 //   **Time:** O(n²) | **Engines:** all | Slowest option   <- optional note line, chips are separated by " | "
 //
+// Only the FIRST code fence in a block is shown as the query, so put every statement of one approach in one fence.
+//
+// Text before the first "### " heading is the "quick answer" (short theory bullets). parseIntro returns it and the
+// page shows it above the approaches. Do not start a line with "### " inside it.
+//
 // A heading without " | " is fine too (it just has no level badge). If the file has no "### " headings at all,
-// parseAnswers returns [] and the page falls back to rendering the raw markdown.
+// parseAnswers returns [] and the page falls back to rendering the raw markdown (used for pure theory questions).
+
+export function parseIntro(markdown) {
+  const src = String(markdown ?? '').replace(/\r\n/g, '\n');
+  if (!/^### /m.test(src)) return '';
+  return src.split(/^### /m)[0].trim();
+}
 
 export function parseAnswers(markdown) {
   const src = String(markdown ?? '').replace(/\r\n/g, '\n');
@@ -19,6 +30,7 @@ export function parseAnswers(markdown) {
 
   return src
     .split(/^### /m)
+    .slice(1) // the first piece is the quick answer (or empty), not an approach
     .map((s) => s.trim())
     .filter(Boolean)
     .map((part, i) => {
