@@ -25,6 +25,22 @@ import { SITE_URL } from '@/lib/seo';
 
 export const metadata = { title: 'Dashboard' };
 
+// One of the two big framed panels. Gives each half of the dashboard its own surface, title and spacing.
+const panelClass =
+  'min-w-0 rounded-3xl border border-line bg-surface-2/40 p-3 shadow-sm sm:p-5 lg:p-6';
+
+function PanelHeader({ title, hint }) {
+  return (
+    <div className="mb-4 flex items-center justify-between gap-3 px-1 sm:mb-5">
+      <div className="flex min-w-0 items-center gap-2.5">
+        <span aria-hidden="true" className="h-2.5 w-2.5 shrink-0 rounded-full bg-accent shadow-[0_0_0_4px_var(--accent-soft)]" />
+        <h2 className="truncate text-sm font-semibold uppercase tracking-[0.14em] text-muted">{title}</h2>
+      </div>
+      {hint && <span className="hidden shrink-0 text-xs text-muted sm:block">{hint}</span>}
+    </div>
+  );
+}
+
 export default async function DashboardPage() {
   const user = await getOrCreateUser();
   if (!user) redirect('/login');
@@ -58,7 +74,7 @@ export default async function DashboardPage() {
     : 'rounded-full bg-gradient-to-br from-accent/60 to-accent/10 p-[3px]';
 
   return (
-    <div className="relative mx-auto w-full max-w-[80rem] overflow-x-clip px-4 py-5 sm:px-6 lg:px-8 lg:py-10">
+    <div className="relative mx-auto w-full max-w-[84rem] overflow-x-clip px-4 py-5 sm:px-6 lg:px-8 lg:py-10">
       <div className="relative">
         {/* Public profile links + share, at the very top (or a prompt to claim a username) */}
         {user.username ? (
@@ -115,37 +131,45 @@ export default async function DashboardPage() {
           {pro && <ProBanner periodEnd={ent.periodEnd} className="min-w-0 lg:flex-1" />}
         </header>
 
-        {/* 1. Problems solved + activity (left), streak calendar (right). On phones: solved, activity, calendar. */}
-        <div className="mt-5 grid gap-5 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
-          <div className="min-w-0 space-y-5 lg:space-y-8">
-            <StatsCard stats={stats} signedIn roomy />
-            <ActivityChart activeDays={stats.activeDays} todayKey={todayKey} />
-          </div>
-          <div className="min-w-0">
-            <StreakCalendar activeDays={stats.activeDays} todayKey={todayKey} streak={stats.streak} />
-          </div>
+        {/* TWO DIVIDED SECTIONS: main overview (left) and side panel (right). On phones they stack. */}
+        <div className="mt-5 grid gap-5 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_23rem] lg:items-start lg:gap-6 xl:grid-cols-[minmax(0,1fr)_25rem]">
+          {/* SECTION 1: Progress overview */}
+          <section aria-label="Progress overview" className={panelClass}>
+            <PanelHeader title="Progress overview" hint="Your practice at a glance" />
+
+            <div className="space-y-4 sm:space-y-5">
+              {/* Problems solved + stat tiles */}
+              <StatsCard stats={stats} signedIn roomy />
+
+              {/* Activity line graph */}
+              <ActivityChart activeDays={stats.activeDays} todayKey={todayKey} />
+
+              {/* Milestones: animated badge path */}
+              <MilestoneJourney solved={stats.solved} badges={badgeData.badges} />
+
+              {/* Interview readiness */}
+              <ReadinessCard readiness={insights.readiness} competencies={insights.competencies} />
+            </div>
+          </section>
+
+          {/* SECTION 2: Streak & tools side panel */}
+          <aside aria-label="Streak and tools" className={panelClass}>
+            <PanelHeader title="Streak & tools" />
+
+            <div className="space-y-4 sm:space-y-5">
+              <StreakCalendar activeDays={stats.activeDays} todayKey={todayKey} streak={stats.streak} />
+
+              {/* Pro members see their plan in the "Plan details" popup on the banner above */}
+              {!pro && <PlanCard ent={ent} />}
+
+              <JobPrepCard jobs={jobs.slice(0, 3)} />
+              <SavedCard items={savedList} pro={pro} />
+            </div>
+          </aside>
         </div>
 
-        {/* 2. Milestones: animated badge path */}
-        <div className="mt-5 lg:mt-8">
-          <MilestoneJourney solved={stats.solved} badges={badgeData.badges} />
-        </div>
-
-        {/* 3. Readiness, plan, job prep and saved questions */}
-        <div className="mt-5 grid gap-5 lg:mt-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8 xl:grid-cols-[minmax(0,1fr)_24rem]">
-          <div className="min-w-0">
-            <ReadinessCard readiness={insights.readiness} competencies={insights.competencies} />
-          </div>
-          <div className="min-w-0 space-y-5 lg:space-y-8">
-            {/* Pro members see their plan in the "Plan details" popup on the banner above */}
-            {!pro && <PlanCard ent={ent} />}
-            <JobPrepCard jobs={jobs.slice(0, 3)} />
-            <SavedCard items={savedList} pro={pro} />
-          </div>
-        </div>
-
-        {/* 4. Share cards: a banner at the very bottom that opens a popup with every card */}
-        <div className="mt-8">
+        {/* Share cards: a banner at the very bottom that opens a popup with every card */}
+        <div className="mt-6 lg:mt-8">
           <ShareCards
             name={publicName(user)}
             username={user.username ?? null}
