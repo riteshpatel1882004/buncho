@@ -249,6 +249,7 @@ export default function SqlProblem({
     {
       id: 'description',
       label: 'Description',
+      splitLabel: 'Question',
       icon: <FileText width={16} height={16} />,
       content: description,
       // Two-column layout: keep the question on screen while the answers scroll
@@ -257,6 +258,7 @@ export default function SqlProblem({
     {
       id: 'answers',
       label: 'Answers & Optimization',
+      splitLabel: 'Answers',
       icon: locked ? <Lock width={15} height={15} /> : <Code width={16} height={16} />,
       badge: answers.length > 0 ? answers.length : null,
       content: answersPane,
