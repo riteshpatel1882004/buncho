@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 // Small inline icons so this file has no dependency on the shared icon set
 const ICONS = {
@@ -65,15 +65,16 @@ function Icon({ name, size = 18 }) {
  * Two-section dashboard.
  *
  * Desktop: left = menu with every section, right = content of the clicked section.
- * Phone:   menu screen (summary + tile grid), tapping a tile opens that section full screen with a back button.
+ * Phone:   menu (summary + tile grid). Tapping a tile opens that section as a bottom-sheet popup.
  *
  * items: [{ id, label, icon, hint?, summary?, content }]  (content is server-rendered JSX from page.js)
- * top: header content (shown on desktop always, on phones only on the menu screen)
- * mobileTop: phone-only summary card shown on the menu screen
+ * top: header content (greeting, profile links)
+ * mobileTop: phone-only summary card shown above the tiles
  */
 export default function DashboardTabs({ items, initial, top, mobileTop }) {
   const [active, setActive] = useState(initial ?? items[0]?.id);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [popupOpen, setPopupOpen] = useState(false); // phone popup only, ignored on desktop
+  const pushedRef = useRef(false); // true when opening the popup added a history entry
 
   // Follow the URL hash (/dashboard#saved) on load and on the browser/Android back button
   useEffect(() => {
@@ -81,9 +82,9 @@ export default function DashboardTabs({ items, initial, top, mobileTop }) {
       const id = window.location.hash.replace('#', '');
       if (id && items.some((i) => i.id === id)) {
         setActive(id);
-        setMobileOpen(true);
+        setPopupOpen(true);
       } else {
-        setMobileOpen(false);
+        setPopupOpen(false);
       }
     };
     sync();
@@ -91,48 +92,81 @@ export default function DashboardTabs({ items, initial, top, mobileTop }) {
     return () => window.removeEventListener('popstate', sync);
   }, [items]);
 
+  // Lock page scroll behind the popup (phones only) and close it with the Escape key
+  useEffect(() => {
+    if (!popupOpen) return undefined;
+    const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
+    const previous = document.body.style.overflow;
+    if (!isDesktop) document.body.style.overflow = 'hidden';
+    const onKey = (e) => {
+      if (e.key === 'Escape') close();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener('keydown', onKey);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [popupOpen]);
+
   function select(id) {
     const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
     setActive(id);
-    setMobileOpen(true);
+    setPopupOpen(true);
     try {
-      // Phones get a history entry so the system back button returns to the menu
-      window.history[isDesktop ? 'replaceState' : 'pushState'](null, '', `#${id}`);
+      if (isDesktop) {
+        window.history.replaceState(null, '', `#${id}`);
+      } else {
+        // Phones get a history entry so the system back button closes the popup
+        window.history.pushState(null, '', `#${id}`);
+        pushedRef.current = true;
+      }
     } catch {
       // Hash update is optional
     }
-    if (!isDesktop) window.scrollTo({ top: 0 });
   }
 
-  function back() {
-    setMobileOpen(false);
+  function close() {
+    if (pushedRef.current) {
+      // popstate listener above closes the popup
+      pushedRef.current = false;
+      window.history.back();
+      return;
+    }
+    setPopupOpen(false);
     try {
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
     } catch {
       // Hash update is optional
     }
-    window.scrollTo({ top: 0 });
   }
 
   const activeItem = items.find((i) => i.id === active) ?? items[0];
 
   return (
     <>
-      {/* Header block: always on desktop, only on the phone menu screen */}
-      <div className={mobileOpen ? 'hidden lg:block' : ''}>{top}</div>
+      <style>{`
+        @keyframes dash-sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        @keyframes dash-fade-in { from { opacity: 0; } to { opacity: 1; } }
+        .dash-sheet { animation: dash-sheet-up 260ms cubic-bezier(0.22, 1, 0.36, 1); }
+        .dash-backdrop { animation: dash-fade-in 200ms ease-out; }
+        @media (min-width: 1024px) { .dash-sheet, .dash-backdrop { animation: none; } }
+        @media (prefers-reduced-motion: reduce) { .dash-sheet, .dash-backdrop { animation: none; } }
+      `}</style>
 
-      {/* Phone-only summary card, only on the menu screen */}
-      <div className={mobileOpen ? 'hidden' : 'mt-5 lg:hidden'}>{mobileTop}</div>
+      {/* Header block: greeting, profile links, Pro banner */}
+      <div>{top}</div>
+
+      {/* Phone-only summary card */}
+      <div className="mt-5 lg:hidden">{mobileTop}</div>
 
       <div className="mt-5 grid gap-4 lg:mt-8 lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start lg:gap-6 xl:grid-cols-[18.5rem_minmax(0,1fr)]">
         {/* LEFT SECTION: menu */}
         <nav
           aria-label="Dashboard sections"
-          className={`min-w-0 lg:sticky lg:top-24 lg:rounded-3xl lg:border lg:border-line lg:bg-surface lg:p-3 lg:shadow-sm ${
-            mobileOpen ? 'hidden lg:block' : 'block'
-          }`}
+          className="min-w-0 lg:sticky lg:top-24 lg:rounded-3xl lg:border lg:border-line lg:bg-surface lg:p-3 lg:shadow-sm"
         >
-          {/* Phone: tile grid */}
+          {/* Phone: tile grid, each tile opens a popup */}
           <p className="mb-3 px-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted lg:hidden">Explore</p>
           <div className="grid grid-cols-2 gap-3 lg:hidden">
             {items.map((item) => (
@@ -141,6 +175,7 @@ export default function DashboardTabs({ items, initial, top, mobileTop }) {
                 type="button"
                 onClick={() => select(item.id)}
                 aria-label={item.label}
+                aria-haspopup="dialog"
                 className="group flex min-h-[7.25rem] flex-col justify-between rounded-2xl border border-line bg-surface p-3.5 text-left shadow-sm transition active:scale-[0.97] [&:last-child:nth-child(odd)]:col-span-2"
               >
                 <span className="flex items-start justify-between gap-2">
@@ -204,39 +239,58 @@ export default function DashboardTabs({ items, initial, top, mobileTop }) {
           </div>
         </nav>
 
-        {/* RIGHT SECTION: content of the selected item */}
-        <div className={`min-w-0 ${mobileOpen ? 'block' : 'hidden lg:block'}`}>
-          {/* Phone: back bar */}
-          <div className="mb-4 flex items-center gap-3 lg:hidden">
-            <button
-              type="button"
-              onClick={back}
-              aria-label="Back to dashboard"
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-line bg-surface shadow-sm transition active:scale-95"
-            >
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M15 5l-7 7 7 7" />
-              </svg>
-            </button>
-            <div className="min-w-0">
-              <p className="text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-muted">Dashboard</p>
-              <h2 className="truncate text-lg font-semibold leading-tight tracking-tight">{activeItem?.label}</h2>
+        {/* RIGHT SECTION: content of the selected item.
+            Desktop: a normal column. Phone: the same element becomes a full-screen overlay with a bottom sheet. */}
+        <div className={popupOpen ? 'fixed inset-0 z-50 flex items-end lg:static lg:z-auto lg:block' : 'hidden lg:block'}>
+          {/* Phone: dimmed backdrop, tap to close */}
+          <button
+            type="button"
+            onClick={close}
+            aria-label="Close popup"
+            tabIndex={-1}
+            className="dash-backdrop absolute inset-0 cursor-default bg-black/55 backdrop-blur-[2px] lg:hidden"
+          />
+
+          <div className="dash-sheet relative flex max-h-[88vh] w-full min-w-0 flex-col overflow-hidden rounded-t-3xl border-t border-line bg-bg shadow-2xl lg:max-h-none lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:shadow-none">
+            {/* Phone: grab handle + title + close */}
+            <div className="shrink-0 border-b border-line px-4 pb-3 pt-2.5 lg:hidden">
+              <span aria-hidden="true" className="mx-auto mb-2.5 block h-1.5 w-10 rounded-full bg-line" />
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${TONES[activeItem?.icon] ?? 'bg-accent-soft text-accent'}`}>
+                    <Icon name={activeItem?.icon} />
+                  </span>
+                  <h2 className="truncate text-base font-semibold tracking-tight">{activeItem?.label}</h2>
+                </div>
+                <button
+                  type="button"
+                  onClick={close}
+                  aria-label="Close"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-surface-2 text-ink transition active:scale-95"
+                >
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M6 6l12 12M18 6L6 18" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Panels stay mounted (keeps chart range, calendar month etc.); only the active one is visible */}
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-8 pt-4 lg:overflow-visible lg:p-0">
+              {items.map((item) => (
+                <div
+                  key={item.id}
+                  id={`panel-${item.id}`}
+                  role="tabpanel"
+                  aria-labelledby={`tab-${item.id}`}
+                  hidden={item.id !== active}
+                  className="min-w-0"
+                >
+                  {item.content}
+                </div>
+              ))}
             </div>
           </div>
-
-          {/* All panels stay mounted (keeps chart range, calendar month etc.); only the active one is visible */}
-          {items.map((item) => (
-            <div
-              key={item.id}
-              id={`panel-${item.id}`}
-              role="tabpanel"
-              aria-labelledby={`tab-${item.id}`}
-              hidden={item.id !== active}
-              className="min-w-0"
-            >
-              {item.content}
-            </div>
-          ))}
         </div>
       </div>
     </>
