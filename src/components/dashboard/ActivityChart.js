@@ -1,6 +1,6 @@
 'use client';
 
-import { useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
 const DAY = 86400000;
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -85,7 +85,28 @@ const DIM_COMPACT = { W: 960, H: 210, PAD: { l: 34, r: 14, t: 14, b: 26 } };
  * dayTopics (optional): { 'YYYY-MM-DD': ['Arrays', 'Arrays', 'Dynamic Programming'] }, one topic name per solved problem.
  */
 export default function ActivityChart({ activeDays, dayTopics = NO_TOPICS, todayKey, title = 'Activity', color = 'var(--accent)', compact = false }) {
-  const { W, H, PAD } = compact ? DIM_COMPACT : DIM_FULL;
+  const base = compact ? DIM_COMPACT : DIM_FULL;
+  const { W, PAD } = base;
+
+  // Compact: when the card is stretched taller than the chart's natural height (desktop dashboard,
+  // both columns equal height), grow the chart to fill it. The viewBox follows the real box shape,
+  // so nothing gets squashed.
+  const boxRef = useRef(null);
+  const [boxH, setBoxH] = useState(0);
+  useEffect(() => {
+    if (!compact || !boxRef.current) return undefined;
+    const el = boxRef.current;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      setBoxH(r.width > 0 ? Math.round((W * r.height) / r.width) : 0);
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [compact, W]);
+  const H = compact ? Math.max(base.H, Math.min(boxH, 700)) : base.H;
+
   const gradId = `area-${useId().replace(/:/g, '')}`;
   const [rangeId, setRangeId] = useState('7d');
   const [hover, setHover] = useState(null);
@@ -128,7 +149,7 @@ export default function ActivityChart({ activeDays, dayTopics = NO_TOPICS, today
   const extraTopics = active ? Math.max(0, active.topics.length - MAX_TOPICS) : 0;
 
   return (
-    <section aria-label={title} className={compact ? 'card p-4' : 'card p-4 sm:p-6'}>
+    <section aria-label={title} className={compact ? 'card flex flex-col p-4' : 'card p-4 sm:p-6'}>
       <div className={`flex flex-col ${compact ? 'gap-2 sm:flex-row sm:items-center sm:justify-between' : 'gap-4 sm:flex-row sm:items-start sm:justify-between'}`}>
         <div className="min-w-0">
           <div className={compact ? 'flex flex-wrap items-baseline gap-x-2' : ''}>
@@ -166,10 +187,15 @@ export default function ActivityChart({ activeDays, dayTopics = NO_TOPICS, today
         </div>
       </div>
 
-      <div className={`relative ${compact ? 'mt-2' : 'mt-4 sm:mt-5'}`} onMouseLeave={() => setHover(null)}>
+      <div
+        ref={boxRef}
+        className={`relative ${compact ? 'mt-2 flex-1' : 'mt-4 sm:mt-5'}`}
+        style={compact ? { aspectRatio: `${DIM_COMPACT.W} / ${DIM_COMPACT.H}` } : undefined}
+        onMouseLeave={() => setHover(null)}
+      >
         <svg
           viewBox={`0 0 ${W} ${H}`}
-          className="h-auto w-full"
+          className={compact ? 'absolute inset-0 h-full w-full' : 'h-auto w-full'}
           role="img"
           aria-label={`Line graph: ${total} problems solved in the ${range.long}`}
         >
