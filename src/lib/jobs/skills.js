@@ -5,7 +5,7 @@
 // Extraction is deterministic on purpose: the same JD always gives the same skills, and nothing is invented.
 
 export const SKILLS = [
-  { key: 'python', label: 'Python', aliases: ['python', 'pandas', 'numpy'], terms: ['python', 'pandas', 'numpy', 'generator', 'decorator'], topics: ['python-for-ai-ml', 'numpy'] },
+  { key: 'python', label: 'Python', aliases: ['python', 'pandas', 'numpy'], terms: ['python', 'pandas', 'numpy', 'generator', 'decorator'], topics: ['python-for-ai-ml', 'numpy', 'pandas'] },
   { key: 'ml', label: 'Machine learning', aliases: ['machine learning', 'ml', 'supervised learning', 'unsupervised learning', 'scikit-learn', 'sklearn', 'xgboost', 'predictive model', 'feature engineering', 'model training'], terms: ['bias', 'variance', 'overfitting', 'regularization', 'regularisation', 'classification', 'metric', 'precision', 'recall', 'feature', 'cross-validation'], topics: ['ml-fundamentals'] },
   { key: 'dl', label: 'Deep learning', aliases: ['deep learning', 'neural network', 'neural networks', 'pytorch', 'tensorflow', 'keras', 'cnn', 'rnn', 'lstm', 'backpropagation'], terms: ['gradient', 'neural', 'backprop', 'activation', 'batch normalization', 'optimizer', 'optimiser', 'convolution'], topics: ['deep-learning'] },
   { key: 'stats', label: 'Statistics and experimentation', aliases: ['statistics', 'statistical', 'probability', 'hypothesis testing', 'a/b testing', 'ab testing', 'experimentation', 'bayesian'], terms: ['p-value', 'hypothesis', 'a/b', 'confidence interval', 'probability', 'bayes', 'distribution', 'significance'], topics: ['statistics-and-mathematics'] },

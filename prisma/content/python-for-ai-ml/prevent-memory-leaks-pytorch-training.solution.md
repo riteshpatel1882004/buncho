@@ -1,0 +1,7 @@
+- Do not keep computation graphs alive unnecessarily.
+- Store **values**, not tensors with gradients: `loss_history.append(loss.item())`, not `loss_history.append(loss)` (the latter retains the whole graph).
+- Use `detach()` when you only need values.
+- Call `zero_grad()` correctly each step.
+- Use sensible batch sizes.
+- Use `inference_mode()` for inference.
+- Monitor GPU memory (`torch.cuda.memory_allocated()`).

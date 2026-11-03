@@ -107,6 +107,7 @@ export const PRO_PERIOD_MONTHS = 1;
 export const TOPIC_ORDER = [
   'python-for-ai-ml',
   'numpy',
+  'pandas',
   'ml-fundamentals',
   'ml-algorithms',
   'ml-system-design',

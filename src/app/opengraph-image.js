@@ -19,10 +19,10 @@ async function questionChip() {
 export default async function Image() {
   const count = await questionChip();
   return renderOg({
-    eyebrow: 'AI interview practice',
-    title: 'Crack your AI engineering interview',
+    eyebrow: 'AI/ML interview practice plat',
+    title: 'Crack your AI/ML engineering interview',
     highlight: ['AI', 'engineering'],
-    subtitle: 'Answer out loud or in writing, get instant AI feedback.',
+    subtitle: 'Answer out loud or in writing, get instant feedback.',
     chips: [count ?? 'AI, ML and GenAI', 'Voice + text', 'Free to start'],
     preview: true,
     cta: 'Start practicing free',
