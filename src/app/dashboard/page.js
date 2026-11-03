@@ -71,7 +71,7 @@ export default async function DashboardPage() {
       hint: 'Solved, streak, activity',
       summary: `${stats.solved}/${stats.total}`,
       content: (
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4 lg:h-full">
           {/* Row 1: Problems solved + Streak calendar, equal column widths (stacked on phones) */}
           <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2">
             <div className="min-w-0 [&>*]:h-full">
@@ -82,8 +82,8 @@ export default async function DashboardPage() {
             </div>
           </div>
 
-          {/* Row 2: Activity, full width */}
-          <div className="min-w-0">
+          {/* Row 2: Activity, full width. Grows to use any spare height so both columns end level on desktop */}
+          <div className="min-w-0 flex-1 [&>*]:h-full">
             <ActivityChart activeDays={stats.activeDays} dayTopics={dayTopics} todayKey={todayKey} compact />
           </div>
         </div>

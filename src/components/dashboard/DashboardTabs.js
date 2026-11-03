@@ -65,6 +65,8 @@ function Icon({ name, size = 18 }) {
  * Two-section dashboard.
  *
  * Desktop: left = (optional header cards) + menu with every section, right = content of the clicked section.
+ *          The left column stays fixed (sticky) while the page scrolls; only the right column moves.
+ *          Both columns are stretched to the same height.
  * Phone:   menu (summary + tile grid). Tapping a tile opens that section as a bottom-sheet popup.
  *
  * items: [{ id, label, icon, hint?, summary?, content }]  (content is server-rendered JSX from page.js)
@@ -162,14 +164,16 @@ export default function DashboardTabs({ items, initial, top, mobileTop, sidebarT
       {/* Phone-only summary card */}
       <div className="mt-5 lg:hidden">{mobileTop}</div>
 
-      <div className={`mt-5 grid gap-4 ${sidebarTop ? 'lg:mt-0' : 'lg:mt-8'} lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start lg:gap-6 xl:grid-cols-[18.5rem_minmax(0,1fr)]`}>
-        {/* LEFT COLUMN: optional desktop cards on top, then the menu */}
-        <div className="min-w-0 lg:flex lg:flex-col lg:gap-4 lg:self-start">
+      {/* items-stretch: the right column is as tall as the row (the taller of the two columns) */}
+      <div className={`mt-5 grid gap-4 ${sidebarTop ? 'lg:mt-0' : 'lg:mt-8'} lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-stretch lg:gap-6 xl:grid-cols-[18.5rem_minmax(0,1fr)]`}>
+        {/* LEFT COLUMN: sticky on desktop, so it stays in place while the page scrolls.
+            If the screen is shorter than the column, it scrolls inside itself (scrollbar hidden). */}
+        <div className="min-w-0 lg:sticky lg:top-24 lg:-m-1 lg:flex lg:max-h-[calc(100vh-7rem)] lg:flex-col lg:gap-4 lg:self-start lg:overflow-y-auto lg:p-1 lg:[scrollbar-width:none] lg:[&::-webkit-scrollbar]:hidden">
           {sidebarTop && <div className="hidden space-y-3 lg:block">{sidebarTop}</div>}
 
           <nav
             aria-label="Dashboard sections"
-            className={`min-w-0 lg:rounded-3xl lg:border lg:border-line lg:bg-surface lg:p-3 lg:shadow-sm ${sidebarTop ? '' : 'lg:sticky lg:top-24'}`}
+            className="min-w-0 lg:rounded-3xl lg:border lg:border-line lg:bg-surface lg:p-3 lg:shadow-sm"
           >
             {/* Phone: tile grid, each tile opens a popup */}
             <p className="mb-3 px-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted lg:hidden">Explore</p>
@@ -246,8 +250,9 @@ export default function DashboardTabs({ items, initial, top, mobileTop, sidebarT
         </div>
 
         {/* RIGHT SECTION: content of the selected item.
-            Desktop: a normal column. Phone: the same element becomes a full-screen overlay with a bottom sheet. */}
-        <div className={popupOpen ? 'fixed inset-0 z-50 flex items-end lg:static lg:z-auto lg:block' : 'hidden lg:block'}>
+            Desktop: a normal column that is as tall as the row (and scrolls with the page if its content is longer).
+            Phone: the same element becomes a full-screen overlay with a bottom sheet. */}
+        <div className={popupOpen ? 'fixed inset-0 z-50 flex items-end lg:static lg:z-auto lg:block lg:h-full' : 'hidden lg:block lg:h-full'}>
           {/* Phone: dimmed backdrop, tap to close */}
           <button
             type="button"
@@ -257,7 +262,7 @@ export default function DashboardTabs({ items, initial, top, mobileTop, sidebarT
             className="dash-backdrop absolute inset-0 cursor-default bg-black/55 backdrop-blur-[2px] lg:hidden"
           />
 
-          <div className="dash-sheet relative flex max-h-[88vh] w-full min-w-0 flex-col overflow-hidden rounded-t-3xl border-t border-line bg-bg shadow-2xl lg:max-h-none lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:shadow-none">
+          <div className="dash-sheet relative flex max-h-[88vh] w-full min-w-0 flex-col overflow-hidden rounded-t-3xl border-t border-line bg-bg shadow-2xl lg:h-full lg:max-h-none lg:overflow-visible lg:rounded-none lg:border-0 lg:bg-transparent lg:shadow-none">
             {/* Phone: grab handle + title + close */}
             <div className="shrink-0 border-b border-line px-4 pb-3 pt-2.5 lg:hidden">
               <span aria-hidden="true" className="mx-auto mb-2.5 block h-1.5 w-10 rounded-full bg-line" />
@@ -282,7 +287,7 @@ export default function DashboardTabs({ items, initial, top, mobileTop, sidebarT
             </div>
 
             {/* Panels stay mounted (keeps chart range, calendar month etc.); only the active one is visible */}
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-8 pt-4 lg:overflow-visible lg:p-0">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-8 pt-4 lg:h-full lg:overflow-visible lg:p-0">
               {items.map((item) => (
                 <div
                   key={item.id}
@@ -290,7 +295,7 @@ export default function DashboardTabs({ items, initial, top, mobileTop, sidebarT
                   role="tabpanel"
                   aria-labelledby={`tab-${item.id}`}
                   hidden={item.id !== active}
-                  className={`min-w-0 ${item.mobileOnly ? 'lg:hidden' : ''}`}
+                  className={`min-w-0 lg:h-full ${item.mobileOnly ? 'lg:hidden' : ''}`}
                 >
                   {item.content}
                 </div>
