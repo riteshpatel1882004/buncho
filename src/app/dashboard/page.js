@@ -119,7 +119,7 @@ export default async function DashboardPage() {
       hint: 'Skill breakdown',
       content: <ReadinessCard readiness={insights.readiness} competencies={insights.competencies} />,
     },
-    // Pro members see their plan in the "Plan details" popup on the banner above
+    // Pro members see their plan in the "Plan details" popup on the banner
     ...(!pro
       ? [
           {
@@ -150,7 +150,49 @@ export default async function DashboardPage() {
     },
   ];
 
-  // Everything above the menu: profile links / claim banner + greeting header
+  const avatar = (
+    <span className={`shrink-0 ${avatarRing}`}>
+      {user.imageUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={user.imageUrl} alt="" width={56} height={56} className="h-12 w-12 rounded-full object-cover sm:h-14 sm:w-14" />
+      ) : (
+        <span className="grid h-12 w-12 place-items-center rounded-full bg-accent-soft text-xl font-semibold text-accent sm:h-14 sm:w-14">
+          {(user.name ?? '?').charAt(0).toUpperCase()}
+        </span>
+      )}
+    </span>
+  );
+
+  const claimBanner = (margin) => (
+    <Link
+      href="/settings/profile"
+      className={`group ${margin} flex items-center justify-between gap-3 rounded-2xl border border-accent/40 bg-accent-soft px-4 py-3.5 transition hover:border-accent sm:px-5 sm:py-4`}
+    >
+      <span className="min-w-0">
+        <span className="block text-sm font-semibold sm:text-base">Claim your username</span>
+        <span className="mt-0.5 block text-xs text-muted sm:text-sm">Get a shareable profile at buncho.live/user/your-name.</span>
+      </span>
+      <span className="shrink-0 rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-accent-ink group-hover:opacity-90">Claim</span>
+    </Link>
+  );
+
+  // Desktop: public profile, greeting and Pro banner stacked in the left column, above the menu
+  const sidebarTop = (
+    <>
+      {user.username ? (
+        <ProfileBar stacked username={user.username} url={`${SITE_URL}/user/${user.username}`} name={user.profileName || firstName || 'my'} />
+      ) : (
+        claimBanner('')
+      )}
+      <div className="flex min-w-0 items-center gap-3.5 px-1 py-1">
+        {avatar}
+        <Greeting name={firstName} pro={pro} stacked />
+      </div>
+      {pro && <ProBanner stacked periodEnd={ent.periodEnd} />}
+    </>
+  );
+
+  // Phones: the same header on top of the page (desktop hides this and uses the left column above)
   const top = (
     <>
       {/* Public profile bar at the very top (or a prompt to claim a username) */}
@@ -161,35 +203,17 @@ export default async function DashboardPage() {
           name={user.profileName || firstName || 'my'}
         />
       ) : (
-        <Link
-          href="/settings/profile"
-          className="group mb-5 flex items-center justify-between gap-3 rounded-2xl border border-accent/40 bg-accent-soft px-4 py-3.5 transition hover:border-accent sm:px-5 sm:py-4"
-        >
-          <span className="min-w-0">
-            <span className="block text-sm font-semibold sm:text-base">Claim your username</span>
-            <span className="mt-0.5 block text-xs text-muted sm:text-sm">Get a shareable profile at buncho.live/user/your-name.</span>
-          </span>
-          <span className="shrink-0 rounded-full bg-accent px-4 py-1.5 text-sm font-semibold text-accent-ink group-hover:opacity-90">Claim</span>
-        </Link>
+        claimBanner('mb-5')
       )}
 
       {/* Header: greeting + Pro banner in ONE row (stacks on phones) */}
       <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:gap-6">
         <div className="flex min-w-0 shrink-0 items-center gap-3.5 sm:gap-4">
-          <span className={`shrink-0 ${avatarRing}`}>
-            {user.imageUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={user.imageUrl} alt="" width={56} height={56} className="h-12 w-12 rounded-full object-cover sm:h-14 sm:w-14" />
-            ) : (
-              <span className="grid h-12 w-12 place-items-center rounded-full bg-accent-soft text-xl font-semibold text-accent sm:h-14 sm:w-14">
-                {(user.name ?? '?').charAt(0).toUpperCase()}
-              </span>
-            )}
-          </span>
+          {avatar}
           <Greeting name={firstName} pro={pro} />
         </div>
 
-        {/* Phones: quick actions right under the greeting (desktop has the profile bar above) */}
+        {/* Phones: quick actions right under the greeting */}
         {user.username && (
           <ProfileTiles
             username={user.username}
@@ -210,6 +234,7 @@ export default async function DashboardPage() {
           items={items}
           initial="progress"
           top={top}
+          sidebarTop={sidebarTop}
           mobileTop={
             <MobileHero
               solved={stats.solved}

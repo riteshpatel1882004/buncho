@@ -14,8 +14,9 @@ function partOfDay(hour) {
 const indiaHour = () =>
   Number(new Intl.DateTimeFormat('en-GB', { hour: '2-digit', hourCycle: 'h23', timeZone: 'Asia/Kolkata' }).format(new Date()));
 
-/** Phone: small muted "Good morning" on line 1, the name in large type on line 2. Desktop: "Good morning, Name" on one line. */
-export default function Greeting({ name }) {
+/** Phone: small muted "Good morning" on line 1, the name in large type on line 2. Desktop: "Good morning, Name" on one line.
+ *  stacked: always the two-line version (used in the narrow left column). */
+export default function Greeting({ name, stacked = false }) {
   const [greeting, setGreeting] = useState(() => partOfDay(indiaHour()));
 
   useEffect(() => {
@@ -24,6 +25,18 @@ export default function Greeting({ name }) {
     const timer = setInterval(update, 60000);
     return () => clearInterval(timer);
   }, []);
+
+  // Narrow left column: small "Good morning" above, the name in large type below
+  if (stacked) {
+    return (
+      <h1 className="flex min-w-0 flex-col text-2xl font-semibold leading-tight tracking-tight">
+        <span suppressHydrationWarning className="text-sm font-medium tracking-normal text-muted">
+          {greeting}
+        </span>
+        {name && <span className="min-w-0 truncate text-[1.65rem]">{name}</span>}
+      </h1>
+    );
+  }
 
   return (
     <h1 className="flex min-w-0 flex-col text-2xl font-semibold leading-tight tracking-tight sm:flex-row sm:flex-nowrap sm:items-center sm:gap-x-2 sm:text-3xl">

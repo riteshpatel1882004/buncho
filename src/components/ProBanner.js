@@ -12,11 +12,59 @@ const SURFACE =
 /**
  * Compact premium strip for active Pro users. Sits next to the greeting on desktop.
  * Phones: title + PRO badge only; tapping opens the plan details popup (the perk list lives there).
+ * stacked: narrow vertical card for the left column.
  */
-export default function ProBanner({ periodEnd, className = '' }) {
+export default function ProBanner({ periodEnd, className = '', stacked = false }) {
   const end = new Date(periodEnd);
   const daysLeft = Math.max(0, Math.ceil((end.getTime() - Date.now()) / 86400000));
   const soon = daysLeft <= 5;
+
+  // Narrow left column: icon + title on top, the two buttons side by side underneath
+  if (stacked) {
+    return (
+      <div className={className}>
+        <section aria-label="Buncho Pro" className={`relative overflow-hidden rounded-2xl p-4 ${SURFACE}`}>
+          <div aria-hidden="true" className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-amber-400/25 blur-3xl" />
+          <div className="relative">
+            <div className="flex items-center gap-3">
+              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl bg-gradient-to-br from-amber-300 via-amber-400 to-amber-600 text-amber-950 shadow-md shadow-amber-500/30">
+                <Crown width={20} height={20} />
+              </span>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-base font-semibold tracking-tight">You&rsquo;re on Buncho Pro</h2>
+                  <ProBadge />
+                </div>
+                <p className="mt-0.5 text-sm text-muted">
+                  Active until <span className="font-semibold text-ink">{dateFmt(end)}</span> ·{' '}
+                  <span className={soon ? 'font-semibold text-medium' : ''}>
+                    {daysLeft} day{daysLeft === 1 ? '' : 's'} left
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <Popup
+                title="Your plan"
+                subtitle="Buncho Pro"
+                buttonLabel="Plan details"
+                buttonClassName="inline-flex w-full items-center justify-center whitespace-nowrap rounded-full border border-amber-500/50 bg-white/60 px-3 py-2 text-sm font-semibold transition hover:bg-white dark:bg-black/20 dark:hover:bg-black/30"
+              >
+                <PlanDetails periodEnd={periodEnd} />
+              </Popup>
+              <Link
+                href="/pricing"
+                className="inline-flex w-full items-center justify-center whitespace-nowrap rounded-full bg-gradient-to-br from-amber-300 via-amber-400 to-amber-600 px-3 py-2 text-sm font-bold text-amber-950 shadow-md shadow-amber-500/30 transition hover:-translate-y-0.5 hover:opacity-95"
+              >
+                {soon ? 'Renew now' : 'Extend Pro'}
+              </Link>
+            </div>
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className={className}>

@@ -22,8 +22,9 @@ function Svg({ children, size = 16 }) {
  * Desktop-only profile strip at the top of the dashboard.
  * Left: where the public profile lives. Right: copy / share, then edit and view.
  * Phones use <ProfileTiles /> instead.
+ * stacked: narrow vertical card (url on top, 2x2 buttons below) for the left column.
  */
-export default function ProfileBar({ username, url, name = 'my' }) {
+export default function ProfileBar({ username, url, name = 'my', stacked = false }) {
   const [copied, setCopied] = useState(false);
   const [failed, setFailed] = useState(false);
   const [canNative, setCanNative] = useState(false);
@@ -79,7 +80,13 @@ export default function ProfileBar({ username, url, name = 'my' }) {
   const item = 'flex w-full items-center rounded-lg px-3 py-2 text-left text-sm font-medium text-ink transition hover:bg-surface-2';
 
   return (
-    <div className="mb-5 hidden items-center justify-between gap-4 rounded-2xl border border-line bg-surface px-3 py-2.5 shadow-sm lg:flex">
+    <div
+      className={
+        stacked
+          ? 'flex flex-col gap-3 rounded-2xl border border-line bg-surface p-3 shadow-sm'
+          : 'mb-5 hidden items-center justify-between gap-4 rounded-2xl border border-line bg-surface px-3 py-2.5 shadow-sm lg:flex'
+      }
+    >
       {/* Where the profile lives */}
       <div className="flex min-w-0 items-center gap-3">
         <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent">
@@ -95,14 +102,24 @@ export default function ProfileBar({ username, url, name = 'my' }) {
       </div>
 
       {/* Actions */}
-      <div className="flex shrink-0 items-center gap-1.5">
-        <button type="button" onClick={onCopy} className={`${ghost} min-w-[7.5rem] ${copied ? '!bg-accent-soft !text-accent' : ''}`}>
+      <div className={stacked ? 'grid grid-cols-2 gap-1.5' : 'flex shrink-0 items-center gap-1.5'}>
+        <button
+          type="button"
+          onClick={onCopy}
+          className={`${stacked ? `${outline} w-full !gap-1.5 !px-2` : `${ghost} min-w-[7.5rem]`} ${copied ? '!bg-accent-soft !text-accent' : ''}`}
+        >
           <Svg>{copied ? <path d="M20 6 9 17l-5-5" /> : (<><rect x="9" y="9" width="12" height="12" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></>)}</Svg>
           {copied ? 'Copied' : failed ? 'Copy failed' : 'Copy link'}
         </button>
 
         <div className="relative" ref={menuRef}>
-          <button type="button" onClick={onShare} aria-haspopup={canNative ? undefined : 'menu'} aria-expanded={canNative ? undefined : menu} className={ghost}>
+          <button
+            type="button"
+            onClick={onShare}
+            aria-haspopup={canNative ? undefined : 'menu'}
+            aria-expanded={canNative ? undefined : menu}
+            className={stacked ? `${outline} w-full !gap-1.5 !px-2` : ghost}
+          >
             <Svg>
               <path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" />
               <path d="M16 6l-4-4-4 4M12 2v14" />
@@ -118,16 +135,16 @@ export default function ProfileBar({ username, url, name = 'my' }) {
           )}
         </div>
 
-        <span aria-hidden="true" className="mx-1.5 h-6 w-px bg-line" />
+        {!stacked && <span aria-hidden="true" className="mx-1.5 h-6 w-px bg-line" />}
 
-        <Link href="/settings/profile" className={outline}>
+        <Link href="/settings/profile" className={stacked ? `${outline} w-full !gap-1.5 !px-2` : outline}>
           <Svg>
             <path d="M12 20h9" />
             <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z" />
           </Svg>
           Edit profile
         </Link>
-        <Link href={`/user/${username}`} className={primary}>
+        <Link href={`/user/${username}`} className={stacked ? `${primary} w-full !gap-1.5 !px-2` : primary}>
           View profile
           <Svg size={14}>
             <path d="M7 17 17 7" />
