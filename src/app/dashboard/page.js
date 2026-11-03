@@ -1,4 +1,3 @@
-// src/app/dashboard/page.js
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
@@ -72,20 +71,20 @@ export default async function DashboardPage() {
       hint: 'Solved, streak, activity',
       summary: `${stats.solved}/${stats.total}`,
       content: (
-        <div className="space-y-5">
+        <div className="space-y-4">
           {/* Row 1: Problems solved + Streak calendar, equal column widths (stacked on phones) */}
-          <div className="grid grid-cols-1 items-stretch gap-5 lg:grid-cols-2">
+          <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2">
             <div className="min-w-0 [&>*]:h-full">
-              <StatsCard stats={stats} signedIn roomy />
+              <StatsCard stats={stats} signedIn compact />
             </div>
             <div className="min-w-0 [&>*]:h-full">
-              <StreakCalendar activeDays={stats.activeDays} todayKey={todayKey} streak={stats.streak} />
+              <StreakCalendar activeDays={stats.activeDays} todayKey={todayKey} streak={stats.streak} compact />
             </div>
           </div>
 
           {/* Row 2: Activity, full width */}
           <div className="min-w-0">
-            <ActivityChart activeDays={stats.activeDays} dayTopics={dayTopics} todayKey={todayKey} />
+            <ActivityChart activeDays={stats.activeDays} dayTopics={dayTopics} todayKey={todayKey} compact />
           </div>
         </div>
       ),

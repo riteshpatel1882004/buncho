@@ -74,18 +74,18 @@ function smoothPath(pts) {
   return d;
 }
 
-const W = 640;
-const H = 430;
-// PAD.t is empty headroom above the highest gridline, so the (taller) hover card always fits above the point.
-// The plot area itself stays about 210px tall.
-const PAD = { l: 34, r: 14, t: 190, b: 30 };
+// Full size: PAD.t is empty headroom above the highest gridline, so the (taller) hover card always fits above the point.
+const DIM_FULL = { W: 640, H: 430, PAD: { l: 34, r: 14, t: 190, b: 30 } };
+// Compact: a wide, flat chart; the hover card sits beside the point instead of above it.
+const DIM_COMPACT = { W: 960, H: 210, PAD: { l: 34, r: 14, t: 14, b: 26 } };
 
 /**
  * Line graph of problems solved over time (7 days, 30 days, 3 months, 6 months).
  * activeDays: { 'YYYY-MM-DD': count }, todayKey: today in the same format (India time).
  * dayTopics (optional): { 'YYYY-MM-DD': ['Arrays', 'Arrays', 'Dynamic Programming'] }, one topic name per solved problem.
  */
-export default function ActivityChart({ activeDays, dayTopics = NO_TOPICS, todayKey, title = 'Activity', color = 'var(--accent)' }) {
+export default function ActivityChart({ activeDays, dayTopics = NO_TOPICS, todayKey, title = 'Activity', color = 'var(--accent)', compact = false }) {
+  const { W, H, PAD } = compact ? DIM_COMPACT : DIM_FULL;
   const gradId = `area-${useId().replace(/:/g, '')}`;
   const [rangeId, setRangeId] = useState('7d');
   const [hover, setHover] = useState(null);
@@ -111,10 +111,14 @@ export default function ActivityChart({ activeDays, dayTopics = NO_TOPICS, today
   const active = hover !== null ? series[hover] : null;
 
   // Hover card position (percent of the chart box, which matches the SVG viewBox).
-  // The card is always placed ABOVE the point, so it never covers the line, the green fill or the previous dot.
+  // Full size: the card is placed ABOVE the point. Compact: it sits BESIDE the point.
   const tipLeft = hover !== null ? (pts[hover].x / W) * 100 : 0;
-  const tipTop = hover !== null ? (pts[hover].y / H) * 100 : 0;
+  const tipTopRaw = hover !== null ? (pts[hover].y / H) * 100 : 0;
+  const tipTop = compact ? Math.min(70, Math.max(30, tipTopRaw)) : tipTopRaw;
   const tipShiftX = tipLeft < 16 ? '-12%' : tipLeft > 84 ? '-88%' : '-50%';
+  const tipTransform = compact
+    ? `translate(${tipLeft > 50 ? 'calc(-100% - 16px)' : '16px'}, -50%)` // beside the dot
+    : `translate(${tipShiftX}, calc(-100% - 20px))`; // above the dot
 
   const unit = range.bucket === 1 ? 'day' : 'week';
   const prev = hover !== null && hover > 0 ? series[hover - 1] : null;
@@ -124,13 +128,15 @@ export default function ActivityChart({ activeDays, dayTopics = NO_TOPICS, today
   const extraTopics = active ? Math.max(0, active.topics.length - MAX_TOPICS) : 0;
 
   return (
-    <section aria-label={title} className="card p-4 sm:p-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+    <section aria-label={title} className={compact ? 'card p-4' : 'card p-4 sm:p-6'}>
+      <div className={`flex flex-col ${compact ? 'gap-2 sm:flex-row sm:items-center sm:justify-between' : 'gap-4 sm:flex-row sm:items-start sm:justify-between'}`}>
         <div className="min-w-0">
-          <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
-          <p className="mt-1 text-sm text-muted">Total of {range.long}</p>
-          <p className="mt-3 flex items-baseline gap-2">
-            <span className="text-4xl font-semibold tabular-nums tracking-tight" style={{ color }}>
+          <div className={compact ? 'flex flex-wrap items-baseline gap-x-2' : ''}>
+            <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
+            <p className={`${compact ? '' : 'mt-1'} text-sm text-muted`}>Total of {range.long}</p>
+          </div>
+          <p className={`${compact ? 'mt-1' : 'mt-3'} flex items-baseline gap-2`}>
+            <span className={`${compact ? 'text-2xl' : 'text-4xl'} font-semibold tabular-nums tracking-tight`} style={{ color }}>
               {active ? active.value : total}
             </span>
             <span className="text-sm text-muted">
@@ -160,7 +166,7 @@ export default function ActivityChart({ activeDays, dayTopics = NO_TOPICS, today
         </div>
       </div>
 
-      <div className="relative mt-4 sm:mt-5" onMouseLeave={() => setHover(null)}>
+      <div className={`relative ${compact ? 'mt-2' : 'mt-4 sm:mt-5'}`} onMouseLeave={() => setHover(null)}>
         <svg
           viewBox={`0 0 ${W} ${H}`}
           className="h-auto w-full"
@@ -255,7 +261,7 @@ export default function ActivityChart({ activeDays, dayTopics = NO_TOPICS, today
             style={{
               left: `${tipLeft}%`,
               top: `${tipTop}%`,
-              transform: `translate(${tipShiftX}, calc(-100% - 20px))`, // always above the dot
+              transform: tipTransform,
               transition: 'left 120ms ease-out, top 120ms ease-out',
             }}
           >

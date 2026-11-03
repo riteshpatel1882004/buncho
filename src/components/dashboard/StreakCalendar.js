@@ -19,7 +19,7 @@ function level(count) {
  * days with activity are shaded, today is outlined.
  * activeDays: { 'YYYY-MM-DD': count }, todayKey: today's date in the same format (India time).
  */
-export default function StreakCalendar({ activeDays, todayKey, streak }) {
+export default function StreakCalendar({ activeDays, todayKey, streak, compact = false }) {
   const [ty, tm] = todayKey.split('-').map(Number);
   const [view, setView] = useState({ y: ty, m: tm - 1 });
   const atCurrent = view.y === ty && view.m === tm - 1;
@@ -44,7 +44,7 @@ export default function StreakCalendar({ activeDays, todayKey, streak }) {
   }
 
   return (
-    <section aria-label="Streak calendar" className="card p-5 sm:p-6">
+    <section aria-label="Streak calendar" className={compact ? 'card p-4' : 'card p-5 sm:p-6'}>
       {/* Streak */}
       <div className="flex items-center justify-center gap-2">
         <Flame width={18} height={18} className={streak ? 'text-orange-500' : 'text-muted'} />
@@ -55,7 +55,7 @@ export default function StreakCalendar({ activeDays, todayKey, streak }) {
       </div>
 
       {/* Month switcher */}
-      <div className="mt-3 flex items-center justify-between">
+      <div className={`${compact ? 'mt-1.5' : 'mt-3'} flex items-center justify-between`}>
         <button
           type="button"
           onClick={() => shift(-1)}
@@ -64,7 +64,7 @@ export default function StreakCalendar({ activeDays, todayKey, streak }) {
         >
           <ChevronLeft width={18} height={18} />
         </button>
-        <h2 className="text-lg font-semibold tracking-tight">
+        <h2 className={`${compact ? 'text-base' : 'text-lg'} font-semibold tracking-tight`}>
           {MONTHS[view.m]} {view.y}
         </h2>
         <button
@@ -79,14 +79,14 @@ export default function StreakCalendar({ activeDays, todayKey, streak }) {
       </div>
 
       {/* Weekdays */}
-      <div className="mt-4 grid grid-cols-7 gap-1 text-center text-xs font-semibold text-muted">
+      <div className={`${compact ? 'mt-2' : 'mt-4'} grid grid-cols-7 gap-1 text-center text-xs font-semibold text-muted`}>
         {WEEK.map((w) => (
           <span key={w}>{w}</span>
         ))}
       </div>
 
       {/* Days */}
-      <div className="mt-2 grid grid-cols-7 gap-1">
+      <div className={`${compact ? 'mt-1' : 'mt-2'} grid grid-cols-7 gap-1`}>
         {cells.map((day, i) => {
           if (day === null) return <span key={`b${i}`} />;
           const key = prefix + pad(day);
@@ -97,19 +97,19 @@ export default function StreakCalendar({ activeDays, todayKey, streak }) {
             <div
               key={key}
               title={future ? key : `${key}: ${count} ${count === 1 ? 'problem' : 'problems'} solved`}
-              className={`flex aspect-square flex-col items-center justify-center rounded-xl text-sm font-semibold leading-none tabular-nums ${level(count)} ${
+              className={`flex items-center justify-center ${compact ? 'h-7 flex-row gap-0.5 rounded-lg text-xs' : 'aspect-square flex-col rounded-xl text-sm'} font-semibold leading-none tabular-nums ${level(count)} ${
                 future ? 'text-muted/40' : count >= 4 ? '' : count ? 'text-ink' : 'text-muted'
               } ${isToday ? 'ring-2 ring-orange-500' : ''}`}
             >
               <span>{day}</span>
-              {count > 0 && <span className="mt-0.5 text-[0.6rem] font-bold opacity-80">{count}</span>}
+              {count > 0 && <span className={`${compact ? '' : 'mt-0.5'} text-[0.6rem] font-bold opacity-80`}>{compact ? `·${count}` : count}</span>}
             </div>
           );
         })}
       </div>
 
       {/* Footer */}
-      <div className="mt-4 flex items-center justify-between border-t border-line pt-4 text-xs text-muted">
+      <div className={`${compact ? 'mt-2.5 pt-2.5' : 'mt-4 pt-4'} flex items-center justify-between border-t border-line text-xs text-muted`}>
         <span>
           <span className="font-semibold text-ink">{monthTotal}</span> problem{monthTotal === 1 ? '' : 's'} ·{' '}
           <span className="font-semibold text-ink">{monthActive}</span> active day{monthActive === 1 ? '' : 's'}

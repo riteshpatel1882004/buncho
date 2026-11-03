@@ -39,13 +39,13 @@ const ROWS = [
   ['HARD', 'Hard', 'bg-hard'],
 ];
 
-export function StatsCard({ stats, signedIn, roomy = false }) {
+export function StatsCard({ stats, signedIn, roomy = false, compact = false }) {
   return (
-    <section aria-label="Your progress" className={roomy ? 'card p-5 sm:p-6' : 'panel p-4'}>
-      {roomy && <h2 className="mb-5 text-base font-semibold tracking-tight">Problems solved</h2>}
-      <div className={`flex items-center ${roomy ? 'gap-6' : 'gap-4'}`}>
-        <Ring solved={stats.solved} total={stats.total} size={roomy ? 116 : 104} />
-        <ul className={`min-w-0 flex-1 ${roomy ? 'space-y-4' : 'space-y-2.5'}`}>
+    <section aria-label="Your progress" className={compact ? 'card p-4' : roomy ? 'card p-5 sm:p-6' : 'panel p-4'}>
+      {(roomy || compact) && <h2 className={`${compact ? 'mb-3' : 'mb-5'} text-base font-semibold tracking-tight`}>Problems solved</h2>}
+      <div className={`flex items-center ${compact ? 'gap-4' : roomy ? 'gap-6' : 'gap-4'}`}>
+        <Ring solved={stats.solved} total={stats.total} size={compact ? 92 : roomy ? 116 : 104} />
+        <ul className={`min-w-0 flex-1 ${compact ? 'space-y-2' : roomy ? 'space-y-4' : 'space-y-2.5'}`}>
           {ROWS.map(([key, label, bar]) => {
             const d = stats.byDifficulty[key];
             const pct = d.total ? Math.round((d.solved / d.total) * 100) : 0;
@@ -64,7 +64,7 @@ export function StatsCard({ stats, signedIn, roomy = false }) {
         </ul>
       </div>
       {signedIn ? (
-        <p className={`text-muted ${roomy ? 'mt-5 border-t border-line pt-4 text-sm' : 'mt-3 text-xs'}`}>
+        <p className={`text-muted ${compact ? 'mt-3 border-t border-line pt-2.5 text-xs' : roomy ? 'mt-5 border-t border-line pt-4 text-sm' : 'mt-3 text-xs'}`}>
           {Math.max(0, stats.total - stats.solved)} left to solve
         </p>
       ) : (
