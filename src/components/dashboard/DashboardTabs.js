@@ -70,10 +70,8 @@ function Icon({ name, size = 18 }) {
  * items: [{ id, label, icon, hint?, summary?, content }]  (content is server-rendered JSX from page.js)
  * top: header content (greeting, profile links)
  * mobileTop: phone-only summary card shown above the tiles
- * sidebarTop: desktop-only content shown in the left column ABOVE the Dashboard menu
- * item.mobileOnly: item is only a phone tile / popup (desktop already shows it in sidebarTop)
  */
-export default function DashboardTabs({ items, initial, top, mobileTop, sidebarTop }) {
+export default function DashboardTabs({ items, initial, top, mobileTop }) {
   const [active, setActive] = useState(initial ?? items[0]?.id);
   const [popupOpen, setPopupOpen] = useState(false); // phone popup only, ignored on desktop
   const pushedRef = useRef(false); // true when opening the popup added a history entry
@@ -163,86 +161,83 @@ export default function DashboardTabs({ items, initial, top, mobileTop, sidebarT
       <div className="mt-5 lg:hidden">{mobileTop}</div>
 
       <div className="mt-5 grid gap-4 lg:mt-8 lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start lg:gap-6 xl:grid-cols-[18.5rem_minmax(0,1fr)]">
-        {/* LEFT COLUMN: optional desktop cards on top, then the menu */}
-        <div className="min-w-0 lg:flex lg:flex-col lg:gap-4 lg:self-start">
-          {sidebarTop && <div className="hidden space-y-3 lg:block">{sidebarTop}</div>}
-          <nav
-            aria-label="Dashboard sections"
-            className={`min-w-0 lg:rounded-3xl lg:border lg:border-line lg:bg-surface lg:p-3 lg:shadow-sm ${sidebarTop ? '' : 'lg:sticky lg:top-24'}`}
-          >
-            {/* Phone: tile grid, each tile opens a popup */}
-            <p className="mb-3 px-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted lg:hidden">Explore</p>
-            <div className="grid grid-cols-2 gap-3 lg:hidden">
-              {items.map((item) => (
+        {/* LEFT SECTION: menu */}
+        <nav
+          aria-label="Dashboard sections"
+          className="min-w-0 lg:sticky lg:top-24 lg:rounded-3xl lg:border lg:border-line lg:bg-surface lg:p-3 lg:shadow-sm"
+        >
+          {/* Phone: tile grid, each tile opens a popup */}
+          <p className="mb-3 px-1 text-xs font-semibold uppercase tracking-[0.14em] text-muted lg:hidden">Explore</p>
+          <div className="grid grid-cols-2 gap-3 lg:hidden">
+            {items.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => select(item.id)}
+                aria-label={item.label}
+                aria-haspopup="dialog"
+                className="group flex min-h-[7.25rem] flex-col justify-between rounded-2xl border border-line bg-surface p-3.5 text-left shadow-sm transition active:scale-[0.97] [&:last-child:nth-child(odd)]:col-span-2"
+              >
+                <span className="flex items-start justify-between gap-2">
+                  <span className={`grid h-10 w-10 place-items-center rounded-xl ${TONES[item.icon] ?? 'bg-accent-soft text-accent'}`}>
+                    <Icon name={item.icon} size={20} />
+                  </span>
+                  {item.summary != null && (
+                    <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold tabular-nums text-ink">
+                      {item.summary}
+                    </span>
+                  )}
+                </span>
+                <span className="mt-3 block">
+                  <span className="block text-[0.95rem] font-semibold leading-tight tracking-tight">{item.label}</span>
+                  {item.hint && <span className="mt-1 block text-xs text-muted">{item.hint}</span>}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Desktop: vertical menu */}
+          <p className="hidden px-3 pb-2 pt-2 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-muted lg:block">
+            Dashboard
+          </p>
+          <div role="tablist" aria-orientation="vertical" className="hidden lg:flex lg:flex-col lg:gap-1">
+            {items.map((item) => {
+              const on = item.id === active;
+              return (
                 <button
                   key={item.id}
                   type="button"
+                  role="tab"
+                  id={`tab-${item.id}`}
+                  aria-selected={on}
+                  aria-controls={`panel-${item.id}`}
                   onClick={() => select(item.id)}
-                  aria-label={item.label}
-                  aria-haspopup="dialog"
-                  className="group flex min-h-[7.25rem] flex-col justify-between rounded-2xl border border-line bg-surface p-3.5 text-left shadow-sm transition active:scale-[0.97] [&:last-child:nth-child(odd)]:col-span-2"
+                  className={`group flex w-full items-center gap-2.5 rounded-2xl border px-3.5 py-3 text-left text-sm font-semibold transition-colors ${
+                    on ? 'border-accent/40 bg-accent-soft text-accent' : 'border-transparent text-ink hover:bg-surface-2'
+                  }`}
                 >
-                  <span className="flex items-start justify-between gap-2">
-                    <span className={`grid h-10 w-10 place-items-center rounded-xl ${TONES[item.icon] ?? 'bg-accent-soft text-accent'}`}>
-                      <Icon name={item.icon} size={20} />
-                    </span>
-                    {item.summary != null && (
-                      <span className="rounded-full bg-surface-2 px-2 py-0.5 text-xs font-semibold tabular-nums text-ink">
-                        {item.summary}
-                      </span>
-                    )}
-                  </span>
-                  <span className="mt-3 block">
-                    <span className="block text-[0.95rem] font-semibold leading-tight tracking-tight">{item.label}</span>
-                    {item.hint && <span className="mt-1 block text-xs text-muted">{item.hint}</span>}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            {/* Desktop: vertical menu */}
-            <p className="hidden px-3 pb-2 pt-2 text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-muted lg:block">
-              Dashboard
-            </p>
-            <div role="tablist" aria-orientation="vertical" className="hidden lg:flex lg:flex-col lg:gap-1">
-              {items.filter((item) => !item.mobileOnly).map((item) => {
-                const on = item.id === active;
-                return (
-                  <button
-                    key={item.id}
-                    type="button"
-                    role="tab"
-                    id={`tab-${item.id}`}
-                    aria-selected={on}
-                    aria-controls={`panel-${item.id}`}
-                    onClick={() => select(item.id)}
-                    className={`group flex w-full items-center gap-2.5 rounded-2xl border px-3.5 py-3 text-left text-sm font-semibold transition-colors ${
-                      on ? 'border-accent/40 bg-accent-soft text-accent' : 'border-transparent text-ink hover:bg-surface-2'
+                  <span
+                    className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl transition-colors ${
+                      on ? 'bg-accent text-accent-ink' : 'bg-surface-2 text-muted group-hover:text-ink'
                     }`}
                   >
+                    <Icon name={item.icon} />
+                  </span>
+                  <span className="min-w-0 flex-1 leading-tight">{item.label}</span>
+                  {item.summary != null && (
                     <span
-                      className={`grid h-8 w-8 shrink-0 place-items-center rounded-xl transition-colors ${
-                        on ? 'bg-accent text-accent-ink' : 'bg-surface-2 text-muted group-hover:text-ink'
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${
+                        on ? 'bg-accent/15 text-accent' : 'bg-surface-2 text-muted'
                       }`}
                     >
-                      <Icon name={item.icon} />
+                      {item.summary}
                     </span>
-                    <span className="min-w-0 flex-1 leading-tight">{item.label}</span>
-                    {item.summary != null && (
-                      <span
-                        className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${
-                          on ? 'bg-accent/15 text-accent' : 'bg-surface-2 text-muted'
-                        }`}
-                      >
-                        {item.summary}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </nav>
-        </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </nav>
 
         {/* RIGHT SECTION: content of the selected item.
             Desktop: a normal column. Phone: the same element becomes a full-screen overlay with a bottom sheet. */}
@@ -289,7 +284,7 @@ export default function DashboardTabs({ items, initial, top, mobileTop, sidebarT
                   role="tabpanel"
                   aria-labelledby={`tab-${item.id}`}
                   hidden={item.id !== active}
-                  className={`min-w-0 ${item.mobileOnly ? 'lg:hidden' : ''}`}
+                  className="min-w-0"
                 >
                   {item.content}
                 </div>
