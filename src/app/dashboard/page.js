@@ -62,6 +62,16 @@ export default async function DashboardPage() {
     ? 'rounded-full bg-gradient-to-br from-amber-300 via-amber-400 to-amber-600 p-[3px] shadow-md shadow-amber-500/30'
     : 'rounded-full bg-gradient-to-br from-accent/60 to-accent/10 p-[3px]';
 
+  // Problems solved + Streak + Activity: on desktop they sit in the left column above the menu,
+  // on phones they open from the "Progress" tile.
+  const progressCards = (
+    <>
+      <StatsCard stats={stats} signedIn compact />
+      <StreakCalendar activeDays={stats.activeDays} todayKey={todayKey} streak={stats.streak} compact />
+      <ActivityChart activeDays={stats.activeDays} dayTopics={dayTopics} todayKey={todayKey} compact />
+    </>
+  );
+
   // Every dashboard section. The left menu lists them, the right side shows the one that is clicked.
   const items = [
     {
@@ -70,24 +80,8 @@ export default async function DashboardPage() {
       icon: 'solved',
       hint: 'Solved, streak, activity',
       summary: `${stats.solved}/${stats.total}`,
-      content: (
-        <div className="space-y-4">
-          {/* Row 1: Problems solved + Streak calendar, equal column widths (stacked on phones) */}
-          <div className="grid grid-cols-1 items-stretch gap-4 md:grid-cols-2">
-            <div className="min-w-0 [&>*]:h-full">
-              <StatsCard stats={stats} signedIn compact />
-            </div>
-            <div className="min-w-0 [&>*]:h-full">
-              <StreakCalendar activeDays={stats.activeDays} todayKey={todayKey} streak={stats.streak} compact />
-            </div>
-          </div>
-
-          {/* Row 2: Activity, full width */}
-          <div className="min-w-0">
-            <ActivityChart activeDays={stats.activeDays} dayTopics={dayTopics} todayKey={todayKey} compact />
-          </div>
-        </div>
-      ),
+      mobileOnly: true, // desktop shows these cards above the menu instead (sidebarTop)
+      content: <div className="space-y-4">{progressCards}</div>,
     },
     {
       id: 'jobs',
@@ -208,8 +202,9 @@ export default async function DashboardPage() {
       <div className="relative">
         <DashboardTabs
           items={items}
-          initial="progress"
+          initial="jobs"
           top={top}
+          sidebarTop={progressCards}
           mobileTop={
             <MobileHero
               solved={stats.solved}
