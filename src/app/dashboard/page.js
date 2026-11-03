@@ -1,3 +1,4 @@
+// src/app/dashboard/page.js
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
@@ -65,27 +66,18 @@ export default async function DashboardPage() {
   // Every dashboard section. The left menu lists them, the right side shows the one that is clicked.
   const items = [
     {
-      id: 'solved',
-      label: 'Problems solved',
+      id: 'progress',
+      label: 'Progress',
       icon: 'solved',
-      hint: 'Your progress',
+      hint: 'Solved, streak, activity',
       summary: `${stats.solved}/${stats.total}`,
-      content: <StatsCard stats={stats} signedIn roomy />,
-    },
-    {
-      id: 'streak',
-      label: 'Streak',
-      icon: 'streak',
-      hint: 'Daily calendar',
-      summary: `${stats.streak}d`,
-      content: <StreakCalendar activeDays={stats.activeDays} todayKey={todayKey} streak={stats.streak} />,
-    },
-    {
-      id: 'activity',
-      label: 'Activity',
-      icon: 'activity',
-      hint: 'Solved over time',
-      content: <ActivityChart activeDays={stats.activeDays} dayTopics={dayTopics} todayKey={todayKey} />,
+      content: (
+        <div className="space-y-5">
+          <StatsCard stats={stats} signedIn roomy />
+          <StreakCalendar activeDays={stats.activeDays} todayKey={todayKey} streak={stats.streak} />
+          <ActivityChart activeDays={stats.activeDays} dayTopics={dayTopics} todayKey={todayKey} />
+        </div>
+      ),
     },
     {
       id: 'jobs',
@@ -206,7 +198,7 @@ export default async function DashboardPage() {
       <div className="relative">
         <DashboardTabs
           items={items}
-          initial="solved"
+          initial="progress"
           top={top}
           mobileTop={
             <MobileHero
