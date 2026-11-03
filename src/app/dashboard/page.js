@@ -176,17 +176,26 @@ export default async function DashboardPage() {
     </Link>
   );
 
-  // Desktop: public profile, greeting and Pro banner stacked in the left column, above the menu
+  // Desktop: greeting and Pro banner stacked in the left column, above the menu.
+  // The only profile control is a small "See profile" button at the top-right of the greeting row.
   const sidebarTop = (
     <>
-      {user.username ? (
-        <ProfileBar stacked username={user.username} url={`${SITE_URL}/user/${user.username}`} name={user.profileName || firstName || 'my'} />
-      ) : (
-        claimBanner('')
-      )}
-      <div className="flex min-w-0 items-center gap-3.5 px-1 py-1">
+      {!user.username && claimBanner('')}
+      <div className="flex min-w-0 items-center gap-3 px-1 py-1">
         {avatar}
         <Greeting name={firstName} pro={pro} stacked />
+        {user.username && (
+          <Link
+            href={`/user/${user.username}`}
+            className="ml-auto inline-flex shrink-0 items-center gap-1 self-start whitespace-nowrap rounded-full bg-accent px-3 py-1.5 text-xs font-semibold text-accent-ink shadow-sm transition hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]/40"
+          >
+            See profile
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M7 17 17 7" />
+              <path d="M8 7h9v9" />
+            </svg>
+          </Link>
+        )}
       </div>
       {pro && <ProBanner stacked periodEnd={ent.periodEnd} />}
     </>
