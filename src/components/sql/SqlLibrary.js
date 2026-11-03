@@ -7,7 +7,7 @@ import PromoSection from '@/components/PromoSection';
 import JsonLd from '@/components/JsonLd';
 import SqlCode from './SqlCode';
 import SqlList from './SqlList';
-import { getCategoryCounts, getProblems, getProgressMap, getSubcategories, getUserStats, parseFilters } from '@/lib/problems';
+import { COMPANY_FILTER_PRO_ONLY, getCategoryCounts, getCompanyCounts, getProblems, getProgressMap, getSubcategories, getUserStats, parseFilters } from '@/lib/problems';
 import { CATEGORIES } from '@/lib/categories';
 import { getOrCreateUser } from '@/lib/user';
 import { getIsPro } from '@/lib/subscription';
@@ -37,12 +37,14 @@ export default async function SqlLibrary({ searchParams }) {
   const filters = parseFilters(await searchParams);
   const user = await getOrCreateUser();
   const pro = user ? await getIsPro(user.id) : false;
-  const [result, stats, ads, counts, subcategories] = await Promise.all([
+  const companyLocked = COMPANY_FILTER_PRO_ONLY && !pro;
+  const [result, stats, ads, counts, subcategories, companies] = await Promise.all([
     getProblems({ ...filters, category: CATEGORY, pro, userId: user?.id ?? null }),
     getUserStats(user?.id ?? null, CATEGORY), // solved counts are SQL only; the streak is shared by every category
     getLiveAds(),
     getCategoryCounts(),
     getSubcategories({ category: CATEGORY }), // topic chips
+    companyLocked ? [] : getCompanyCounts({ category: CATEGORY }), // sidebar company filter (Pro)
   ]);
   const statusMap = user ? await getProgressMap(user.id, result.items.map((p) => p.id)) : {};
 
@@ -73,7 +75,7 @@ export default async function SqlLibrary({ searchParams }) {
   }));
 
   return (
-    <ProblemsShell items={navItems}>
+    <ProblemsShell items={navItems} companies={companies} companyLocked={companyLocked} params={params}>
       <JsonLd data={jsonLd} />
       <h1 className="sr-only">{H1}</h1>
 

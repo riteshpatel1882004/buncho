@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
-import { Book, ChevronLeft, ChevronRight, Database, Users } from './icons';
+import { Book, Check, ChevronLeft, ChevronRight, Database, Lock, Search, Tag, Users } from './icons';
+import { ProBadge } from './ProBadge';
 
 const KEY = 'buncho-problems-nav';
 const ICONS = { ai: Book, hr: Users, sql: Database };
@@ -15,9 +16,129 @@ const ICONS = { ai: Book, hr: Users, sql: Database };
  * Right: the list for the selected type (children).
  * Below the lg breakpoint the left column becomes a segmented switch above the list.
  *
+ * Below the question types (expanded sidebar only) there is a "Filter by company" list: each company with the number of
+ * questions it has asked in this category. Picking one adds ?company=<name> to the URL, so the list, pagination and the
+ * existing filters keep working. Company data is a Pro insight, so free users see a locked card instead.
+ *
  * items: [{ key, label, href, count, description }]
+ * companies: [{ name, count }] (most questions first), companyLocked: show the Pro lock instead of the list,
+ * params: the active filters from the URL (used to keep them when a company is picked)
  */
-export default function ProblemsShell({ items, children }) {
+const COMPANIES_COLLAPSED = 8; // companies shown before "Show more"
+
+function CompanyFilter({ companies, locked, params, pathname }) {
+  const [query, setQuery] = useState('');
+  const [showAll, setShowAll] = useState(false);
+  const active = params?.company || '';
+
+  // Link that keeps the other filters, swaps the company and goes back to page 1
+  const hrefFor = (name) => {
+    const sp = new URLSearchParams();
+    Object.entries(params ?? {}).forEach(([k, v]) => {
+      if (v && k !== 'company' && k !== 'page') sp.set(k, String(v));
+    });
+    if (name) sp.set('company', name);
+    const qs = sp.toString();
+    return qs ? `${pathname}?${qs}` : pathname;
+  };
+
+  if (locked) {
+    return (
+      <div className="mt-2 border-t border-line pt-3">
+        <Link
+          href="/pricing"
+          className="flex items-center gap-3 rounded-lg border border-dashed border-line bg-surface-2/50 px-3 py-2.5 text-sm transition-colors hover:border-accent"
+        >
+          <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-accent-soft text-accent">
+            <Lock width={16} height={16} />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="flex items-center gap-1.5 font-semibold">
+              Filter by company <ProBadge />
+            </span>
+            <span className="block text-xs font-normal text-muted">See which companies asked what.</span>
+          </span>
+        </Link>
+      </div>
+    );
+  }
+
+  // A company typed into the URL that is not in this category still shows up, so it can be cleared
+  const list = active && !companies.some((c) => c.name === active) ? [{ name: active, count: 0 }, ...companies] : companies;
+  if (!list.length) return null;
+
+  const q = query.trim().toLowerCase();
+  const matches = q ? list.filter((c) => c.name.toLowerCase().includes(q)) : list;
+  const visible = q || showAll ? matches : matches.slice(0, COMPANIES_COLLAPSED);
+  const hidden = matches.length - visible.length;
+
+  return (
+    <div className="mt-2 border-t border-line pt-3" role="group" aria-label="Filter by company">
+      <div className="flex items-center justify-between pl-3 pr-1">
+        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
+          <Tag width={13} height={13} /> Companies
+        </p>
+        {active && (
+          <Link href={hrefFor('')} scroll={false} className="rounded-md px-2 py-1 text-xs font-semibold text-accent hover:underline">
+            Clear
+          </Link>
+        )}
+      </div>
+      <p className="px-3 pb-1 pt-0.5 text-xs text-muted">Questions each company has asked</p>
+
+      {list.length > COMPANIES_COLLAPSED && (
+        <div className="relative mx-1 mb-1">
+          <Search width={14} height={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted" />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search companies"
+            aria-label="Search companies"
+            className="h-9 w-full rounded-lg border border-line bg-surface pl-8 pr-2 text-sm outline-none transition-colors placeholder:text-muted focus:border-accent"
+          />
+        </div>
+      )}
+
+      <ul className="max-h-72 space-y-0.5 overflow-y-auto">
+        {visible.map((c) => {
+          const on = c.name === active;
+          return (
+            <li key={c.name}>
+              <Link
+                href={hrefFor(on ? '' : c.name)}
+                scroll={false}
+                aria-current={on ? 'true' : undefined}
+                title={`${c.name}: ${c.count} ${c.count === 1 ? 'question' : 'questions'}`}
+                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  on ? 'bg-surface-2 text-ink' : 'text-muted hover:bg-surface-2 hover:text-ink'
+                }`}
+              >
+                <span className="min-w-0 flex-1 truncate">{c.name}</span>
+                {on ? <Check width={14} height={14} className="shrink-0 text-accent" /> : null}
+                <span className="shrink-0 text-xs tabular-nums text-muted">{c.count}</span>
+              </Link>
+            </li>
+          );
+        })}
+        {q && matches.length === 0 && <li className="px-3 py-2 text-sm text-muted">No company matches.</li>}
+      </ul>
+
+      {hidden > 0 && (
+        <button type="button" onClick={() => setShowAll(true)} className="mt-1 w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-accent hover:underline">
+          Show {hidden} more
+        </button>
+      )}
+      {showAll && !q && matches.length > COMPANIES_COLLAPSED && (
+        <button type="button" onClick={() => setShowAll(false)} className="mt-1 w-full rounded-lg px-3 py-2 text-left text-sm font-medium text-muted hover:text-ink">
+          Show fewer
+        </button>
+      )}
+    </div>
+  );
+}
+
+export default function ProblemsShell({ items, companies = [], companyLocked = false, params = {}, children }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const activeRef = useRef(null); // the active pill in the phone switch
@@ -142,6 +263,8 @@ export default function ProblemsShell({ items, children }) {
               );
             })}
           </nav>
+
+          {!collapsed && <CompanyFilter companies={companies} locked={companyLocked} params={params} pathname={pathname} />}
         </div>
       </aside>
 

@@ -25,7 +25,46 @@ const prisma = new PrismaClient({
 const args = process.argv.slice(2);
 const FORCE = args.includes('--force');
 const onlyArg = args.find((a) => a.startsWith('--only='));
-const ONLY = onlyArg ? new Set(onlyArg.slice(7).split(',').map((s) => s.trim()).filter(Boolean)) : null;
+let ONLY = onlyArg ? new Set(onlyArg.slice(7).split(',').map((s) => s.trim()).filter(Boolean)) : null;
+
+// Batches (for slow or unstable connections):
+//   node --env-file=.env prisma/seed.js --batch=1            -> problems 1-150 (in seed order)
+//   node --env-file=.env prisma/seed.js --batch=2 --size=100 -> problems 101-200, 100 per batch
+// Only that batch is read from and written to the database. Run batch 1, 2, 3 ... until it says "last batch".
+const batchArg = args.find((a) => a.startsWith('--batch='));
+const sizeArg = args.find((a) => a.startsWith('--size='));
+const BATCH = batchArg ? Number(batchArg.slice(8)) : null;
+const BATCH_SIZE = sizeArg ? Number(sizeArg.slice(7)) : 150;
+if (BATCH !== null) {
+  if (!Number.isInteger(BATCH) || BATCH < 1 || !Number.isInteger(BATCH_SIZE) || BATCH_SIZE < 1) {
+    console.error('Use --batch=<1,2,3...> and optionally --size=<problems per batch>.');
+    process.exit(1);
+  }
+  const slice = problems.slice((BATCH - 1) * BATCH_SIZE, BATCH * BATCH_SIZE).map((p) => p.slug);
+  const totalBatches = Math.ceil(problems.length / BATCH_SIZE);
+  if (!slice.length) {
+    console.log(`Nothing in batch ${BATCH}. There are only ${totalBatches} batches, so all are done.`);
+    process.exit(0);
+  }
+  console.log(`Batch ${BATCH} of ${totalBatches}: problems ${(BATCH - 1) * BATCH_SIZE + 1}-${(BATCH - 1) * BATCH_SIZE + slice.length} of ${problems.length}${BATCH >= totalBatches ? ' (last batch)' : ''}`);
+  ONLY = ONLY ? new Set(slice.filter((s) => ONLY.has(s))) : new Set(slice);
+}
+
+// Neon can drop a connection (cold start, idle timeout, flaky network). Retry those a few times.
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function retry(fn, tries = 5) {
+  for (let i = 1; ; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      const msg = String(e?.message || e);
+      const transient = /Connection terminated|ECONNRESET|ETIMEDOUT|EAI_AGAIN|socket|WebSocket|timeout|ECONNREFUSED/i.test(msg);
+      if (!transient || i >= tries) throw e;
+      console.warn(`Connection problem (${msg.split('\n')[0]}). Retry ${i}/${tries - 1}...`);
+      await sleep(1500 * i);
+    }
+  }
+}
 
 // Files live in prisma/content/<topic-slug>/<slug>.<kind>.md
 // If the question has a subcategory, prisma/content/<topic-slug>/<subcategory-folder>/<slug>.<kind>.md is checked first
@@ -58,7 +97,7 @@ const same = (a, b) => stable(a) === stable(b);
 
 async function main() {
   // Topics: one read, write only what changed.
-  const dbTopics = new Map((await prisma.topic.findMany()).map((t) => [t.slug, t]));
+  const dbTopics = new Map((await retry(() => prisma.topic.findMany())).map((t) => [t.slug, t]));
   const topicIds = {};
   for (const [order, t] of topics.entries()) {
     const cur = dbTopics.get(t.slug);
@@ -66,18 +105,20 @@ async function main() {
       topicIds[t.slug] = cur.id;
       continue;
     }
-    const row = await prisma.topic.upsert({
+    const row = await retry(() => prisma.topic.upsert({
       where: { slug: t.slug },
       update: { name: t.name, description: t.description, order },
       create: { ...t, order },
-    });
+    }));
     topicIds[t.slug] = row.id;
   }
 
   // Load everything that exists once (a single query) instead of one upsert per problem.
-  const dbRows = await prisma.problem.findMany({
+  // With --only / --batch only those slugs are read, so the query stays small.
+  const dbRows = await retry(() => prisma.problem.findMany({
+    where: ONLY ? { slug: { in: [...ONLY] } } : undefined,
     include: { expertSolution: true, related: { select: { slug: true } } },
-  });
+  }));
   const dbBySlug = new Map(dbRows.map((r) => [r.slug, r]));
 
   const created = [];
@@ -123,20 +164,23 @@ async function main() {
       }
     }
 
-    const problem = await prisma.problem.upsert({ where: { slug: p.slug }, update: data, create: data });
-    await prisma.expertSolution.upsert({
+    const problem = await retry(() => prisma.problem.upsert({ where: { slug: p.slug }, update: data, create: data }));
+    await retry(() => prisma.expertSolution.upsert({
       where: { problemId: problem.id },
       update: { content, alternatives },
       create: { problemId: problem.id, content, alternatives },
-    });
+    }));
     (cur ? updated : created).push(p.slug);
   }
 
   // Related links. Links to problems that don't exist yet are ignored.
   // Runs for every problem, but only writes when the desired links differ from what is stored,
   // so adding a new question also fixes older questions that already pointed at it.
-  const fresh = await prisma.problem.findMany({ select: { slug: true, related: { select: { slug: true } } } });
-  const existing = new Set(fresh.map((x) => x.slug));
+  const existing = new Set((await retry(() => prisma.problem.findMany({ select: { slug: true } }))).map((x) => x.slug));
+  const fresh = await retry(() => prisma.problem.findMany({
+    where: ONLY ? { slug: { in: [...ONLY] } } : undefined,
+    select: { slug: true, related: { select: { slug: true } } },
+  }));
   const currentRelated = new Map(fresh.map((x) => [x.slug, x.related.map((r) => r.slug).sort().join('|')]));
   let linksChanged = 0;
   for (const p of problems) {
@@ -144,10 +188,10 @@ async function main() {
     if (ONLY && !ONLY.has(p.slug)) continue;
     const wanted = [...new Set(p.related.filter((slug) => existing.has(slug)))];
     if (wanted.slice().sort().join('|') === currentRelated.get(p.slug)) continue;
-    await prisma.problem.update({
+    await retry(() => prisma.problem.update({
       where: { slug: p.slug },
       data: { related: { set: wanted.map((slug) => ({ slug })) } },
-    });
+    }));
     linksChanged++;
   }
 

@@ -6,7 +6,7 @@ import ProblemsShell from '@/components/ProblemsShell';
 import { ProgressCard } from '@/components/ProblemStats';
 import PromoSection from '@/components/PromoSection';
 import PacePlanner from '@/components/PacePlanner';
-import { getCategoryCounts, getProblems, getProgressMap, getTopics, getUserStats, parseFilters } from '@/lib/problems';
+import { COMPANY_FILTER_PRO_ONLY, getCategoryCounts, getCompanyCounts, getProblems, getProgressMap, getTopics, getUserStats, parseFilters } from '@/lib/problems';
 import { CATEGORIES } from '@/lib/categories';
 import { getOrCreateUser } from '@/lib/user';
 import { getIsPro } from '@/lib/subscription';
@@ -62,12 +62,14 @@ export default async function CategoryPage({ category, searchParams }) {
   const filters = parseFilters(await searchParams);
   const user = await getOrCreateUser();
   const pro = user ? await getIsPro(user.id) : false;
-  const [topics, result, stats, ads, counts] = await Promise.all([
+  const companyLocked = COMPANY_FILTER_PRO_ONLY && !pro;
+  const [topics, result, stats, ads, counts, companies] = await Promise.all([
     category === 'ai' ? getTopics({ category }) : [],
     getProblems({ ...filters, category, pro, userId: user?.id ?? null }),
     getUserStats(user?.id ?? null, category),
     getLiveAds(), // the sponsor banners show on every category (AI/ML, HR and SQL)
     getCategoryCounts(),
+    companyLocked ? [] : getCompanyCounts({ category }), // sidebar company filter (Pro)
   ]);
   const statusMap = user ? await getProgressMap(user.id, result.items.map((p) => p.id)) : {};
 
@@ -98,7 +100,7 @@ export default async function CategoryPage({ category, searchParams }) {
   }));
 
   return (
-    <ProblemsShell items={navItems}>
+    <ProblemsShell items={navItems} companies={companies} companyLocked={companyLocked} params={params}>
       <JsonLd data={jsonLd} />
 
       {/* Not shown on screen, but kept so the page still has its H1 for search engines and screen readers */}

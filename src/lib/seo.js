@@ -355,7 +355,7 @@ export function buildMetadata({
 
 /** True when a list page carries search or filter params, which should not be indexed. */
 export const hasActiveFilters = (filters = {}, { ignoreTopic = false } = {}) =>
-  Boolean(filters.q || filters.difficulty || filters.type || filters.access || filters.status || filters.sub || (!ignoreTopic && filters.topic));
+  Boolean(filters.q || filters.difficulty || filters.type || filters.access || filters.status || filters.sub || filters.company || (!ignoreTopic && filters.topic));
 
 /* ----------------------- structured data builders -------------------- */
 

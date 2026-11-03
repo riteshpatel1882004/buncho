@@ -1,0 +1,1 @@
+(1) You have 100,000 document embeddings. How do you retrieve the top 5 most similar documents to a query? (2) You get an error because the query embedding has 768 dimensions and the stored ones have 384. How do you fix it?

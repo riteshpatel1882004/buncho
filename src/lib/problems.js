@@ -248,6 +248,9 @@ function shuffled(rows) {
 export const ACCESS_FILTERS = ['pro', 'free'];
 export const STATUS_FILTERS = ['solved', 'unsolved'];
 
+/** Company-wise insights are a Pro feature. Set to false to let free users use the sidebar company filter too. */
+export const COMPANY_FILTER_PRO_ONLY = true;
+
 /** Turns untrusted search params into a safe filter object. */
 export function parseFilters(sp = {}) {
   const str = (v, max) => (typeof v === 'string' ? v.trim().slice(0, max) : '');
@@ -255,6 +258,7 @@ export function parseFilters(sp = {}) {
     q: str(sp.q, 100),
     topic: str(sp.topic, 80),
     sub: str(sp.sub, 80), // SQL topic chip (the question's subcategory)
+    company: str(sp.company, 80), // company filter in the sidebar (Pro)
     difficulty: DIFFICULTIES.includes(sp.difficulty) ? sp.difficulty : '',
     type: PROBLEM_TYPES.includes(sp.type) ? sp.type : '',
     access: ACCESS_FILTERS.includes(sp.access) ? sp.access : '',
@@ -265,13 +269,15 @@ export function parseFilters(sp = {}) {
 
 // userId is only needed for the solved / not solved filter; signed-out visitors have no progress, so it is ignored.
 // category: 'ai' (default, every non-HR / non-SQL topic) | 'hr' | 'sql' | 'all'
-export async function getProblems({ q, topic, sub, difficulty, type, access, status, page, challenge, category = 'ai', pro = false, userId = null }) {
+export async function getProblems({ q, topic, sub, company, difficulty, type, access, status, page, challenge, category = 'ai', pro = false, userId = null }) {
   const topicFilters = [topic && { slug: topic }, topicCategoryWhere(category)].filter(Boolean);
   const where = {
     published: true,
     ...(challenge && { isChallenge: true }),
     ...(topicFilters.length && { topic: { AND: topicFilters } }),
     ...(sub && { subcategory: sub }),
+    // Company data is a Pro insight, so the filter only applies for Pro users (see COMPANY_FILTER_PRO_ONLY)
+    ...(company && (pro || !COMPANY_FILTER_PRO_ONLY) && { askedByCompanies: { has: company } }),
     ...(difficulty && { difficulty }),
     ...(type && { type }),
     ...(access === 'pro' && { proOnly: true }),
@@ -355,6 +361,24 @@ export async function getCategoryCounts() {
     ['ai', 'hr', 'sql'].map((c) => prisma.problem.count({ where: { published: true, topic: topicCategoryWhere(c) } })),
   );
   return { ai, hr, sql };
+}
+
+/**
+ * Sidebar company filter: every company asked in this category, with how many published
+ * questions it asked, most questions first. askedByCompanies is a String[] so the counting is done here.
+ */
+export async function getCompanyCounts({ category = 'ai' } = {}) {
+  const rows = await prisma.problem.findMany({
+    where: { published: true, topic: topicCategoryWhere(category) },
+    select: { askedByCompanies: true },
+  });
+  const counts = new Map();
+  rows.forEach((r) => {
+    new Set((r.askedByCompanies ?? []).map((c) => c.trim()).filter(Boolean)).forEach((c) => counts.set(c, (counts.get(c) ?? 0) + 1));
+  });
+  return [...counts.entries()]
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
 
 /** Map of problemId -> 'COMPLETED' for the problems this user has solved (submitted an answer for). */
