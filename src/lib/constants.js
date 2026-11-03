@@ -106,6 +106,7 @@ export const PRO_PERIOD_MONTHS = 1;
 // Any topic not listed here is placed after these, in its normal database order.
 export const TOPIC_ORDER = [
   'python-for-ai-ml',
+  'numpy',
   'ml-fundamentals',
   'ml-algorithms',
   'ml-system-design',
