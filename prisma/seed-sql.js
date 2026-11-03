@@ -28,7 +28,7 @@ const topics = [
 const problems = [
   {
     slug: 'sql-join-types',
-    title: 'What are the different types of SQL JOINs, and what does each one return?',
+    title: "SQL JOIN Types",
     topic: 'sql', subcategory: 'Joins and set operations', difficulty: 'EASY', type: 'CONCEPTUAL', estimatedMinutes: 5,
     roles: ALL_ROLES, allowDirectReveal: true,
     hints: [
@@ -39,7 +39,7 @@ const problems = [
   },
   {
     slug: 'sql-inner-join-matching-rows',
-    title: 'Write a query that joins two tables and returns only the rows with matching keys',
+    title: "INNER JOIN Matching Rows",
     topic: 'sql', subcategory: 'Joins and set operations', difficulty: 'EASY', type: 'PRACTICAL', estimatedMinutes: 4,
     roles: ALL_ROLES, allowDirectReveal: true,
     hints: [
@@ -50,7 +50,7 @@ const problems = [
   },
   {
     slug: 'sql-union-vs-union-all',
-    title: 'How do you merge two result sets in SQL without duplicates?',
+    title: "UNION vs UNION ALL",
     topic: 'sql', subcategory: 'Joins and set operations', difficulty: 'EASY', type: 'PRACTICAL', estimatedMinutes: 4,
     roles: ALL_ROLES, allowDirectReveal: true,
     hints: [
@@ -61,7 +61,7 @@ const problems = [
   },
   {
     slug: 'sql-where-vs-having',
-    title: 'What is the difference between WHERE and HAVING?',
+    title: "WHERE vs HAVING",
     topic: 'sql', subcategory: 'Filtering and aggregation', difficulty: 'EASY', type: 'CONCEPTUAL', estimatedMinutes: 5,
     roles: ALL_ROLES, allowDirectReveal: true,
     hints: [
@@ -72,7 +72,7 @@ const problems = [
   },
   {
     slug: 'sql-distinct-values',
-    title: 'How do you select distinct values from a column?',
+    title: "Select Distinct Values",
     topic: 'sql', subcategory: 'Filtering and aggregation', difficulty: 'EASY', type: 'PRACTICAL', estimatedMinutes: 3,
     roles: ALL_ROLES, allowDirectReveal: true,
     hints: [
@@ -83,7 +83,7 @@ const problems = [
   },
   {
     slug: 'sql-group-by',
-    title: 'What does GROUP BY do in a SQL query?',
+    title: "GROUP BY Basics",
     topic: 'sql', subcategory: 'Filtering and aggregation', difficulty: 'EASY', type: 'CONCEPTUAL', estimatedMinutes: 6,
     roles: ALL_ROLES, allowDirectReveal: true,
     hints: [
@@ -94,7 +94,7 @@ const problems = [
   },
   {
     slug: 'sql-aggregate-functions',
-    title: 'How do you aggregate data in SQL with COUNT, SUM, AVG, MAX and MIN?',
+    title: "SQL Aggregate Functions",
     topic: 'sql', subcategory: 'Filtering and aggregation', difficulty: 'EASY', type: 'PRACTICAL', estimatedMinutes: 5,
     roles: ALL_ROLES, allowDirectReveal: true,
     hints: [
@@ -105,7 +105,7 @@ const problems = [
   },
   {
     slug: 'sql-subquery-use-cases',
-    title: 'What is a subquery, and what are its typical use cases?',
+    title: "Subquery Use Cases",
     topic: 'sql', subcategory: 'Subqueries', difficulty: 'MEDIUM', type: 'CONCEPTUAL', estimatedMinutes: 8,
     roles: ALL_ROLES, allowDirectReveal: true,
     hints: [
@@ -116,7 +116,7 @@ const problems = [
   },
   {
     slug: 'sql-indexes-and-ml',
-    title: 'What are database indexes and how do they relate to machine learning work?',
+    title: "Indexes and ML Workloads",
     topic: 'sql', subcategory: 'Performance and indexing', difficulty: 'MEDIUM', type: 'CONCEPTUAL', estimatedMinutes: 5,
     roles: ALL_ROLES, allowDirectReveal: true,
     hints: [
@@ -127,7 +127,7 @@ const problems = [
   },
   {
     slug: 'sql-optimize-slow-query',
-    title: 'How would you optimize a SQL query that runs slowly?',
+    title: "Optimize a Slow Query",
     topic: 'sql', subcategory: 'Performance and indexing', difficulty: 'MEDIUM', type: 'CONCEPTUAL', estimatedMinutes: 6,
     roles: ALL_ROLES, allowDirectReveal: true, proOnly: true,
     hints: [
@@ -138,7 +138,7 @@ const problems = [
   },
   {
     slug: 'sql-handle-missing-values',
-    title: 'How do you handle missing values in a SQL dataset?',
+    title: "Handle Missing Values in SQL",
     topic: 'sql', subcategory: 'Data cleaning and reshaping', difficulty: 'MEDIUM', type: 'PRACTICAL', estimatedMinutes: 8,
     roles: ALL_ROLES, allowDirectReveal: true,
     hints: [
@@ -149,7 +149,7 @@ const problems = [
   },
   {
     slug: 'sql-pivot-rows-to-columns',
-    title: 'Write a SQL query to pivot a table, turning rows into columns',
+    title: "Pivot Rows to Columns",
     topic: 'sql', subcategory: 'Data cleaning and reshaping', difficulty: 'MEDIUM', type: 'PRACTICAL', estimatedMinutes: 8,
     roles: ALL_ROLES, allowDirectReveal: true, proOnly: true,
     hints: [
@@ -160,7 +160,7 @@ const problems = [
   },
   {
     slug: 'sql-second-highest-salary',
-    title: 'Find the second highest salary in each department',
+    title: "Second Highest Salary",
     topic: 'sql', subcategory: 'Window functions and ranking', difficulty: 'MEDIUM', type: 'PRACTICAL', estimatedMinutes: 10,
     roles: ALL_ROLES, allowDirectReveal: true, proOnly: true,
     hints: [
@@ -171,7 +171,7 @@ const problems = [
   },
   {
     slug: 'sql-window-functions-for-ml',
-    title: 'What are SQL window functions, and how do you use them for ML feature engineering?',
+    title: "Window Functions for ML",
     topic: 'sql', subcategory: 'Window functions and ranking', difficulty: 'MEDIUM', type: 'PRACTICAL', estimatedMinutes: 10,
     roles: ALL_ROLES, allowDirectReveal: true, proOnly: true,
     hints: [
@@ -182,7 +182,7 @@ const problems = [
   },
   {
     slug: 'sql-normalization-for-ml',
-    title: 'Why does normalization matter in SQL, and how does it affect ML models?',
+    title: "Normalization and ML Models",
     topic: 'sql', subcategory: 'SQL for machine learning', difficulty: 'MEDIUM', type: 'CONCEPTUAL', estimatedMinutes: 5,
     roles: ALL_ROLES, allowDirectReveal: true,
     hints: [
@@ -193,7 +193,7 @@ const problems = [
   },
   {
     slug: 'sql-time-features-for-ml',
-    title: 'How do you extract time-based features from a datetime field for an ML model?',
+    title: "Time Features for ML",
     topic: 'sql', subcategory: 'SQL for machine learning', difficulty: 'MEDIUM', type: 'PRACTICAL', estimatedMinutes: 10,
     roles: ALL_ROLES, allowDirectReveal: true,
     hints: [
