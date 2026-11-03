@@ -6,6 +6,9 @@ import { useEffect, useState } from 'react';
 const base =
   'inline-flex h-9 w-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full border text-sm font-semibold transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]/40 sm:w-auto sm:rounded-lg sm:px-3.5';
 const btn = `${base} border-line bg-surface text-ink hover:border-accent/60 hover:bg-accent-soft/60 hover:text-accent`;
+// On top of a banner image: dark glass, round, icon-only at every size
+const overlayBtn =
+  'inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/25 bg-black/45 text-white backdrop-blur transition hover:bg-black/65 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/60';
 
 export async function copy(text) {
   try {
@@ -64,9 +67,10 @@ const ShareIcon = () => (
  * Share buttons for a public profile: copy link, native share sheet (phones / some desktops), X, LinkedIn, WhatsApp.
  * owner: also shows the "README badge" copy button (a Markdown snippet for GitHub).
  * compact: only the copy and share buttons, for the profile hero. On phones they are round icon-only buttons.
+ * overlay: dark round icon-only buttons for placing on top of the profile banner.
  * Feedback happens inside the button ("Copied" with a tick), so nothing jumps around the layout.
  */
-export default function ShareProfile({ url, name = 'my', owner = false, compact = false }) {
+export default function ShareProfile({ url, name = 'my', owner = false, compact = false, overlay = false }) {
   const [done, setDone] = useState(null); // 'link' | 'badge' | 'fail' | null
   const [canNative, setCanNative] = useState(false);
 
@@ -96,6 +100,8 @@ export default function ShareProfile({ url, name = 'my', owner = false, compact 
   }
 
   const copied = done === 'link';
+  const b = overlay ? overlayBtn : btn;
+  const label = overlay ? 'hidden' : 'hidden sm:inline';
 
   return (
     <div className={compact ? 'flex items-center gap-2' : 'flex flex-wrap items-center gap-2'}>
@@ -104,16 +110,16 @@ export default function ShareProfile({ url, name = 'my', owner = false, compact 
         onClick={onCopy}
         aria-label="Copy profile link"
         title="Copy link"
-        className={`${btn} sm:min-w-[7.5rem] ${copied ? '!border-accent/60 !bg-accent-soft !text-accent' : ''}`}
+        className={`${b} ${overlay ? (copied ? '!border-accent !bg-accent !text-accent-ink' : '') : `sm:min-w-[7.5rem] ${copied ? '!border-accent/60 !bg-accent-soft !text-accent' : ''}`}`}
       >
         {copied ? <CheckIcon /> : <CopyIcon />}
-        <span className="hidden sm:inline">{copied ? 'Copied' : done === 'fail' ? 'Copy failed' : 'Copy link'}</span>
+        <span className={label}>{copied ? 'Copied' : done === 'fail' ? 'Copy failed' : 'Copy link'}</span>
       </button>
 
       {canNative && (
-        <button type="button" onClick={onNative} aria-label="Share profile" title="Share" className={btn}>
+        <button type="button" onClick={onNative} aria-label="Share profile" title="Share" className={b}>
           <ShareIcon />
-          <span className="hidden sm:inline">Share</span>
+          <span className={label}>Share</span>
         </button>
       )}
 
