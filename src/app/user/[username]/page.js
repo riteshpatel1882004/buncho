@@ -105,12 +105,13 @@ function linkIcon(label) {
   return 'globe';
 }
 
+// Phones: plain accent-coloured link. From `sm` up: bordered pill.
 function Pill({ href, icon, children, external = true }) {
   return (
     <a
       href={href}
       {...(external ? { target: '_blank', rel: 'noopener noreferrer nofollow' } : {})}
-      className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 text-sm font-medium transition hover:-translate-y-px hover:border-accent hover:text-accent"
+      className="inline-flex items-center gap-1.5 text-sm font-medium text-accent transition hover:underline sm:rounded-full sm:border sm:border-line sm:bg-surface sm:px-3 sm:py-1.5 sm:text-ink sm:no-underline sm:hover:-translate-y-px sm:hover:border-accent sm:hover:text-accent"
     >
       {icon && <Icon name={icon} size={14} />}
       {children}
@@ -293,9 +294,10 @@ export default async function PublicProfilePage({ params }) {
               )}
             </span>
 
-            <div className="flex flex-wrap items-center justify-end gap-2 pb-1">
+            {/* One tidy row, like a social profile: Edit profile + round icon buttons (labels appear from sm up) */}
+            <div className="flex items-center justify-end gap-2 pb-1">
               {isOwner && (
-                <Link href="/settings/profile" className="rounded-xl bg-accent px-4 py-2 text-sm font-semibold text-accent-ink shadow-sm transition hover:opacity-90">
+                <Link href="/settings/profile" className="inline-flex h-9 items-center rounded-full bg-accent px-4 text-sm font-semibold text-accent-ink shadow-sm transition hover:opacity-90 sm:rounded-xl sm:px-4">
                   Edit profile
                 </Link>
               )}
@@ -303,25 +305,23 @@ export default async function PublicProfilePage({ params }) {
             </div>
           </div>
 
-          <div className="mt-4">
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{name}</h1>
-            <p className="mt-1.5 flex flex-wrap items-center gap-x-2.5 gap-y-1 text-sm text-muted">
-              <span className="font-mono text-base">@{user.username}</span>
-              <span aria-hidden="true">·</span>
-              <span className="inline-flex items-center gap-1.5"><Icon name="calendar" size={14} /> Joined {formatDate(user.createdAt)}</span>
-              {user.location && (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <span className="inline-flex items-center gap-1.5"><Icon name="pin" size={14} /> {user.location}</span>
-                </>
-              )}
-            </p>
+          <div className="mt-3 sm:mt-4">
+            <h1 className="text-2xl font-bold leading-tight tracking-tight sm:text-4xl">{name}</h1>
+            <p className="mt-0.5 font-mono text-[0.95rem] text-muted sm:text-base">@{user.username}</p>
 
-            {user.headline && <p className="mt-4 text-lg font-medium leading-snug">{user.headline}</p>}
+            {user.headline && <p className="mt-3 text-base font-medium leading-snug sm:mt-4 sm:text-lg">{user.headline}</p>}
             {user.bio && <p className="mt-2 max-w-2xl whitespace-pre-line text-[0.95rem] leading-relaxed text-muted">{user.bio}</p>}
 
+            {/* Location + joined date, one quiet line (wraps neatly on small screens) */}
+            <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-sm text-muted">
+              {user.location && (
+                <span className="inline-flex items-center gap-1.5"><Icon name="pin" size={15} /> {user.location}</span>
+              )}
+              <span className="inline-flex items-center gap-1.5"><Icon name="calendar" size={15} /> Joined {formatDate(user.createdAt)}</span>
+            </p>
+
             {links.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2">
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 sm:gap-2">
                 {links.map((l) => (
                   <Pill key={l.href} href={l.href} icon={linkIcon(l.label)}>{l.label}</Pill>
                 ))}

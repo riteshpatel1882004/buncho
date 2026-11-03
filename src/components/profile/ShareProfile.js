@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 
+// Phones: round icon-only buttons (clean, one row). From `sm` up: normal buttons with text labels.
 const base =
-  'inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-lg border px-3.5 text-sm font-semibold transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]/40';
+  'inline-flex h-9 w-9 shrink-0 items-center justify-center gap-2 whitespace-nowrap rounded-full border text-sm font-semibold transition active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--accent)]/40 sm:w-auto sm:rounded-lg sm:px-3.5';
 const btn = `${base} border-line bg-surface text-ink hover:border-accent/60 hover:bg-accent-soft/60 hover:text-accent`;
 
 export async function copy(text) {
@@ -47,6 +48,11 @@ const CheckIcon = () => (
     <path d="M20 6 9 17l-5-5" />
   </Svg>
 );
+const CodeIcon = () => (
+  <Svg>
+    <path d="m8 8-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14" />
+  </Svg>
+);
 const ShareIcon = () => (
   <Svg>
     <path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7" />
@@ -57,7 +63,7 @@ const ShareIcon = () => (
 /**
  * Share buttons for a public profile: copy link, native share sheet (phones / some desktops), X, LinkedIn, WhatsApp.
  * owner: also shows the "README badge" copy button (a Markdown snippet for GitHub).
- * compact: only the copy and share buttons, for the profile hero.
+ * compact: only the copy and share buttons, for the profile hero. On phones they are round icon-only buttons.
  * Feedback happens inside the button ("Copied" with a tick), so nothing jumps around the layout.
  */
 export default function ShareProfile({ url, name = 'my', owner = false, compact = false }) {
@@ -92,16 +98,22 @@ export default function ShareProfile({ url, name = 'my', owner = false, compact 
   const copied = done === 'link';
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <button type="button" onClick={onCopy} className={`${btn} min-w-[7.5rem] ${copied ? '!border-accent/60 !bg-accent-soft !text-accent' : ''}`}>
+    <div className={compact ? 'flex items-center gap-2' : 'flex flex-wrap items-center gap-2'}>
+      <button
+        type="button"
+        onClick={onCopy}
+        aria-label="Copy profile link"
+        title="Copy link"
+        className={`${btn} sm:min-w-[7.5rem] ${copied ? '!border-accent/60 !bg-accent-soft !text-accent' : ''}`}
+      >
         {copied ? <CheckIcon /> : <CopyIcon />}
-        {copied ? 'Copied' : done === 'fail' ? 'Copy failed' : 'Copy link'}
+        <span className="hidden sm:inline">{copied ? 'Copied' : done === 'fail' ? 'Copy failed' : 'Copy link'}</span>
       </button>
 
       {canNative && (
-        <button type="button" onClick={onNative} className={btn}>
+        <button type="button" onClick={onNative} aria-label="Share profile" title="Share" className={btn}>
           <ShareIcon />
-          Share
+          <span className="hidden sm:inline">Share</span>
         </button>
       )}
 
@@ -114,9 +126,9 @@ export default function ShareProfile({ url, name = 'my', owner = false, compact 
       )}
 
       {owner && (
-        <button type="button" onClick={onBadge} className={btn}>
-          {done === 'badge' ? <CheckIcon /> : null}
-          {done === 'badge' ? 'Badge copied' : 'Copy README badge'}
+        <button type="button" onClick={onBadge} aria-label="Copy README badge" title="Copy README badge" className={btn}>
+          {done === 'badge' ? <CheckIcon /> : <CodeIcon />}
+          <span className="hidden sm:inline">{done === 'badge' ? 'Badge copied' : 'Copy README badge'}</span>
         </button>
       )}
 
