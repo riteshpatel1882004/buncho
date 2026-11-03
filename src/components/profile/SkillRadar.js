@@ -1,7 +1,7 @@
 // Radar chart of the average AI score per topic. Pure SVG, rendered on the server, themed with CSS variables.
-// topics: [{ name, avg }]  (only topics with an AI score are drawn)
+// topics: [{ slug, name, avg }]. avg = null means "no AI score": the axis stays at the centre and is labelled N/A.
 
-const SIZE = 320;
+const SIZE = 340; // a little padding around the 320 chart so labels never get clipped
 const C = SIZE / 2;
 const R = 100;
 
@@ -11,15 +11,16 @@ const point = (i, n, value) => {
   return [C + r * Math.cos(angle), C + r * Math.sin(angle)];
 };
 
-const short = (s) => (s.length > 18 ? `${s.slice(0, 17).trim()}…` : s);
+const short = (s) => (s.length > 14 ? `${s.slice(0, 13).trim()}…` : s);
 
 export default function SkillRadar({ topics, color }) {
-  const data = topics.filter((t) => t.avg != null).slice(0, 7);
+  const data = topics.slice(0, 7);
+  const val = (t) => t.avg ?? 0;
   const n = data.length;
-  const poly = data.map((t, i) => point(i, n, t.avg).join(',')).join(' ');
+  const poly = data.map((t, i) => point(i, n, val(t)).join(',')).join(' ');
 
   return (
-    <svg viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label={`Average AI score by topic: ${data.map((t) => `${t.name} ${t.avg}`).join(', ')}`} className="mx-auto w-full max-w-[22rem] overflow-visible">
+    <svg viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label={`Average AI score by topic: ${data.map((t) => `${t.name} ${t.avg ?? 'no score'}`).join(', ')}`} className="mx-auto w-full max-w-[22rem] overflow-visible">
       <defs>
         <radialGradient id="radar-fill" cx="50%" cy="50%" r="60%">
           <stop offset="0%" stopColor={color} stopOpacity="0.55" />
@@ -35,17 +36,17 @@ export default function SkillRadar({ topics, color }) {
       })}
       <polygon points={poly} fill="url(#radar-fill)" stroke={color} strokeWidth="2.5" strokeLinejoin="round" />
       {data.map((t, i) => {
-        const [x, y] = point(i, n, t.avg);
+        const [x, y] = point(i, n, val(t));
         const [lx, ly] = point(i, n, 128);
         const anchor = lx < C - 8 ? 'end' : lx > C + 8 ? 'start' : 'middle';
         return (
           <g key={t.slug}>
-            <circle cx={x} cy={y} r="4.5" fill={color} stroke="var(--surface)" strokeWidth="2" />
+            <circle cx={x} cy={y} r="4.5" fill={t.avg == null ? 'var(--surface)' : color} stroke={t.avg == null ? 'var(--muted)' : 'var(--surface)'} strokeWidth="2" />
             <text x={lx} y={ly} textAnchor={anchor} dominantBaseline="middle" fontSize="11" fontWeight="600" fill="var(--ink)">
               {short(t.name)}
             </text>
             <text x={lx} y={ly + 13} textAnchor={anchor} dominantBaseline="middle" fontSize="10.5" fill="var(--muted)">
-              {t.avg}/100
+              {t.avg == null ? 'N/A' : `${t.avg}/100`}
             </text>
           </g>
         );

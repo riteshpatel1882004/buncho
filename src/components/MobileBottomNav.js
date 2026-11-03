@@ -67,7 +67,7 @@ export default function MobileBottomNav({ signedIn = false, isPro = false, profi
             role="dialog"
             aria-label="Account"
             style={{ bottom: 'calc(var(--bottom-nav-h) + env(safe-area-inset-bottom, 0px) + 0.5rem)' }}
-            className={`fixed inset-x-3 z-[45] rounded-3xl border bg-surface p-3 shadow-2xl md:hidden ${isPro ? 'border-amber-400/50' : 'border-line'}`}
+            className="fixed inset-x-3 z-[45] rounded-3xl border border-line bg-surface p-3 shadow-2xl md:hidden"
           >
             {signedIn ? (
               <>

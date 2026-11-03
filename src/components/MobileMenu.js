@@ -34,7 +34,7 @@ export default function MobileMenu({ links, premium = false }) {
       {open && (
         <nav
           id="mobile-nav"
-          className={`absolute inset-x-0 top-full mt-2 rounded-3xl border bg-surface px-6 py-3 shadow-lg ${premium ? 'border-amber-400/50' : 'border-line'}`}
+          className="absolute inset-x-0 top-full mt-2 rounded-3xl border border-line bg-surface px-6 py-3 shadow-lg"
         >
           <ul>
             {links.map((l) => (
