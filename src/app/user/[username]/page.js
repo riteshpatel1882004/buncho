@@ -271,8 +271,14 @@ export default async function PublicProfilePage({ params }) {
         <div className="relative h-32 overflow-hidden sm:h-44" style={{ background: theme.banner }}>
           <div aria-hidden="true" className="absolute inset-0 opacity-50" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.3) 1px, transparent 1px)', backgroundSize: '18px 18px' }} />
           <div aria-hidden="true" className="absolute inset-x-0 bottom-0 h-3/4 bg-gradient-to-t from-[var(--surface)] via-[var(--surface)]/30 to-transparent" />
+
+          {/* Copy link + Share, top-right of the banner */}
+          <div className="absolute right-3 top-3 z-10 sm:right-4 sm:top-4">
+            <ShareProfile url={url} name={name} compact overlay />
+          </div>
+
           {data.pro && (
-            <span className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-black/50 px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-300 ring-1 ring-amber-300/30 backdrop-blur">
+            <span className="absolute left-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-black/50 px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-300 ring-1 ring-amber-300/30 backdrop-blur">
               <Crown width={12} height={12} /> Pro member
             </span>
           )}
@@ -294,15 +300,11 @@ export default async function PublicProfilePage({ params }) {
               )}
             </span>
 
-            {/* One tidy row, like a social profile: Edit profile + round icon buttons (labels appear from sm up) */}
-            <div className="flex items-center justify-end gap-2 pb-1">
-              {isOwner && (
-                <Link href="/settings/profile" className="inline-flex h-9 items-center rounded-full bg-accent px-4 text-sm font-semibold text-accent-ink shadow-sm transition hover:opacity-90 sm:rounded-xl sm:px-4">
-                  Edit profile
-                </Link>
-              )}
-              <ShareProfile url={url} name={name} compact owner={isOwner} />
-            </div>
+            {isOwner && (
+              <Link href="/settings/profile" className="mb-1 inline-flex h-9 items-center rounded-full bg-accent px-4 text-sm font-semibold text-accent-ink shadow-sm transition hover:opacity-90 sm:rounded-xl">
+                Edit profile
+              </Link>
+            )}
           </div>
 
           <div className="mt-3 sm:mt-4">
