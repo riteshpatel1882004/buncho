@@ -16,7 +16,6 @@ import StatTile from '@/components/dashboard/StatTile';
 import BadgeGrid from '@/components/profile/BadgeGrid';
 import BadgeArt from '@/components/badges/BadgeArt';
 import ShareProfile from '@/components/profile/ShareProfile';
-import SkillRadar from '@/components/profile/SkillRadar';
 
 const formatDate = (d) => d.toLocaleDateString('en-IN', { dateStyle: 'medium', timeZone: 'Asia/Kolkata' });
 
@@ -232,9 +231,8 @@ export default async function PublicProfilePage({ params }) {
     user.xHandle && { href: `https://x.com/${user.xHandle}`, label: 'X' },
   ].filter(Boolean);
 
-  const evaluatedTopics = data.topics.filter((t) => t.avg != null);
-  const showRadar = evaluatedTopics.length >= 3;
-  const maxSolved = Math.max(1, ...data.topics.map((t) => t.solved));
+  // Skill map = one card per category (AI/ML, HR, SQL), only those the user has practised
+  const practised = data.categories.filter((c) => c.solved > 0);
   const hasAnything = Boolean(stats);
 
   const ring = data.pro ? 'bg-gradient-to-br from-amber-300 via-amber-400 to-amber-600' : '';
@@ -364,29 +362,40 @@ export default async function PublicProfilePage({ params }) {
 
           <div className="min-w-0 space-y-6">
             <section aria-labelledby="skills-h" className="card p-5 sm:p-6">
-              <h2 id="skills-h" className="text-base font-semibold tracking-tight">{showRadar ? 'Skill map' : 'Topics practised'}</h2>
-              <p className="mt-1 text-sm text-muted">
-                {showRadar ? 'Average AI feedback score per topic, from solved problems.' : 'Solved problems per topic.'}
-              </p>
-              {data.topics.length === 0 ? (
+              <h2 id="skills-h" className="text-base font-semibold tracking-tight">Skill map</h2>
+              <p className="mt-1 text-sm text-muted">Progress and average AI feedback score in each area.</p>
+              {practised.length === 0 ? (
                 <p className="mt-4 rounded-xl border border-dashed border-line px-4 py-6 text-center text-sm text-muted">No solved problems yet.</p>
-              ) : showRadar ? (
-                <div className="mt-4">
-                  <SkillRadar topics={evaluatedTopics} color={theme.a} />
-                </div>
               ) : (
-                <ul className="mt-5 space-y-4">
-                  {data.topics.map((t) => (
-                    <li key={t.slug}>
-                      <div className="flex items-baseline justify-between gap-3 text-sm">
-                        <span className="min-w-0 truncate font-medium">{t.name}</span>
-                        <span className="shrink-0 tabular-nums text-muted">{t.solved} solved</span>
-                      </div>
-                      <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-surface-2">
-                        <div className="h-full rounded-full" style={{ width: `${Math.max(6, (t.solved / maxSolved) * 100)}%`, background: `linear-gradient(90deg, ${theme.a}, ${theme.c})` }} />
-                      </div>
-                    </li>
-                  ))}
+                <ul className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+                  {practised.map((c) => {
+                    const pct = c.total ? Math.min(100, (c.solved / c.total) * 100) : 0;
+                    return (
+                      <li key={c.key} className="min-w-0 rounded-2xl border border-line bg-surface-2/40 p-4">
+                        <div className="flex items-baseline justify-between gap-3">
+                          <span className="min-w-0 truncate text-base font-semibold">{c.label}</span>
+                          <span className="shrink-0 text-xs tabular-nums text-muted">
+                            <span className="text-sm font-semibold text-ink">{c.solved}</span> / {c.total} solved
+                          </span>
+                        </div>
+                        <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface-2" role="progressbar" aria-valuenow={Math.round(pct)} aria-valuemin={0} aria-valuemax={100} aria-label={`${c.label} problems solved`}>
+                          <div className="h-full rounded-full" style={{ width: `${Math.max(3, pct)}%`, background: `linear-gradient(90deg, ${theme.a}, ${theme.c})` }} />
+                        </div>
+
+                        <div className="mt-4 flex items-baseline justify-between gap-3 text-xs text-muted">
+                          <span>Avg AI score</span>
+                          {c.avg != null ? (
+                            <span className="tabular-nums"><span className="text-sm font-semibold text-ink">{c.avg}</span> / 100</span>
+                          ) : (
+                            <span>{c.key === 'sql' ? 'No AI scoring for SQL' : 'No AI feedback yet'}</span>
+                          )}
+                        </div>
+                        <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-surface-2">
+                          {c.avg != null && <div className="h-full rounded-full" style={{ width: `${Math.max(3, c.avg)}%`, background: theme.a, opacity: 0.75 }} />}
+                        </div>
+                      </li>
+                    );
+                  })}
                 </ul>
               )}
             </section>

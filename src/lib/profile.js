@@ -4,6 +4,7 @@ import { getUserStats } from './problems';
 import { getIsPro } from './subscription';
 import { normalizeUsername, validateUsername } from './username';
 import { badgeList } from './badges';
+import { CATEGORIES, categoryOf, topicCategoryWhere } from './categories';
 
 /* ------------------------------------------------------------------ */
 /* Public profile data. Everything here is safe to show to strangers:  */
@@ -102,9 +103,9 @@ export const publicName = (u) => u.profileName || displayName(u.name);
 /** Everything the profile page and the share image show. Cached per request. */
 export const getProfileData = cache(async (user) => {
   const pro = await getIsPro(user.id);
-  const base = { name: publicName(user), pro, stats: null, level: null, topics: [], avgScore: null, evals: 0, badges: [] };
+  const base = { name: publicName(user), pro, stats: null, level: null, topics: [], categories: [], avgScore: null, evals: 0, badges: [] };
 
-  const [stats, completed, evals] = await Promise.all([
+  const [stats, completed, evals, totals] = await Promise.all([
     user.showStats ? getUserStats(user.id) : null,
     user.showStats
       ? prisma.problemProgress.findMany({
@@ -114,6 +115,10 @@ export const getProfileData = cache(async (user) => {
       : [],
     user.showStats
       ? prisma.evaluation.findMany({ where: { userId: user.id }, orderBy: { createdAt: 'desc' }, select: { problemId: true, score: true } })
+      : [],
+    // Published questions per category (AI/ML, HR, SQL), to show "solved of total"
+    user.showStats
+      ? Promise.all(Object.keys(CATEGORIES).map((key) => prisma.problem.count({ where: { published: true, topic: topicCategoryWhere(key) } })))
       : [],
   ]);
 
@@ -129,10 +134,18 @@ export const getProfileData = cache(async (user) => {
 
   // Strength per topic: solved count, and the average AI score over solved problems that were evaluated
   const byTopic = new Map();
+  // Same numbers one level up: per category (AI/ML, HR, SQL) instead of per sub-topic
+  const byCategory = new Map(Object.keys(CATEGORIES).map((key, i) => [key, { key, solved: 0, sum: 0, n: 0, total: totals[i] ?? 0 }]));
   let hard = 0;
   completed.forEach((c) => {
     if (c.problem.difficulty === 'HARD') hard += 1;
     const t = c.problem.topic;
+    const cat = byCategory.get(categoryOf(t.slug));
+    cat.solved += 1;
+    if (latest.has(c.problemId)) {
+      cat.sum += latest.get(c.problemId);
+      cat.n += 1;
+    }
     const row = byTopic.get(t.slug) ?? { slug: t.slug, name: t.name, solved: 0, sum: 0, n: 0 };
     row.solved += 1;
     if (latest.has(c.problemId)) {
@@ -145,6 +158,14 @@ export const getProfileData = cache(async (user) => {
     .map((t) => ({ slug: t.slug, name: t.name, solved: t.solved, avg: t.n ? Math.round(t.sum / t.n) : null }))
     .sort((a, b) => b.solved - a.solved || (b.avg ?? 0) - (a.avg ?? 0))
     .slice(0, 8);
+
+  const categories = [...byCategory.values()].map((c) => ({
+    key: c.key,
+    label: CATEGORIES[c.key].label.trim(),
+    solved: c.solved,
+    total: c.total,
+    avg: c.n ? Math.round(c.sum / c.n) : null, // null = no AI feedback yet (always the case for SQL)
+  }));
 
   const metrics = {
     solved: stats.solved,
@@ -161,6 +182,7 @@ export const getProfileData = cache(async (user) => {
     stats,
     level: getLevel(stats.solved),
     topics,
+    categories,
     avgScore,
     evals: scores.length,
     badges: badgeList(metrics),
