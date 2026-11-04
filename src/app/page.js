@@ -3,9 +3,10 @@ import { auth } from '@clerk/nextjs/server';
 import HeroDemo from '@/components/HeroDemo';
 import Logo from '@/components/Logo';
 import CountUp from '@/components/home/CountUp';
+import RotatingWord from '@/components/home/RotatingWord';
 import StickyCta from '@/components/home/StickyCta';
-import { Check, ChevronRight, Chat, Mic, Tag, Users } from '@/components/icons';
-import { getCompanyCounts, getTopics, getTotalProblemCount } from '@/lib/problems';
+import { Book, Check, ChevronRight, Chat, Database, Mic, Tag, Users } from '@/components/icons';
+import { getCategoryCounts, getCompanyCounts, getTopics, getTotalProblemCount } from '@/lib/problems';
 import JsonLd from '@/components/JsonLd';
 import { SITE_NAME, SITE_TAGLINE, SITE_DESCRIPTION, buildMetadata, graph, organizationJsonLd, websiteJsonLd } from '@/lib/seo';
 
@@ -83,13 +84,15 @@ function IconChip({ children }) {
 export default async function LandingPage() {
   const { userId } = await auth();
   let topics = [];
-  let companyCount = 0;
+  let companies = [];
   let allProblems = 0; // every published question: AI + HR + SQL + anything added later
+  let categoryCounts = { ai: 0, hr: 0, sql: 0 };
   try {
-    const [t, companies, total] = await Promise.all([getTopics(), getCompanyCounts(), getTotalProblemCount()]);
+    const [t, c, total, cats] = await Promise.all([getTopics(), getCompanyCounts(), getTotalProblemCount(), getCategoryCounts()]);
     topics = t;
-    companyCount = companies.length;
+    companies = c;
     allProblems = total;
+    categoryCounts = cats;
   } catch {
     // The landing page should still render if the database is unreachable
   }
@@ -101,7 +104,9 @@ export default async function LandingPage() {
     mainEntity: FAQ.map((f) => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
   };
 
-  const marqueeNames = topics.length ? topics.map((t) => t.name) : FALLBACK_TOPICS;
+  const companyCount = companies.length;
+  // The strip under the hero shows real company names; falls back to topic names if no company data exists yet
+  const marqueeNames = companies.length ? companies.slice(0, 16).map((c) => c.name) : topics.length ? topics.map((t) => t.name) : FALLBACK_TOPICS;
   const marqueeHalf = [...marqueeNames, ...marqueeNames];
 
   const primaryHref = userId ? '/problems' : '/register';
@@ -118,11 +123,26 @@ export default async function LandingPage() {
         {/* minmax(0, ...) lets each column shrink to the screen, so nothing gets cut off on phones */}
         <div className="mx-auto grid w-full max-w-[96rem] grid-cols-[minmax(0,1fr)] items-center gap-8 px-4 pb-10 pt-6 sm:gap-10 sm:pb-12 sm:pt-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-14 lg:pb-24 lg:pt-20">
           <div className="min-w-0">
+            <Link
+              href="/problems"
+              className="rise group inline-flex max-w-full items-center gap-2.5 rounded-full border border-line bg-surface/80 py-1.5 pl-3 pr-3.5 text-xs font-medium text-muted backdrop-blur transition-colors hover:border-accent/50 hover:text-ink sm:text-sm"
+              style={{ '--i': 0 }}
+            >
+              <span className="relative flex h-2 w-2 shrink-0">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-accent" />
+              </span>
+              <span className="truncate">
+                <span className="font-semibold text-ink">{allProblems ? `${allProblems}+` : 'Hundreds of'}</span> questions across AI, SQL and HR
+              </span>
+              <ChevronRight width={14} height={14} className="shrink-0 transition-transform duration-300 group-hover:translate-x-0.5" />
+            </Link>
+
             <h1
               className="rise mt-4 text-balance text-[2.1rem] font-extrabold leading-[1.08] tracking-tight sm:mt-5 sm:text-5xl lg:text-6xl"
               style={{ '--i': 1 }}
             >
-              Practice AI engineering interview questions out loud.
+              Practice <RotatingWord words={['AI engineering', 'machine learning', 'generative AI', 'SQL', 'HR round']} /> interview questions out loud.
             </h1>
 
             <p
@@ -168,41 +188,91 @@ export default async function LandingPage() {
         </div>
       </section>
 
+      {/* ---------- Companies strip ---------- */}
+      <section className="mx-auto w-full max-w-[96rem] px-4" aria-label="Companies">
+        <p className="text-center text-xs font-semibold uppercase tracking-[0.18em] text-muted">
+          {companies.length ? 'Questions reported from interviews at' : 'Topics you can practice'}
+        </p>
+        <div className="marquee mt-4 overflow-hidden" aria-hidden="true">
+          <div className="marquee-mask">
+            <div className="marquee-track">
+              {[...marqueeNames, ...marqueeNames, ...marqueeNames, ...marqueeNames].map((name, i) => (
+                <span key={i} className="mr-10 inline-flex items-center gap-10 whitespace-nowrap text-lg font-bold tracking-tight text-muted/80 sm:text-xl">
+                  {name}
+                  <span className="h-1 w-1 rounded-full bg-line" />
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ---------- Stats ---------- */}
-      <section className="mx-auto w-full max-w-[96rem] px-4" aria-label="Platform at a glance">
-        <dl className="grid grid-cols-3 divide-x divide-line rounded-2xl border border-line bg-surface/80 backdrop-blur">
-          {/* Every number comes from the database. `fallback` (shown with a "+") is only used if the database is unreachable.
-              To add or swap a stat, edit this list. */}
+      <section className="mx-auto mt-12 w-full max-w-[96rem] px-4" aria-label="Platform at a glance">
+        {/* Every number comes from the database. `fallback` (shown with a "+") is only used if the database is unreachable.
+            To add or swap a stat, edit this list. */}
+        <dl className="grid grid-cols-3 gap-3 sm:gap-5">
           {[
-            { label: 'Problems', value: allProblems, fallback: 100 },
-            { label: 'Topics', value: topics.length, fallback: 10 },
-            { label: 'Companies', value: companyCount, fallback: 50 },
-          ].map(({ label, value, fallback }) => (
-            <div key={label} className="px-2 py-5 text-center sm:py-7">
-              <dd className="text-2xl font-extrabold tracking-tight sm:text-4xl">
-                <CountUp value={value || fallback} suffix={value ? '' : '+'} />
-              </dd>
-              <dt className="mt-1 text-xs text-muted sm:text-sm">{label}</dt>
+            { label: 'Problems', value: allProblems, fallback: 100, Icon: Book },
+            { label: 'Topics', value: topics.length, fallback: 10, Icon: Tag },
+            { label: 'Companies', value: companyCount, fallback: 50, Icon: Users },
+          ].map(({ label, value, fallback, Icon }) => (
+            <div key={label} className="reveal">
+              <div className="lift flex h-full flex-col items-center rounded-2xl border border-line bg-surface px-2 py-5 text-center sm:flex-row sm:justify-center sm:gap-5 sm:py-7 sm:text-left">
+                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-accent-soft text-accent sm:h-12 sm:w-12 sm:rounded-2xl">
+                  <Icon width={20} height={20} />
+                </span>
+                <div className="mt-2 sm:mt-0">
+                  <dd className="text-2xl font-extrabold tracking-tight sm:text-4xl">
+                    <CountUp value={value || fallback} suffix={value ? '' : '+'} />
+                  </dd>
+                  <dt className="text-xs text-muted sm:text-sm">{label}</dt>
+                </div>
+              </div>
             </div>
           ))}
         </dl>
       </section>
 
-      {/* ---------- Topic strip ---------- */}
-      <div className="marquee mt-10 overflow-hidden py-2" aria-hidden="true">
-        <div className="marquee-mask">
-          <div className="marquee-track">
-            {[...marqueeHalf, ...marqueeHalf].map((name, i) => (
-              <span
-                key={i}
-                className="mr-3 inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-line bg-surface px-4 py-2 text-sm font-medium"
+      {/* ---------- Tracks ---------- */}
+      <section className="mx-auto w-full max-w-[96rem] px-4 pt-16 sm:pt-24" aria-labelledby="tracks">
+        <SectionHeader
+          id="tracks"
+          title="Pick your track"
+          body="Technical depth, SQL fluency and the people round. Practice each one the way it is actually asked."
+        />
+        <div className="mt-10 grid gap-4 md:grid-cols-3 md:gap-5">
+          {[
+            { href: '/problems', title: 'AI and ML engineering', body: 'RAG, LLMs, deep learning, Python for AI and production systems.', count: categoryCounts.ai, Icon: Book },
+            { href: '/problems/sql', title: 'SQL', body: 'Joins, window functions, subqueries and performance, with real company questions.', count: categoryCounts.sql, Icon: Database },
+            { href: '/problems/hr', title: 'HR and behavioural', body: 'Tell me about yourself, conflict, leadership and the rest of the people round.', count: categoryCounts.hr, Icon: Users },
+          ].map(({ href, title, body, count, Icon }) => (
+            <div key={href} className="reveal">
+              <Link
+                href={href}
+                className="lift group relative flex h-full flex-col overflow-hidden rounded-3xl border border-line bg-surface p-6 sm:p-7"
               >
-                <Tag width={15} height={15} className="text-accent" /> {name}
-              </span>
-            ))}
-          </div>
+                {/* Solid accent bar that draws across the top on hover */}
+                <span aria-hidden="true" className="absolute inset-x-0 top-0 h-1 origin-left scale-x-0 bg-accent transition-transform duration-500 group-hover:scale-x-100" />
+                <span className="grid h-12 w-12 place-items-center rounded-2xl bg-accent-soft text-accent transition-transform duration-300 group-hover:-rotate-6 group-hover:scale-110">
+                  <Icon width={22} height={22} />
+                </span>
+                <h3 className="mt-5 text-xl font-extrabold tracking-tight">{title}</h3>
+                <p className="mt-2 flex-1 text-sm leading-relaxed text-muted">{body}</p>
+                <div className="mt-6 flex items-end justify-between">
+                  <p className="text-3xl font-extrabold tracking-tight">
+                    <CountUp value={count} />
+                    <span className="ml-1.5 text-sm font-medium text-muted">{count === 1 ? 'question' : 'questions'}</span>
+                  </p>
+                  <span className="grid h-10 w-10 place-items-center rounded-full border border-line text-muted transition-all duration-300 group-hover:translate-x-1 group-hover:border-accent group-hover:bg-accent group-hover:text-accent-ink">
+                    <ChevronRight width={18} height={18} />
+                  </span>
+                </div>
+              </Link>
+            </div>
+          ))}
         </div>
-      </div>
+      </section>
 
       {/* ---------- Features ---------- */}
       <section className="mx-auto w-full max-w-[96rem] px-4 py-16 sm:py-24" aria-labelledby="features">
@@ -326,7 +396,10 @@ export default async function LandingPage() {
           <ol className="mt-10 grid gap-4 md:grid-cols-3 md:gap-5">
             {STEPS.map((s) => (
               <li key={s.n} className="reveal">
-                <div className="lift panel flex h-full gap-4 !rounded-2xl p-5 md:block md:p-6">
+                <div className="lift panel relative flex h-full gap-4 overflow-hidden !rounded-2xl p-5 md:block md:p-6">
+                  <span aria-hidden="true" className="pointer-events-none absolute -right-1 -top-4 select-none text-8xl font-extrabold leading-none text-line/50">
+                    {s.n}
+                  </span>
                   <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-accent text-base font-bold text-accent-ink shadow-md shadow-accent/30">
                     {s.n}
                   </span>
@@ -456,7 +529,7 @@ export default async function LandingPage() {
 
       {/* ---------- Final CTA ---------- */}
       <section className="mx-auto w-full max-w-[96rem] px-4 pb-20 pt-2">
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#34d67b] to-[#1fae5a] px-6 py-14 text-[#04140a] sm:px-14 sm:py-16">
+        <div className="relative overflow-hidden rounded-3xl bg-[#34d67b] px-6 py-14 text-[#04140a] sm:px-14 sm:py-16">
           <div
             aria-hidden="true"
             className="absolute inset-0 opacity-[0.12]"
@@ -470,9 +543,11 @@ export default async function LandingPage() {
           />
           <div
             aria-hidden="true"
-            className="absolute right-10 top-1/2 hidden -translate-y-1/2 drop-shadow-[0_20px_32px_rgba(4,20,10,0.25)] lg:block xl:right-16"
+            className="absolute right-10 top-1/2 hidden -translate-y-1/2 lg:block xl:right-16"
           >
-            <Logo size="xl" tone="dark" />
+            <div className="float drop-shadow-[0_20px_32px_rgba(4,20,10,0.25)]">
+              <Logo size="xl" tone="dark" />
+            </div>
           </div>
 
           <div className="relative max-w-2xl">
@@ -495,7 +570,13 @@ export default async function LandingPage() {
                 Browse problems
               </Link>
             </div>
-            <p className="mt-5 text-sm text-[#04140a]/65">Free to start. Voice and text answers included.</p>
+            <ul className="mt-6 flex flex-wrap gap-2 text-xs font-semibold sm:text-sm">
+              {[`${allProblems ? `${allProblems}+` : 'Hundreds of'} questions`, 'AI, SQL and HR tracks', 'Free to start'].map((t) => (
+                <li key={t} className="rounded-full border border-[#04140a]/25 px-3 py-1">
+                  {t}
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </section>

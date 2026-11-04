@@ -467,3 +467,12 @@ html, body { overflow-x: clip; }
   .bo-sweep, .bo-orbit, .bo-radar, .bo-twinkle, .glow-spin { animation: none; }
   .track-fill, .ring-draw { animation: none; }
 }
+/* Gentle floating motion for decorative pieces (used by the final call-to-action logo) */
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(-2deg); }
+  50% { transform: translateY(-14px) rotate(2deg); }
+}
+.float { animation: float 6s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .float, .marquee-track { animation: none; }
+}
