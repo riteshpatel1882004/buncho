@@ -5,7 +5,7 @@ import Logo from '@/components/Logo';
 import CountUp from '@/components/home/CountUp';
 import StickyCta from '@/components/home/StickyCta';
 import { Check, ChevronRight, Chat, Mic, Tag, Users } from '@/components/icons';
-import { getCompanyCounts, getTopics } from '@/lib/problems';
+import { getCompanyCounts, getTopics, getTotalProblemCount } from '@/lib/problems';
 import JsonLd from '@/components/JsonLd';
 import { SITE_NAME, SITE_TAGLINE, SITE_DESCRIPTION, buildMetadata, graph, organizationJsonLd, websiteJsonLd } from '@/lib/seo';
 
@@ -84,13 +84,16 @@ export default async function LandingPage() {
   const { userId } = await auth();
   let topics = [];
   let companyCount = 0;
+  let allProblems = 0; // every published question: AI + HR + SQL + anything added later
   try {
-    const [t, companies] = await Promise.all([getTopics(), getCompanyCounts()]);
+    const [t, companies, total] = await Promise.all([getTopics(), getCompanyCounts(), getTotalProblemCount()]);
     topics = t;
     companyCount = companies.length;
+    allProblems = total;
   } catch {
     // The landing page should still render if the database is unreachable
   }
+  // AI/ML problems only: used by the "Browse by topic" card, which counts the AI topics
   const totalProblems = topics.reduce((sum, t) => sum + t._count.problems, 0);
 
   const faqJsonLd = {
@@ -171,7 +174,7 @@ export default async function LandingPage() {
           {/* Every number comes from the database. `fallback` (shown with a "+") is only used if the database is unreachable.
               To add or swap a stat, edit this list. */}
           {[
-            { label: 'Problems', value: totalProblems, fallback: 100 },
+            { label: 'Problems', value: allProblems, fallback: 100 },
             { label: 'Topics', value: topics.length, fallback: 10 },
             { label: 'Companies', value: companyCount, fallback: 50 },
           ].map(({ label, value, fallback }) => (

@@ -15,10 +15,12 @@ const LEVEL = {
 // Columns follow the width of the list itself (container queries), not the screen, because the list sits in
 // different layouts (beside the sidebar on /problems/ai, /problems/hr and /problems/sql, beside a sidebar and a rail on topic pages).
 //   narrow (phones): status | title + meta line | chevron   (a stacked card row)
-//   @2xl:    status | title | topic | type | time | difficulty
-//   @5xl:    status | title | topic | type | time | asked % | companies | difficulty
+//   @2xl:    status | title | topic | asked % | companies | difficulty
+//   @4xl:    status | title | topic | type | asked % | companies | difficulty
+//   @5xl:    same as @4xl with wider columns (and a small bar under the asked %)
+// The Time column was replaced by Asked % and Companies (Pro insights; free users see a lock).
 const COLS =
-  '@2xl:grid-cols-[1.5rem_minmax(0,1fr)_11rem_7rem_4.5rem_5.5rem] @5xl:grid-cols-[1.5rem_minmax(0,1fr)_9rem_6.5rem_4rem_5.5rem_11rem_5rem]';
+  '@2xl:grid-cols-[1.5rem_minmax(0,1fr)_7rem_4.5rem_8rem_5rem] @4xl:grid-cols-[1.5rem_minmax(0,1fr)_8rem_6.5rem_4.5rem_9rem_5rem] @5xl:grid-cols-[1.5rem_minmax(0,1fr)_9rem_6.5rem_5rem_11rem_5rem]';
 
 function StatusMark({ status }) {
   if (status === 'COMPLETED') {
@@ -85,21 +87,18 @@ export function ProblemRow({ problem, status, number, pro = false, category = 'a
             <Level difficulty={problem.difficulty} />
             <Sep />
             <span className="min-w-0 max-w-[11rem] truncate">{topicLabel}</span>
-            <Sep />
-            <span className="tabular-nums">{problem.estimatedMinutes} min</span>
           </span>
 
           {/* Pro insights go under the title where the columns do not fit. Free users get one banner above the list instead of a lock on every row. */}
-          {pro && <InsightsInline pro={pro} problem={problem} className="mt-1.5 @5xl:hidden" />}
+          {pro && <InsightsInline pro={pro} problem={problem} className="mt-1.5 @2xl:hidden" />}
         </span>
 
         <ChevronRight width={16} height={16} className="mt-0.5 shrink-0 text-muted/60 @2xl:hidden" aria-hidden="true" />
 
         <span className="hidden truncate text-xs text-muted @2xl:block">{topicLabel}</span>
-        <span className="hidden truncate text-xs text-muted @2xl:block">{typeLabel}</span>
-        <span className="hidden text-xs tabular-nums text-muted @2xl:block">{problem.estimatedMinutes} min</span>
-        <span className="hidden @5xl:block"><Frequency pro={pro} value={problem.askedFrequency} /></span>
-        <span className="hidden min-w-0 @5xl:block"><Companies pro={pro} list={problem.askedByCompanies} /></span>
+        <span className="hidden truncate text-xs text-muted @4xl:block">{typeLabel}</span>
+        <span className="hidden @2xl:block"><Frequency pro={pro} value={problem.askedFrequency} /></span>
+        <span className="hidden min-w-0 @2xl:block"><Companies pro={pro} list={problem.askedByCompanies} /></span>
         <span className="hidden text-right @2xl:block">
           <DifficultyBadge difficulty={problem.difficulty} />
         </span>
@@ -185,10 +184,9 @@ export default function ProblemList({ result, statusMap = {}, basePath, params, 
           <span />
           <span>Title</span>
           <span>{category === 'hr' || category === 'sql' ? 'Group' : 'Topic'}</span>
-          <span>Type</span>
-          <span>Time</span>
-          <span className="hidden items-center gap-1 @5xl:flex">Asked {!pro && <Lock width={11} height={11} />}</span>
-          <span className="hidden items-center gap-1 @5xl:flex">Companies {!pro && <Lock width={11} height={11} />}</span>
+          <span className="hidden @4xl:block">Type</span>
+          <span className="hidden items-center gap-1 @2xl:flex">Asked {!pro && <Lock width={11} height={11} />}</span>
+          <span className="hidden items-center gap-1 @2xl:flex">Companies {!pro && <Lock width={11} height={11} />}</span>
           <span className="text-right">Level</span>
         </div>
         <ul className="divide-y divide-line">
