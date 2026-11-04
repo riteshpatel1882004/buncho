@@ -7,12 +7,18 @@ import { Book, Check, ChevronLeft, ChevronRight, Database, Lock, Search, Tag, Us
 import { ProBadge } from './ProBadge';
 
 const KEY = 'buncho-problems-nav';
+const WIDTH_KEY = 'buncho-problems-nav-width';
+const MIN_WIDTH = 200; // px, narrowest the sidebar can be dragged
+const MAX_WIDTH = 420; // px, widest
+const DEFAULT_WIDTH = 256; // px
+const clampWidth = (w) => Math.min(MAX_WIDTH, Math.max(MIN_WIDTH, w));
 const ICONS = { ai: Book, hr: Users, sql: Database };
 
 /**
  * Two-column shell for the question library.
- * Left (about 20%): the question types, AI problems, HR questions and SQL questions. It can be collapsed to a thin icon rail
- * and expanded again; the choice is remembered in this browser.
+ * Left: the question types, AI problems, HR questions and SQL questions. The user can drag its right edge to make it narrower
+ * or wider (double-click the edge to reset), or collapse it to a thin icon rail with the arrow button. Both choices are
+ * remembered in this browser.
  * Right: the list for the selected type (children).
  * Below the lg breakpoint the left column becomes a segmented switch above the list.
  *
@@ -73,7 +79,7 @@ function CompanyFilter({ companies, locked, params, pathname }) {
   const hidden = matches.length - visible.length;
 
   return (
-    <div className="mt-2 border-t border-line pt-3" role="group" aria-label="Filter by company">
+    <div className="mt-2 flex min-h-0 flex-1 flex-col border-t border-line pt-3" role="group" aria-label="Filter by company">
       <div className="flex items-center justify-between pl-3 pr-1">
         <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted">
           <Tag width={13} height={13} /> Companies
@@ -100,7 +106,7 @@ function CompanyFilter({ companies, locked, params, pathname }) {
         </div>
       )}
 
-      <ul className="max-h-72 space-y-0.5 overflow-y-auto">
+      <ul className="min-h-0 flex-1 space-y-0.5 overflow-y-auto">
         {visible.map((c) => {
           const on = c.name === active;
           return (
@@ -141,11 +147,15 @@ function CompanyFilter({ companies, locked, params, pathname }) {
 export default function ProblemsShell({ items, companies = [], companyLocked = false, params = {}, children }) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [width, setWidth] = useState(DEFAULT_WIDTH);
+  const [dragging, setDragging] = useState(false);
   const activeRef = useRef(null); // the active pill in the phone switch
 
   useEffect(() => {
     try {
       if (localStorage.getItem(KEY) === '1') setCollapsed(true);
+      const saved = Number(localStorage.getItem(WIDTH_KEY));
+      if (saved) setWidth(clampWidth(saved));
     } catch {}
   }, []);
 
@@ -162,6 +172,47 @@ export default function ProblemsShell({ items, companies = [], companyLocked = f
       } catch {}
       return next;
     });
+  }
+
+  // Drag the right edge to resize. Pointer events cover mouse, pen and touch; the width is saved when the drag ends.
+  function startResize(e) {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = width;
+    let latest = startW;
+    setDragging(true);
+    const onMove = (ev) => {
+      latest = clampWidth(startW + ev.clientX - startX);
+      setWidth(latest);
+    };
+    const onUp = () => {
+      setDragging(false);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      try {
+        localStorage.setItem(WIDTH_KEY, String(latest));
+      } catch {}
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  }
+
+  function resetWidth() {
+    setWidth(DEFAULT_WIDTH);
+    try {
+      localStorage.removeItem(WIDTH_KEY);
+    } catch {}
+  }
+
+  // Arrow keys resize too, so the handle works without a mouse
+  function onHandleKey(e) {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    e.preventDefault();
+    const next = clampWidth(width + (e.key === 'ArrowRight' ? 16 : -16));
+    setWidth(next);
+    try {
+      localStorage.setItem(WIDTH_KEY, String(next));
+    } catch {}
   }
 
   // AI problems live at /problems (and /problems/ai); HR questions at /problems/hr; SQL questions at /problems/sql
@@ -212,15 +263,14 @@ export default function ProblemsShell({ items, companies = [], companyLocked = f
         <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-canvas to-transparent" />
       </div>
 
-      {/* Desktop: collapsible sidebar, 20% wide when open */}
+      {/* Desktop: sidebar the user can collapse or drag to any width between MIN_WIDTH and MAX_WIDTH */}
       <aside
         aria-label="Question types"
-        className={`hidden shrink-0 transition-[width] duration-200 lg:block ${
-          collapsed ? 'w-12' : 'w-[20%] min-w-[12.5rem] max-w-[17rem]'
-        }`}
+        style={{ width: collapsed ? 48 : width }}
+        className={`relative hidden shrink-0 lg:block ${dragging ? '' : 'transition-[width] duration-200'}`}
       >
-        <div className="panel sticky top-[4.5rem] p-2">
-          <div className={`flex items-center ${collapsed ? 'justify-center' : 'justify-between pl-3'}`}>
+        <div className="panel sticky top-[4.5rem] flex max-h-[calc(100dvh-5.5rem)] flex-col overflow-y-auto p-2">
+          <div className={`flex shrink-0 items-center ${collapsed ? 'justify-center' : 'justify-between pl-3'}`}>
             {!collapsed && <p className="text-xs font-semibold uppercase tracking-wide text-muted">Question bank</p>}
             <button
               type="button"
@@ -234,7 +284,7 @@ export default function ProblemsShell({ items, companies = [], companyLocked = f
             </button>
           </div>
 
-          <nav className="mt-1 space-y-1">
+          <nav className="mt-1 shrink-0 space-y-1">
             {items.map((it) => {
               const on = isOn(it);
               const Icon = ICONS[it.key] ?? Book;
@@ -266,6 +316,26 @@ export default function ProblemsShell({ items, companies = [], companyLocked = f
 
           {!collapsed && <CompanyFilter companies={companies} locked={companyLocked} params={params} pathname={pathname} />}
         </div>
+
+        {/* Drag handle on the right edge (only when expanded) */}
+        {!collapsed && (
+          <div
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Resize sidebar"
+            aria-valuemin={MIN_WIDTH}
+            aria-valuemax={MAX_WIDTH}
+            aria-valuenow={width}
+            tabIndex={0}
+            title="Drag to resize, double-click to reset"
+            onPointerDown={startResize}
+            onDoubleClick={resetWidth}
+            onKeyDown={onHandleKey}
+            className="group absolute -right-3 top-0 z-10 flex h-full w-3 cursor-col-resize touch-none justify-center outline-none"
+          >
+            <span className={`h-full w-0.5 rounded-full transition-colors group-hover:bg-accent/60 group-focus-visible:bg-accent ${dragging ? 'bg-accent' : 'bg-transparent'}`} />
+          </div>
+        )}
       </aside>
 
       <div className="min-w-0 flex-1">{children}</div>

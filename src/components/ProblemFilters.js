@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useState, useTransition } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { DIFFICULTIES, DIFFICULTY_LABEL, PROBLEM_TYPES, TYPE_LABEL } from '@/lib/constants';
@@ -52,13 +51,13 @@ function ChipGroup({ label, value, options, onChange }) {
  * Topic chips + search + filters.
  * Phones: search box with a "Filters" button that opens a bottom sheet, removable chips for what is active.
  * md and up: search plus inline selects.
- * On /problems the topic chips filter in place. On a topic page (currentTopic is set) they are links to the other topics.
+ * On /problems the topic chips filter in place (?topic=<slug>), so a link like /problems?topic=python-for-ai-ml works.
  * category 'hr': no topic chips and no type filter (every question in it shares one topic and type).
  * category 'sql': topic chips come from `subcategories` ([{ name, count }], filter param `sub`), plus the type filter
  * (Conceptual = explain questions, Practical = write-a-query questions).
  * solved: number | null. When null, only the problem count is shown.
  */
-export default function ProblemFilters({ topics = [], subcategories = [], currentTopic, signedIn = false, solved = null, total = 0, category = 'ai' }) {
+export default function ProblemFilters({ topics = [], subcategories = [], signedIn = false, solved = null, total = 0, category = 'ai' }) {
   const single = category === 'hr' || category === 'sql'; // no chips built from the Topic table
   const noType = category === 'hr';
   const useSubs = category === 'sql' && subcategories.length > 0;
@@ -68,7 +67,6 @@ export default function ProblemFilters({ topics = [], subcategories = [], curren
   const sp = useSearchParams();
   const [pending, startTransition] = useTransition();
   const [q, setQ] = useState(sp.get('q') ?? '');
-  const onTopicPage = currentTopic !== undefined;
   const allCount = topics.reduce((sum, t) => sum + (t._count?.problems ?? 0), 0);
 
   const update = useCallback(
@@ -95,8 +93,8 @@ export default function ProblemFilters({ topics = [], subcategories = [], curren
   const access = sp.get('access') ?? '';
   const status = sp.get('status') ?? '';
   const sub = sp.get('sub') ?? '';
-  const activeTopic = onTopicPage ? currentTopic : sp.get('topic') ?? '';
-  const hasFilters = Boolean(sp.get('q') || difficulty || type || access || status || sub || (!onTopicPage && sp.get('topic')));
+  const activeTopic = sp.get('topic') ?? '';
+  const hasFilters = Boolean(sp.get('q') || difficulty || type || access || status || sub || sp.get('topic'));
 
   const active = [
     difficulty && { key: 'difficulty', label: DIFFICULTY_LABEL[difficulty] },
@@ -126,29 +124,14 @@ export default function ProblemFilters({ topics = [], subcategories = [], curren
       {/* Topic chips (AI problems only: HR and SQL questions each share one topic) */}
       {!single && (
         <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0" role="group" aria-label="Topic">
-          {onTopicPage ? (
-            <>
-              <Link href="/problems" className={chipCls(false)}>
-                All topics <span className={countCls(false)}>{allCount}</span>
-              </Link>
-              {topics.map((t) => (
-                <Link key={t.slug} href={`/topics/${t.slug}`} aria-current={t.slug === activeTopic ? 'page' : undefined} className={chipCls(t.slug === activeTopic)}>
-                  {t.name} <span className={countCls(t.slug === activeTopic)}>{t._count?.problems ?? 0}</span>
-                </Link>
-              ))}
-            </>
-          ) : (
-            <>
-              <button type="button" aria-pressed={!activeTopic} onClick={() => update({ topic: '' })} className={chipCls(!activeTopic)}>
-                All topics <span className={countCls(!activeTopic)}>{allCount}</span>
-              </button>
-              {topics.map((t) => (
-                <button key={t.slug} type="button" aria-pressed={activeTopic === t.slug} onClick={() => update({ topic: t.slug })} className={chipCls(activeTopic === t.slug)}>
-                  {t.name} <span className={countCls(activeTopic === t.slug)}>{t._count?.problems ?? 0}</span>
-                </button>
-              ))}
-            </>
-          )}
+          <button type="button" aria-pressed={!activeTopic} onClick={() => update({ topic: '' })} className={chipCls(!activeTopic)}>
+            All topics <span className={countCls(!activeTopic)}>{allCount}</span>
+          </button>
+          {topics.map((t) => (
+            <button key={t.slug} type="button" aria-pressed={activeTopic === t.slug} onClick={() => update({ topic: t.slug })} className={chipCls(activeTopic === t.slug)}>
+              {t.name} <span className={countCls(activeTopic === t.slug)}>{t._count?.problems ?? 0}</span>
+            </button>
+          ))}
         </div>
       )}
 

@@ -20,7 +20,7 @@ export default async function Navbar() {
   const admin = Boolean(user) && isAdmin(user);
 
   const links = [
-    { href: '/problems', label: 'Problems', match: ['/topics'] },
+    { href: '/problems', label: 'Problems' },
     ...(userId
       ? [
           { href: '/jobs', label: 'Job prep' },

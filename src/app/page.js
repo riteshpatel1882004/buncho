@@ -5,7 +5,7 @@ import Logo from '@/components/Logo';
 import CountUp from '@/components/home/CountUp';
 import StickyCta from '@/components/home/StickyCta';
 import { Check, ChevronRight, Chat, Mic, Tag, Users } from '@/components/icons';
-import { getTopics } from '@/lib/problems';
+import { getCompanyCounts, getTopics } from '@/lib/problems';
 import JsonLd from '@/components/JsonLd';
 import { SITE_NAME, SITE_TAGLINE, SITE_DESCRIPTION, buildMetadata, graph, organizationJsonLd, websiteJsonLd } from '@/lib/seo';
 
@@ -83,8 +83,11 @@ function IconChip({ children }) {
 export default async function LandingPage() {
   const { userId } = await auth();
   let topics = [];
+  let companyCount = 0;
   try {
-    topics = await getTopics();
+    const [t, companies] = await Promise.all([getTopics(), getCompanyCounts()]);
+    topics = t;
+    companyCount = companies.length;
   } catch {
     // The landing page should still render if the database is unreachable
   }
@@ -165,14 +168,16 @@ export default async function LandingPage() {
       {/* ---------- Stats ---------- */}
       <section className="mx-auto w-full max-w-[96rem] px-4" aria-label="Platform at a glance">
         <dl className="grid grid-cols-3 divide-x divide-line rounded-2xl border border-line bg-surface/80 backdrop-blur">
+          {/* Every number comes from the database. `fallback` (shown with a "+") is only used if the database is unreachable.
+              To add or swap a stat, edit this list. */}
           {[
-            [totalProblems || 100, totalProblems ? '' : '+', 'Problems'],
-            [topics.length || 10, topics.length ? '' : '+', 'Topics'],
-            [4, '', 'Rubric scores'],
-          ].map(([value, suffix, label]) => (
+            { label: 'Problems', value: totalProblems, fallback: 100 },
+            { label: 'Topics', value: topics.length, fallback: 10 },
+            { label: 'Companies', value: companyCount, fallback: 50 },
+          ].map(({ label, value, fallback }) => (
             <div key={label} className="px-2 py-5 text-center sm:py-7">
               <dd className="text-2xl font-extrabold tracking-tight sm:text-4xl">
-                <CountUp value={value} suffix={suffix} />
+                <CountUp value={value || fallback} suffix={value ? '' : '+'} />
               </dd>
               <dt className="mt-1 text-xs text-muted sm:text-sm">{label}</dt>
             </div>
@@ -363,7 +368,7 @@ export default async function LandingPage() {
                 return (
                   <li key={t.id} className="w-[82%] max-w-sm shrink-0 snap-start md:w-auto md:max-w-none">
                     <Link
-                      href={`/topics/${t.slug}`}
+                      href={`/problems?topic=${t.slug}`}
                       data-tone={i % 6}
                       className="topic-card group flex h-full min-h-[16rem] flex-col p-5 active:scale-[0.98] sm:p-6"
                     >

@@ -47,7 +47,7 @@ export default function MobileBottomNav({ signedIn = false, isPro = false, profi
     : 'border-line bg-surface/95';
   const indicator = <span aria-hidden="true" className="absolute top-0 h-0.5 w-8 rounded-full bg-current" />;
 
-  const problemsOn = isOn('/problems', ['/topics']);
+  const problemsOn = isOn('/problems');
   const dashboardOn = isOn('/dashboard');
   const proOn = isOn('/pricing');
   const accountOn = open;

@@ -22,10 +22,7 @@ export default async function sitemap() {
   ];
 
   try {
-    const [topics, problems, profiles] = await Promise.all([
-      prisma.topic.findMany({
-        select: { slug: true, problems: { where: { published: true }, select: { updatedAt: true }, orderBy: { updatedAt: 'desc' }, take: 1 } },
-      }),
+    const [problems, profiles] = await Promise.all([
       prisma.problem.findMany({
         where: { published: true },
         select: { slug: true, updatedAt: true, topic: { select: { slug: true } } },
@@ -42,17 +39,6 @@ export default async function sitemap() {
 
     profiles.forEach((u) => {
       entries.push({ url: `${SITE_URL}/user/${u.username}`, lastModified: u.updatedAt, changeFrequency: 'weekly', priority: 0.4 });
-    });
-
-    topics.forEach((t) => {
-      // A topic with no published problems would render an empty page, so keep it out of the sitemap
-      if (!t.problems.length) return;
-      entries.push({
-        url: `${SITE_URL}/topics/${t.slug}`,
-        lastModified: t.problems[0].updatedAt,
-        changeFrequency: 'weekly',
-        priority: 0.8,
-      });
     });
 
     problems.forEach((p) => {

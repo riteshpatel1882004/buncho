@@ -65,7 +65,7 @@ export function WeakTopics({ items }) {
           {items.map((t) => (
             <li key={t.slug}>
               <div className="flex items-center justify-between gap-3 text-sm">
-                <Link href={`/topics/${t.slug}`} className="font-medium hover:text-accent">{t.name}</Link>
+                <Link href={`/problems?topic=${t.slug}`} className="font-medium hover:text-accent">{t.name}</Link>
                 <span className="shrink-0 text-xs text-muted">
                   {t.reason === 'low' ? `Avg ${t.avg}/100 · ${t.evaluated} ${t.evaluated === 1 ? 'answer' : 'answers'}` : 'Not started'}
                 </span>
