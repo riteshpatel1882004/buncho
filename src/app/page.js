@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { auth } from '@clerk/nextjs/server';
 import HeroDemo from '@/components/HeroDemo';
-import Logo from '@/components/Logo';
+import AnimatedLogo from '@/components/home/AnimatedLogo';
 import CountUp from '@/components/home/CountUp';
 import RotatingWord from '@/components/home/RotatingWord';
 import StickyCta from '@/components/home/StickyCta';
@@ -545,9 +545,7 @@ export default async function LandingPage() {
             aria-hidden="true"
             className="absolute right-10 top-1/2 hidden -translate-y-1/2 lg:block xl:right-16"
           >
-            <div className="float drop-shadow-[0_20px_32px_rgba(4,20,10,0.25)]">
-              <Logo size="xl" tone="dark" />
-            </div>
+            <AnimatedLogo />
           </div>
 
           <div className="relative max-w-2xl">
