@@ -541,9 +541,10 @@ export default async function LandingPage() {
               WebkitMaskImage: 'linear-gradient(to left, black, transparent 70%)',
             }}
           />
+          {/* Phones and tablets: sits above the heading. Desktop: pinned to the right side of the box. */}
           <div
             aria-hidden="true"
-            className="absolute right-10 top-1/2 hidden -translate-y-1/2 lg:block xl:right-16"
+            className="relative mb-6 lg:absolute lg:right-10 lg:top-1/2 lg:mb-0 lg:-translate-y-1/2 xl:right-16"
           >
             <AnimatedLogo />
           </div>
