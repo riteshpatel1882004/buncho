@@ -142,7 +142,10 @@ export default function DocEditor({ slug, initialContent, initialSettings }) {
   const save = useCallback(() => {
     if (!editor) return;
     start(async () => {
-      const res = await saveTab(slug, editor.getJSON(), settingsRef.current);
+      // ProseMirror's attrs objects have no prototype, which Next cannot send to a server action ("Cannot access id
+      // on the server… temporary client reference"). A JSON round trip turns them into plain objects.
+      const plainDoc = JSON.parse(JSON.stringify(editor.getJSON()));
+      const res = await saveTab(slug, plainDoc, { ...settingsRef.current });
       if (res.ok) {
         setDirty(false);
         setMessage({ type: 'ok', text: `Saved. ${res.questions} question${res.questions === 1 ? '' : 's'} in this tab.` });
