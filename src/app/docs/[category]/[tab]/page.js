@@ -9,6 +9,8 @@ import { EMPTY_DOC, ensureHeadingIds, extractQuestions, isDoc } from '@/lib/docs
 import { buildExtensions } from '@/lib/docs/extensions';
 import DocTabs from '@/components/docs/DocTabs';
 import DocEditor from '@/components/docs/DocEditor';
+import DocLayout from '@/components/docs/DocLayout';
+import { enhanceDocHtml } from '@/lib/docs/highlight';
 import { buildMetadata } from '@/lib/seo';
 
 export const dynamic = 'force-dynamic';
@@ -37,33 +39,36 @@ export default async function DocTabPage({ params }) {
   const settings = readSettings(tab.settings);
   const doc = isDoc(tab.content) ? ensureHeadingIds(tab.content) : EMPTY_DOC;
   const count = extractQuestions(doc).length;
-  const html = admin ? null : generateHTML(doc, buildExtensions());
+  const html = admin ? null : enhanceDocHtml(generateHTML(doc, buildExtensions()));
 
   return (
-    <main className="mx-auto grid max-w-7xl gap-6 px-4 py-6 md:grid-cols-[15rem_minmax(0,1fr)] md:gap-10">
-      <aside className="md:sticky md:top-20 md:self-start">
-        <Link href={CATEGORIES[category].path} className="mb-3 inline-flex items-center gap-1 text-xs text-muted hover:text-ink">
-          ← {CATEGORIES[category].label.trim()} questions
-        </Link>
-        <p className="mb-2 px-3 text-xs font-medium uppercase tracking-wide text-muted">Topics</p>
-        <DocTabs category={category} tabs={tabs} activeSlug={slug} admin={admin} />
-      </aside>
-
-      <article className={`min-w-0 pb-24 ${settings.wide ? '' : 'mx-auto w-full max-w-3xl'}`}>
-        <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
-          <h1 className="text-sm font-medium text-muted">
-            {tab.name} <span className="font-normal">· {count} question{count === 1 ? '' : 's'}</span>
-          </h1>
-          {admin && <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent">Admin editing</span>}
-        </div>
-
+    <DocLayout
+      wide={settings.wide}
+      aside={
+        <>
+          <Link href={CATEGORIES[category].path} className="mb-3 inline-flex items-center gap-1 text-xs text-muted hover:text-ink">
+            ← {CATEGORIES[category].label.trim()} questions
+          </Link>
+          <p className="mb-2 px-3 text-xs font-medium uppercase tracking-wide text-muted">Topics</p>
+          <DocTabs category={category} tabs={tabs} activeSlug={slug} admin={admin} />
+        </>
+      }
+    >
+      <article className="min-w-0 pb-24">
         {admin ? (
-          // key: switching tabs must start a fresh editor
-          <DocEditor key={slug} slug={slug} initialContent={doc} initialSettings={settings} />
+          // key: switching tabs must start a fresh editor. The title row lives inside the editor so it can stay pinned with the toolbar.
+          <DocEditor key={slug} slug={slug} title={tab.name} initialCount={count} initialContent={doc} initialSettings={settings} />
         ) : (
-          <div className={`doc doc-h-${settings.headingFont} doc-t-${settings.textFont}`} dangerouslySetInnerHTML={{ __html: html }} />
+          <>
+            <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
+              <h1 className="text-sm font-medium text-muted">
+                {tab.name} <span className="font-normal">· {count} question{count === 1 ? '' : 's'}</span>
+              </h1>
+            </div>
+            <div className={`doc doc-h-${settings.headingFont} doc-t-${settings.textFont}`} dangerouslySetInnerHTML={{ __html: html }} />
+          </>
         )}
       </article>
-    </main>
+    </DocLayout>
   );
 }

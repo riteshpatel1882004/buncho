@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 import { createTab, deleteTab, moveTab, renameTab } from '@/app/docs-actions';
+import ConfirmDialog from './ConfirmDialog';
 
 const act = 'grid h-6 w-6 place-items-center rounded text-xs text-muted hover:bg-surface hover:text-ink disabled:opacity-40';
 
@@ -14,6 +15,7 @@ export default function DocTabs({ category, tabs, activeSlug, admin }) {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
   const [error, setError] = useState(null);
+  const [toDelete, setToDelete] = useState(null); // the tab waiting for confirmation
 
   const run = (fn, after) =>
     start(async () => {
@@ -55,12 +57,7 @@ export default function DocTabs({ category, tabs, activeSlug, admin }) {
                     className={`${act} hover:!text-hard`}
                     disabled={pending}
                     aria-label={`Delete ${t.name}`}
-                    onClick={() => {
-                      if (!window.confirm(`Delete the tab "${t.name}" with all its questions? Users' progress on them is deleted too. This cannot be undone.`)) return;
-                      run(() => deleteTab(t.slug), () => {
-                        if (active) router.push(`/docs/${category}`);
-                      });
-                    }}
+                    onClick={() => setToDelete(t)}
                   >
                     🗑
                   </button>
@@ -103,6 +100,22 @@ export default function DocTabs({ category, tabs, activeSlug, admin }) {
         ))}
 
       {error && <p role="alert" className="mt-2 px-1 text-xs text-hard">{error}</p>}
+
+      <ConfirmDialog
+        open={Boolean(toDelete)}
+        busy={pending}
+        title={toDelete ? `Delete the tab "${toDelete.name}"?` : ''}
+        message="This deletes the tab with all its questions. Users' progress on them is deleted too. This cannot be undone."
+        confirmLabel="Delete tab"
+        onCancel={() => !pending && setToDelete(null)}
+        onConfirm={() => {
+          const t = toDelete;
+          run(() => deleteTab(t.slug), () => {
+            setToDelete(null);
+            if (t.slug === activeSlug) router.push(`/docs/${category}`);
+          });
+        }}
+      />
     </nav>
   );
 }

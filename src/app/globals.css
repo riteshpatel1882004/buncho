@@ -516,12 +516,34 @@ html, body { overflow-x: clip; }
 .doc blockquote { border-left: 3px solid var(--line); padding-left: 1rem; color: var(--muted); margin: .9rem 0; }
 .doc hr { border: 0; border-top: 1px solid var(--line); margin: 1.6rem 0; }
 .doc code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em; background: var(--surface-2); border-radius: .35rem; padding: .1em .35em; }
-.doc pre { background: var(--surface-2); border: 1px solid var(--line); border-radius: .75rem; padding: 1rem 1.1rem; overflow-x: auto; margin: .9rem 0; }
-.doc pre code { background: none; padding: 0; font-size: .85rem; line-height: 1.6; }
+/* Inline code that is also highlighted: let the highlight colour show instead of the grey code chip */
+.doc mark code { background: transparent; padding: 0; color: inherit; }
+.doc code:has(> mark) { background: transparent; padding: 0; }
+/* Code blocks: always Python, with a language label and coloured tokens */
+.doc pre { position: relative; background: var(--surface-2); border: 1px solid var(--line); border-radius: .75rem; padding: 2.3rem 1.1rem 1rem; overflow-x: auto; margin: .9rem 0; }
+.doc pre::before { content: attr(data-language); position: absolute; top: .55rem; left: 1.1rem; font: 600 .7rem/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .06em; text-transform: lowercase; color: var(--muted); user-select: none; }
+.doc pre code { background: none; padding: 0; font-size: .85rem; line-height: 1.6; color: var(--ink); }
+.doc { --tok-keyword: #a626a4; --tok-string: #2e7d32; --tok-number: #b35900; --tok-comment: #7a828a; --tok-builtin: #0b7285; --tok-function: #2f5fd0; --tok-decorator: #9a6700; --tok-constant: #b35900; --tok-self: #c2410c; }
+.dark .doc { --tok-keyword: #c792ea; --tok-string: #9ccc65; --tok-number: #f2a65a; --tok-comment: #7f8794; --tok-builtin: #56c2d6; --tok-function: #6cb2ff; --tok-decorator: #e5c07b; --tok-constant: #f2a65a; --tok-self: #ef7a85; }
+.doc .tok-keyword { color: var(--tok-keyword); }
+.doc .tok-string { color: var(--tok-string); }
+.doc .tok-number { color: var(--tok-number); }
+.doc .tok-comment { color: var(--tok-comment); font-style: italic; }
+.doc .tok-builtin { color: var(--tok-builtin); }
+.doc .tok-function { color: var(--tok-function); }
+.doc .tok-decorator { color: var(--tok-decorator); }
+.doc .tok-constant { color: var(--tok-constant); }
+.doc .tok-self { color: var(--tok-self); font-style: italic; }
 .doc img { max-width: 100%; height: auto; border-radius: .6rem; margin: .8rem 0; }
 .doc mark { border-radius: .25rem; padding: 0 .12em; }
-.doc table { border-collapse: collapse; margin: 1rem 0; width: 100%; table-layout: fixed; overflow: hidden; display: block; overflow-x: auto; }
-.doc th, .doc td { border: 1px solid var(--line); padding: .45rem .7rem; text-align: left; vertical-align: top; min-width: 5rem; }
+.doc .tableWrapper { margin: 1rem 0; overflow-x: auto; }
+.doc table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 0; }
+.doc th, .doc td { position: relative; border: 1px solid var(--line); padding: .45rem .7rem; text-align: left; vertical-align: top; min-width: 3rem; box-sizing: border-box; overflow-wrap: anywhere; }
+.doc td p, .doc th p { margin: .15rem 0; }
+/* Column resizing (editor only): the bar while dragging, and the resize cursor on a column edge */
+.doc .column-resize-handle { position: absolute; right: -2px; top: 0; bottom: -2px; width: 4px; background: var(--accent); pointer-events: none; z-index: 5; }
+.doc .ProseMirror.resize-cursor { cursor: col-resize; }
+.doc .tableWrapper.resize-cursor { cursor: col-resize; }
 .doc th { background: var(--surface-2); font-weight: 650; }
 .doc .selectedCell { background: var(--accent-soft); }
 .doc ul[data-type='taskList'] { list-style: none; padding-left: .2rem; }

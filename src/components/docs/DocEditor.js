@@ -1,13 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
 import { buildExtensions } from '@/lib/docs/extensions';
 import { saveTab } from '@/app/docs-actions';
+import { cleanClipboardTables, hasForeignTable, stripForeignColors } from '@/lib/docs/paste';
 
 const MAX_IMAGE_BYTES = 1_500_000;
+const AUTOSAVE_MS = 800; // wait this long after the last edit, then save
 
 // These two MUST stay outside the component. BubbleMenu re-registers itself whenever they change identity, and each
 // re-registration triggers a render, which would loop forever ("Maximum update depth exceeded", React error #185).
@@ -90,16 +92,38 @@ const Label = ({ children }) => <p className="px-2.5 pb-0.5 pt-1.5 text-xs font-
 const H = ({ n }) => <span className="text-[11px] font-bold">H{n}</span>;
 
 /* ---------- the editor ---------- */
-export default function DocEditor({ slug, initialContent, initialSettings }) {
+export default function DocEditor({ slug, title, initialCount, initialContent, initialSettings }) {
   const router = useRouter();
   const [settings, setSettings] = useState(initialSettings);
   const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [count, setCount] = useState(initialCount);
   const [message, setMessage] = useState(null);
-  const [pending, start] = useTransition();
   const [menu, setMenu] = useState(null); // 'font' | 'image' | 'plus' | 'style' | 'color' | 'list'
   const fileRef = useRef(null);
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
+
+  // Autosave bookkeeping. Refs, because the editor callbacks and timers must always see the latest values.
+  const editorRef = useRef(null);
+  const timerRef = useRef(null);
+  const savingRef = useRef(false);
+  const dirtyRef = useRef(false);
+  const revRef = useRef(0); // bumped on every edit, so a save knows whether more edits arrived while it ran
+  const mountedRef = useRef(true);
+  const saveRef = useRef(null);
+  const touchRef = useRef(null);
+
+  // Declared BEFORE useEditor on purpose: React runs cleanups in order, so this one still sees a live editor.
+  // It saves what is still unsaved when you click another tab or leave the page.
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      clearTimeout(timerRef.current);
+      if (dirtyRef.current && editorRef.current) saveRef.current?.({ auto: true });
+    };
+  }, []);
 
   const extensions = useMemo(() => buildExtensions({ placeholder: 'Start writing. Every Heading 2 becomes a question in the list.' }), []);
 
@@ -108,14 +132,36 @@ export default function DocEditor({ slug, initialContent, initialSettings }) {
     content: initialContent,
     immediatelyRender: false,
     shouldRerenderOnTransaction: true,
-    onUpdate: () => setDirty(true),
+    onUpdate: () => touchRef.current?.(),
     onCreate: ({ editor: e }) => e.view.dispatch(e.state.tr.setMeta('ensureIds', true).setMeta('addToHistory', false)),
     editorProps: {
+      // Drop the other site's text colour / background so pasted text stays readable on this theme
+      transformPastedHTML: (html) => stripForeignColors(html),
       handlePaste(view, event) {
         const file = [...(event.clipboardData?.files ?? [])].find((f) => f.type.startsWith('image/'));
-        if (!file) return false;
-        insertImageFile(file);
-        return true;
+        if (file) {
+          insertImageFile(file);
+          return true;
+        }
+        // Tables copied from a website or chat page: rebuild them in the editor's own table shape, then insert.
+        const html = event.clipboardData?.getData('text/html');
+        const ed = editorRef.current;
+        if (ed && hasForeignTable(html)) {
+          const clean = cleanClipboardTables(html);
+          // Pasting while the cursor is inside a table would try to overwrite its cells, so go just below that table instead
+          let pos = null;
+          const { $from } = ed.state.selection;
+          for (let d = $from.depth; d > 0; d -= 1) {
+            if ($from.node(d).type.name === 'table') {
+              pos = $from.after(d);
+              break;
+            }
+          }
+          if (pos === null) ed.chain().focus().insertContent(clean).run();
+          else ed.chain().focus().insertContentAt(pos, clean).run();
+          return true;
+        }
+        return false;
       },
       handleDrop(view, event) {
         const file = [...(event.dataTransfer?.files ?? [])].find((f) => f.type.startsWith('image/'));
@@ -126,6 +172,7 @@ export default function DocEditor({ slug, initialContent, initialSettings }) {
       },
     },
   });
+  editorRef.current = editor;
 
   const closeMenu = useCallback(() => setMenu(null), []);
 
@@ -135,37 +182,71 @@ export default function DocEditor({ slug, initialContent, initialSettings }) {
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => editor?.chain().focus().setImage({ src: String(reader.result) }).run();
+    reader.onload = () => editorRef.current?.chain().focus().setImage({ src: String(reader.result) }).run();
     reader.readAsDataURL(file);
   }
 
-  const save = useCallback(() => {
-    if (!editor) return;
-    start(async () => {
-      // ProseMirror's attrs objects have no prototype, which Next cannot send to a server action ("Cannot access id
-      // on the server… temporary client reference"). A JSON round trip turns them into plain objects.
-      const plainDoc = JSON.parse(JSON.stringify(editor.getJSON()));
-      const res = await saveTab(slug, plainDoc, { ...settingsRef.current });
-      if (res.ok) {
-        setDirty(false);
-        setMessage({ type: 'ok', text: `Saved. ${res.questions} question${res.questions === 1 ? '' : 's'} in this tab.` });
-        router.refresh();
-      } else {
-        setMessage({ type: 'error', text: res.error });
+  // One save routine for the Save button, Ctrl+S and autosave
+  const save = useCallback(
+    async ({ auto = false } = {}) => {
+      const ed = editorRef.current;
+      if (!ed || savingRef.current) return;
+      savingRef.current = true;
+      if (mountedRef.current) setSaving(true);
+      const rev = revRef.current;
+      try {
+        // ProseMirror's attrs objects have no prototype, which Next cannot send to a server action ("Cannot access id
+        // on the server… temporary client reference"). A JSON round trip turns them into plain objects.
+        const plainDoc = JSON.parse(JSON.stringify(ed.getJSON()));
+        const res = await saveTab(slug, plainDoc, { ...settingsRef.current });
+        if (!mountedRef.current) return;
+        if (res.ok) {
+          if (revRef.current === rev) {
+            dirtyRef.current = false;
+            setDirty(false);
+          }
+          setCount(res.questions);
+          setMessage(auto ? null : { type: 'ok', text: `Saved. ${res.questions} question${res.questions === 1 ? '' : 's'} in this tab.` });
+          if (!auto) router.refresh();
+        } else {
+          setMessage({ type: 'error', text: `Autosave failed: ${res.error}` });
+        }
+      } catch (e) {
+        if (mountedRef.current) setMessage({ type: 'error', text: `Could not save: ${e.message}` });
+      } finally {
+        savingRef.current = false;
+        if (mountedRef.current) setSaving(false);
       }
-    });
-  }, [editor, slug, router]);
+    },
+    [slug, router],
+  );
+  saveRef.current = save;
 
-  // Ctrl/Cmd+S saves; warn before leaving with unsaved changes
+  // Called after every edit (typing, formatting, tables, images, font / layout settings)
+  touchRef.current = () => {
+    revRef.current += 1;
+    dirtyRef.current = true;
+    setDirty(true);
+    setMessage((m) => (m?.type === 'error' ? m : null));
+    clearTimeout(timerRef.current);
+    const tick = () => {
+      if (savingRef.current) timerRef.current = setTimeout(tick, 400); // a save is running: try again shortly
+      else saveRef.current?.({ auto: true });
+    };
+    timerRef.current = setTimeout(tick, AUTOSAVE_MS);
+  };
+
+  // Ctrl/Cmd+S saves now; warn before closing the tab with unsaved changes
   useEffect(() => {
     const onKey = (e) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
         e.preventDefault();
+        clearTimeout(timerRef.current);
         save();
       }
     };
     const onLeave = (e) => {
-      if (dirty) e.preventDefault();
+      if (dirtyRef.current) e.preventDefault();
     };
     window.addEventListener('keydown', onKey);
     window.addEventListener('beforeunload', onLeave);
@@ -173,11 +254,12 @@ export default function DocEditor({ slug, initialContent, initialSettings }) {
       window.removeEventListener('keydown', onKey);
       window.removeEventListener('beforeunload', onLeave);
     };
-  }, [save, dirty]);
+  }, [save]);
 
   const changeSetting = (patch) => {
+    settingsRef.current = { ...settingsRef.current, ...patch };
     setSettings((s) => ({ ...s, ...patch }));
-    setDirty(true);
+    touchRef.current?.();
   };
 
   if (!editor) return <div className="h-64 animate-pulse rounded-xl bg-surface-2" />;
@@ -193,116 +275,126 @@ export default function DocEditor({ slug, initialContent, initialSettings }) {
 
   return (
     <div>
-      {/* Top toolbar */}
-      <div className="sticky top-0 z-30 -mx-1 mb-4 flex flex-wrap items-center gap-1 border-b border-line bg-bg/95 px-1 py-2 backdrop-blur">
-        <div className="relative">
-          <button type="button" className={`${btn} ${menu === 'font' ? btnOn : ''}`} aria-label="Fonts" title="Fonts" onClick={() => setMenu(menu === 'font' ? null : 'font')}>
-            {I.tt}
-          </button>
-          <Menu open={menu === 'font'} onClose={closeMenu}>
-            <Label>Headings</Label>
-            <MenuItem active={settings.headingFont === 'serif'} onClick={() => changeSetting({ headingFont: 'serif' })}><span style={{ fontFamily: 'Georgia, serif' }}>Serif</span></MenuItem>
-            <MenuItem active={settings.headingFont === 'sans'} onClick={() => changeSetting({ headingFont: 'sans' })}>Sans</MenuItem>
-            <div className="my-1 border-t border-line" />
-            <Label>Text</Label>
-            <MenuItem active={settings.textFont === 'serif'} onClick={() => changeSetting({ textFont: 'serif' })}><span style={{ fontFamily: 'Georgia, serif' }}>Serif</span></MenuItem>
-            <MenuItem active={settings.textFont === 'sans'} onClick={() => changeSetting({ textFont: 'sans' })}>Sans</MenuItem>
-          </Menu>
+      {/* Pinned header: title row + toolbar (+ table tools) stay on screen while you scroll, just under the site navbar */}
+      <div className="sticky top-[4.75rem] z-30 -mx-2 mb-4 bg-bg px-2 pb-0 pt-2">
+        <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-2">
+          <h1 className="text-sm font-medium text-muted">
+            {title} <span className="font-normal">· {count} question{count === 1 ? '' : 's'}</span>
+          </h1>
+          <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent">Admin editing</span>
         </div>
+        <div className="flex flex-wrap items-center gap-1 border-b border-line pb-2">
+          <div className="relative">
+            <button type="button" className={`${btn} ${menu === 'font' ? btnOn : ''}`} aria-label="Fonts" title="Fonts" onClick={() => setMenu(menu === 'font' ? null : 'font')}>
+              {I.tt}
+            </button>
+            <Menu open={menu === 'font'} onClose={closeMenu}>
+              <Label>Headings</Label>
+              <MenuItem active={settings.headingFont === 'serif'} onClick={() => changeSetting({ headingFont: 'serif' })}><span style={{ fontFamily: 'Georgia, serif' }}>Serif</span></MenuItem>
+              <MenuItem active={settings.headingFont === 'sans'} onClick={() => changeSetting({ headingFont: 'sans' })}>Sans</MenuItem>
+              <div className="my-1 border-t border-line" />
+              <Label>Text</Label>
+              <MenuItem active={settings.textFont === 'serif'} onClick={() => changeSetting({ textFont: 'serif' })}><span style={{ fontFamily: 'Georgia, serif' }}>Serif</span></MenuItem>
+              <MenuItem active={settings.textFont === 'sans'} onClick={() => changeSetting({ textFont: 'sans' })}>Sans</MenuItem>
+            </Menu>
+          </div>
 
-        <button type="button" className={`${btn} ${settings.wide ? btnOn : ''}`} aria-label="Wide layout" title="Wide layout" onClick={() => changeSetting({ wide: !settings.wide })}>
-          {I.wide}
-        </button>
-
-        <span className="mx-1 h-5 w-px bg-line" />
-
-        <button type="button" className={btn} aria-label="Table" title="Table" onClick={() => chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
-          {I.table}
-        </button>
-
-        <div className="relative">
-          <button type="button" className={`${btn} ${menu === 'image' ? btnOn : ''}`} aria-label="Image" title="Image" onClick={() => setMenu(menu === 'image' ? null : 'image')}>
-            {I.image}
+          <button type="button" className={`${btn} ${settings.wide ? btnOn : ''}`} aria-label="Wide layout" title="Wide layout" onClick={() => changeSetting({ wide: !settings.wide })}>
+            {I.wide}
           </button>
-          <Menu open={menu === 'image'} onClose={closeMenu}>
-            <MenuItem onClick={() => { closeMenu(); fileRef.current?.click(); }}>Upload from device</MenuItem>
-            <MenuItem
-              onClick={() => {
-                closeMenu();
-                const src = window.prompt('Image link (https://…)');
-                if (src && /^https?:\/\//i.test(src.trim())) chain().setImage({ src: src.trim() }).run();
+
+          <span className="mx-1 h-5 w-px bg-line" />
+
+          <button type="button" className={btn} aria-label="Table" title="Table" onClick={() => chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
+            {I.table}
+          </button>
+
+          <div className="relative">
+            <button type="button" className={`${btn} ${menu === 'image' ? btnOn : ''}`} aria-label="Image" title="Image" onClick={() => setMenu(menu === 'image' ? null : 'image')}>
+              {I.image}
+            </button>
+            <Menu open={menu === 'image'} onClose={closeMenu}>
+              <MenuItem onClick={() => { closeMenu(); fileRef.current?.click(); }}>Upload from device</MenuItem>
+              <MenuItem
+                onClick={() => {
+                  closeMenu();
+                  const src = window.prompt('Image link (https://…)');
+                  if (src && /^https?:\/\//i.test(src.trim())) chain().setImage({ src: src.trim() }).run();
+                }}
+              >
+                From a link
+              </MenuItem>
+            </Menu>
+            <input
+              ref={fileRef}
+              type="file"
+              accept="image/*"
+              hidden
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) insertImageFile(f);
+                e.target.value = '';
               }}
-            >
-              From a link
-            </MenuItem>
-          </Menu>
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              if (f) insertImageFile(f);
-              e.target.value = '';
-            }}
-          />
-        </div>
+            />
+          </div>
 
-        <button type="button" className={`${btn} ${editor.isActive('taskList') ? btnOn : ''}`} aria-label="Checklist" title="Checklist (Ctrl+Shift+9)" onClick={() => chain().toggleTaskList().run()}>
-          {I.check}
-        </button>
-
-        <div className="relative">
-          <button type="button" className={`${btn} gap-1 ${menu === 'plus' ? btnOn : ''}`} aria-label="Insert" title="Insert" onClick={() => setMenu(menu === 'plus' ? null : 'plus')}>
-            {I.plus}
-            {I.caret}
+          <button type="button" className={`${btn} ${editor.isActive('taskList') ? btnOn : ''}`} aria-label="Checklist" title="Checklist (Ctrl+Shift+9)" onClick={() => chain().toggleTaskList().run()}>
+            {I.check}
           </button>
-          <Menu open={menu === 'plus'} onClose={closeMenu} className="max-h-96 overflow-y-auto">
-            <MenuItem icon={I.list} onClick={run(() => chain().toggleBulletList().run())}>Bulleted list</MenuItem>
-            <MenuItem icon={I.check} onClick={run(() => chain().toggleTaskList().run())}>Checklist</MenuItem>
-            <MenuItem icon={<span className="text-xs">{'<>'}</span>} onClick={run(() => chain().toggleCodeBlock().run())}>Code block</MenuItem>
-            <MenuItem icon={<span className="text-xs">▦</span>} onClick={run(() => chain().insertContent(today()).run())}>Date</MenuItem>
-            <MenuItem icon={<span>—</span>} onClick={run(() => chain().setHorizontalRule().run())}>Divider</MenuItem>
-            <MenuItem icon={<span className="text-xs">▾</span>} onClick={run(() => chain().setDetails().run())}>Dropdown</MenuItem>
-            <MenuItem icon={<H n={1} />} onClick={run(() => chain().toggleHeading({ level: 1 }).run())}>Heading 1</MenuItem>
-            <MenuItem icon={<H n={2} />} onClick={run(() => chain().toggleHeading({ level: 2 }).run())}>Heading 2 (a question)</MenuItem>
-            <MenuItem icon={<H n={3} />} onClick={run(() => chain().toggleHeading({ level: 3 }).run())}>Heading 3</MenuItem>
-            <MenuItem icon={<span className="text-xs">1.</span>} onClick={run(() => chain().toggleOrderedList().run())}>Numbered list</MenuItem>
-            <MenuItem icon={<span className="text-xs">❝</span>} onClick={run(() => chain().toggleBlockquote().run())}>Quote</MenuItem>
-          </Menu>
+
+          <div className="relative">
+            <button type="button" className={`${btn} gap-1 ${menu === 'plus' ? btnOn : ''}`} aria-label="Insert" title="Insert" onClick={() => setMenu(menu === 'plus' ? null : 'plus')}>
+              {I.plus}
+              {I.caret}
+            </button>
+            <Menu open={menu === 'plus'} onClose={closeMenu} className="max-h-96 overflow-y-auto">
+              <MenuItem icon={I.list} onClick={run(() => chain().toggleBulletList().run())}>Bulleted list</MenuItem>
+              <MenuItem icon={I.check} onClick={run(() => chain().toggleTaskList().run())}>Checklist</MenuItem>
+              <MenuItem icon={<span className="text-xs">{'<>'}</span>} onClick={run(() => chain().toggleCodeBlock().run())}>Code block (Python)</MenuItem>
+              <MenuItem icon={<span className="text-xs">▦</span>} onClick={run(() => chain().insertContent(today()).run())}>Date</MenuItem>
+              <MenuItem icon={<span>—</span>} onClick={run(() => chain().setHorizontalRule().run())}>Divider</MenuItem>
+              <MenuItem icon={<span className="text-xs">▾</span>} onClick={run(() => chain().setDetails().run())}>Dropdown</MenuItem>
+              <MenuItem icon={<H n={1} />} onClick={run(() => chain().toggleHeading({ level: 1 }).run())}>Heading 1</MenuItem>
+              <MenuItem icon={<H n={2} />} onClick={run(() => chain().toggleHeading({ level: 2 }).run())}>Heading 2 (a question)</MenuItem>
+              <MenuItem icon={<H n={3} />} onClick={run(() => chain().toggleHeading({ level: 3 }).run())}>Heading 3</MenuItem>
+              <MenuItem icon={<span className="text-xs">1.</span>} onClick={run(() => chain().toggleOrderedList().run())}>Numbered list</MenuItem>
+              <MenuItem icon={<span className="text-xs">❝</span>} onClick={run(() => chain().toggleBlockquote().run())}>Quote</MenuItem>
+            </Menu>
+          </div>
+
+          <div className="ml-auto flex items-center gap-3">
+            {message && (
+              <span role="status" className={`text-xs ${message.type === 'error' ? 'text-hard' : 'text-muted'}`}>
+                {message.text}
+              </span>
+            )}
+            <span className="text-xs text-muted">{saving ? 'Saving…' : dirty ? 'Unsaved changes' : 'All changes saved'}</span>
+            <button type="button" onClick={() => { clearTimeout(timerRef.current); save(); }} disabled={saving || !dirty} className="rounded-lg bg-accent px-4 py-1.5 text-sm font-semibold text-accent-ink disabled:opacity-40">
+              {saving ? 'Saving…' : 'Save'}
+            </button>
+          </div>
         </div>
 
-        <div className="ml-auto flex items-center gap-3">
-          {message && (
-            <span role="status" className={`text-xs ${message.type === 'error' ? 'text-hard' : 'text-muted'}`}>
-              {message.text}
-            </span>
-          )}
-          {dirty && !pending && <span className="text-xs text-muted">Unsaved changes</span>}
-          <button type="button" onClick={save} disabled={pending || !dirty} className="rounded-lg bg-accent px-4 py-1.5 text-sm font-semibold text-accent-ink disabled:opacity-40">
-            {pending ? 'Saving…' : 'Save'}
-          </button>
-        </div>
+        {/* Table tools, only while the cursor is in a table */}
+        {editor.isActive('table') && (
+          <div className="mt-2 flex flex-wrap items-center gap-1 rounded-lg border border-line bg-surface px-2 py-1.5 text-xs">
+            <span className="mr-1 text-muted">Table</span>
+            {[
+              ['Row above', () => chain().addRowBefore().run()],
+              ['Row below', () => chain().addRowAfter().run()],
+              ['Column left', () => chain().addColumnBefore().run()],
+              ['Column right', () => chain().addColumnAfter().run()],
+              ['Delete row', () => chain().deleteRow().run()],
+              ['Delete column', () => chain().deleteColumn().run()],
+              ['Delete table', () => chain().deleteTable().run()],
+              ['Toggle header row', () => chain().toggleHeaderRow().run()],
+            ].map(([label, fn]) => (
+              <button key={label} type="button" onClick={fn} className="rounded-md px-2 py-1 hover:bg-surface-2">{label}</button>
+            ))}
+            <span className="ml-auto text-muted">Drag a column edge to resize it</span>
+          </div>
+        )}
       </div>
-
-      {/* Table tools, only while the cursor is in a table */}
-      {editor.isActive('table') && (
-        <div className="mb-3 flex flex-wrap items-center gap-1 rounded-lg border border-line bg-surface px-2 py-1.5 text-xs">
-          <span className="mr-1 text-muted">Table</span>
-          {[
-            ['Row above', () => chain().addRowBefore().run()],
-            ['Row below', () => chain().addRowAfter().run()],
-            ['Column left', () => chain().addColumnBefore().run()],
-            ['Column right', () => chain().addColumnAfter().run()],
-            ['Delete row', () => chain().deleteRow().run()],
-            ['Delete column', () => chain().deleteColumn().run()],
-            ['Delete table', () => chain().deleteTable().run()],
-          ].map(([label, fn]) => (
-            <button key={label} type="button" onClick={fn} className="rounded-md px-2 py-1 hover:bg-surface-2">{label}</button>
-          ))}
-        </div>
-      )}
 
       {/* Floating toolbar on selected text */}
       <BubbleMenu editor={editor} options={BUBBLE_OPTIONS} shouldShow={showBubble}>
