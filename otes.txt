@@ -2,6 +2,5 @@ npx prisma db push
 npx prisma generate
 npm run dev
 
-seed
-npx prisma db seed
+
 
