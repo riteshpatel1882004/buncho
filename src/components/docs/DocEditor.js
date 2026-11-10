@@ -12,6 +12,7 @@ const MAX_IMAGE_BYTES = 1_500_000;
 const AUTOSAVE_MS = 800; // wait this long after the last edit, then save
 const MODE_KEY = 'docs-editor-mode'; // 'edit' | 'read' (remembered in this browser)
 const TOOLS_KEY = 'docs-editor-tools'; // 'open' | 'closed'
+const PANEL_KEY = 'docs-editor-panel'; // 'open' | 'closed' (the whole left panel)
 
 // These two MUST stay outside the component. BubbleMenu re-registers itself whenever they change identity, and each
 // re-registration triggers a render, which would loop forever ("Maximum update depth exceeded", React error #185).
@@ -112,6 +113,16 @@ const I = {
       <path d="M6 9l6 6 6-6" />
     </Icon>
   ),
+  chevL: (
+    <Icon>
+      <path d="M15 6l-6 6 6 6" />
+    </Icon>
+  ),
+  chevR: (
+    <Icon>
+      <path d="M9 6l6 6-6 6" />
+    </Icon>
+  ),
 };
 
 // rail: the menu belongs to the left-hand sidebar, so it opens towards the right instead of downwards
@@ -169,6 +180,8 @@ export default function DocEditor({ slug, title, initialCount, initialContent, i
   const [toolsOpen, setToolsOpen] = useState(false);
   // The "Admin editing" section (save status, Save, mode switch) is shrunk by default
   const [adminOpen, setAdminOpen] = useState(false);
+  // The whole left panel can be shrunk to a thin arrow strip to give the page more room
+  const [panelOpen, setPanelOpen] = useState(true);
   const fileRef = useRef(null);
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
@@ -250,6 +263,7 @@ export default function DocEditor({ slug, title, initialCount, initialContent, i
     try {
       if (localStorage.getItem(MODE_KEY) === 'edit') setReadOnly(false);
       if (localStorage.getItem(TOOLS_KEY) === 'open') setToolsOpen(true);
+      if (localStorage.getItem(PANEL_KEY) === 'closed') setPanelOpen(false);
     } catch {
       /* storage blocked: stay in reading mode */
     }
@@ -268,6 +282,17 @@ export default function DocEditor({ slug, title, initialCount, initialContent, i
     setMenu(null);
     try {
       localStorage.setItem(TOOLS_KEY, next ? 'open' : 'closed');
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const togglePanel = () => {
+    const next = !panelOpen;
+    setPanelOpen(next);
+    setMenu(null);
+    try {
+      localStorage.setItem(PANEL_KEY, next ? 'open' : 'closed');
     } catch {
       /* ignore */
     }
@@ -551,16 +576,43 @@ export default function DocEditor({ slug, title, initialCount, initialContent, i
         </div>
 
         {/* Left sidebar: header + tools. Stays on screen while scrolling (on small screens it sits above the page). */}
-        <aside aria-label="Editor panel" className="z-20 order-first flex w-full shrink-0 flex-col gap-2 md:sticky md:top-[4.75rem] md:w-48">
+        <aside
+          aria-label="Editor panel"
+          className={`z-20 order-first flex w-full shrink-0 flex-col gap-2 md:sticky md:top-[4.75rem] ${panelOpen ? 'md:w-48' : 'md:w-9'}`}
+        >
+          {/* Shrunk: only a thin arrow strip is left, click it to bring the panel back */}
+          {!panelOpen && (
+            <button
+              type="button"
+              onClick={togglePanel}
+              aria-label="Expand panel"
+              title="Expand panel"
+              className="relative grid h-9 w-full place-items-center rounded-xl border border-line bg-surface text-muted hover:bg-surface-2 hover:text-ink"
+            >
+              {I.chevR}
+              {dirty && <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-accent" title="Unsaved changes" />}
+            </button>
+          )}
+          {panelOpen && (
+            <>
           {/* Header card: click the title to fold the tools in or out */}
-          <div className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-2">
+          <div className="relative flex flex-col gap-2 rounded-xl border border-line bg-surface p-2">
+            <button
+              type="button"
+              onClick={togglePanel}
+              aria-label="Shrink panel"
+              title="Shrink panel"
+              className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-md text-muted hover:bg-surface-2 hover:text-ink"
+            >
+              {I.chevL}
+            </button>
             <button
               type="button"
               onClick={toggleTools}
               aria-expanded={toolsOpen && !readOnly}
               disabled={readOnly}
               title={readOnly ? 'Reading mode: click Edit to unlock' : toolsOpen ? 'Hide the toolbar' : 'Show the toolbar'}
-              className={`flex w-full items-start gap-2 rounded-md px-1.5 py-1 text-left ${readOnly ? 'cursor-default' : 'hover:bg-surface-2'}`}
+              className={`flex w-full items-start gap-2 rounded-md py-1 pl-1.5 pr-7 text-left ${readOnly ? 'cursor-default' : 'hover:bg-surface-2'}`}
             >
               {!readOnly && <span className={`mt-1 text-muted transition-transform ${toolsOpen ? 'rotate-180' : ''}`}>{I.caret}</span>}
               <span className="min-w-0 flex-1">
@@ -780,6 +832,8 @@ export default function DocEditor({ slug, title, initialCount, initialContent, i
               ))}
               <span className="w-full pt-1 text-muted">Drag a column edge to resize it</span>
             </div>
+          )}
+            </>
           )}
         </aside>
       </div>
