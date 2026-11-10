@@ -1,15 +1,13 @@
-import { Suspense } from 'react';
 import Link from 'next/link';
-import ProblemFilters from '@/components/ProblemFilters';
-import ProblemList from '@/components/ProblemList';
+import DocQuestionList from '@/components/docs/DocQuestionList';
 import ProblemsShell from '@/components/ProblemsShell';
 import { ProgressCard } from '@/components/ProblemStats';
 import PromoSection from '@/components/PromoSection';
 import PacePlanner from '@/components/PacePlanner';
-import { COMPANY_FILTER_PRO_ONLY, getCategoryCounts, getCompanyCounts, getProblems, getProgressMap, getTopics, getUserStats, parseFilters } from '@/lib/problems';
+import { getCategoryCounts, getUserStats, parseFilters } from '@/lib/problems';
+import { isAdmin } from '@/lib/admin';
 import { CATEGORIES } from '@/lib/categories';
 import { getOrCreateUser } from '@/lib/user';
-import { getIsPro } from '@/lib/subscription';
 import { getLiveAds } from '@/lib/ads';
 import { Bookmark } from '@/components/icons';
 import JsonLd from '@/components/JsonLd';
@@ -19,21 +17,21 @@ const COPY = {
   ai: {
     metaTitle: 'AI, ML & GenAI Interview Questions',
     metaDescription:
-      'Curated AI, ML and GenAI interview questions on LLMs, RAG, deep learning, MLOps and system design. Answer in your own words, then get AI feedback and a reference solution.',
+      'Curated AI, ML and GenAI interview questions on LLMs, RAG, deep learning, MLOps and system design. Read the question and practise your answer in your own words.',
     h1: 'AI, ML and GenAI interview questions',
     schemaName: 'AI, ML and GenAI interview questions',
   },
   hr: {
     metaTitle: 'HR Interview Questions for AI Engineers',
     metaDescription:
-      'Behavioural and HR interview questions for AI engineering roles, with an expert answer for each. Practise your own answer, then get AI feedback.',
+      'Behavioural and HR interview questions for AI engineering roles, Practise your own answer to each one.',
     h1: 'HR interview questions for AI engineers',
     schemaName: 'HR interview questions for AI engineering roles',
   },
   sql: {
     metaTitle: 'SQL Interview Questions for AI Engineers',
     metaDescription:
-      'SQL interview questions for AI, ML and data roles. Read the problem, write your own query, then see every possible answer and how to optimise it.',
+      'SQL interview questions for AI, ML and data roles. Read the problem and write your own query.',
     h1: 'SQL interview questions for AI engineers',
     schemaName: 'SQL interview questions for AI and data engineering roles',
   },
@@ -61,20 +59,13 @@ export default async function CategoryPage({ category, searchParams }) {
   const cat = CATEGORIES[category];
   const filters = parseFilters(await searchParams);
   const user = await getOrCreateUser();
-  const pro = user ? await getIsPro(user.id) : false;
-  const companyLocked = COMPANY_FILTER_PRO_ONLY && !pro;
-  const [topics, result, stats, ads, counts, companies] = await Promise.all([
-    category === 'ai' ? getTopics({ category }) : [],
-    getProblems({ ...filters, category, pro, userId: user?.id ?? null }),
+  const [stats, ads, counts] = await Promise.all([
     getUserStats(user?.id ?? null, category),
     getLiveAds(), // the sponsor banners show on every category (AI/ML, HR and SQL)
     getCategoryCounts(),
-    companyLocked ? [] : getCompanyCounts({ category }), // sidebar company filter (Pro)
   ]);
-  const statusMap = user ? await getProgressMap(user.id, result.items.map((p) => p.id)) : {};
-
-  const { page, ...rest } = filters;
-  const params = Object.fromEntries(Object.entries(rest).filter(([, v]) => v));
+  const params = {};
+  const result = { items: [], page: 1, total: stats.total };
 
   const jsonLd = graph(
     breadcrumbJsonLd([
@@ -100,7 +91,7 @@ export default async function CategoryPage({ category, searchParams }) {
   }));
 
   return (
-    <ProblemsShell items={navItems} companies={companies} companyLocked={companyLocked} params={params}>
+    <ProblemsShell items={navItems} params={params}>
       <JsonLd data={jsonLd} />
 
       {/* Not shown on screen, but kept so the page still has its H1 for search engines and screen readers */}
@@ -130,19 +121,7 @@ export default async function CategoryPage({ category, searchParams }) {
       </section>
 
       <div className="mt-6 sm:mt-8">
-        <Suspense fallback={<div className="h-24" />}>
-          <ProblemFilters
-            topics={topics}
-            category={category}
-            signedIn={Boolean(user)}
-            solved={user ? stats.solved : null}
-            total={user ? stats.total : result.total}
-          />
-        </Suspense>
-      </div>
-
-      <div className="mt-4">
-        <ProblemList result={result} statusMap={statusMap} basePath={cat.path} params={params} pro={pro} category={category} />
+        <DocQuestionList category={category} userId={user?.id ?? null} admin={isAdmin(user)} />
       </div>
     </ProblemsShell>
   );

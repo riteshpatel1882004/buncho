@@ -314,7 +314,7 @@ export default function ProblemsShell({ items, companies = [], companyLocked = f
             })}
           </nav>
 
-          {!collapsed && <CompanyFilter companies={companies} locked={companyLocked} params={params} pathname={pathname} />}
+          {!collapsed && (companies.length > 0 || companyLocked) && <CompanyFilter companies={companies} locked={companyLocked} params={params} pathname={pathname} />}
         </div>
 
         {/* Drag handle on the right edge (only when expanded) */}

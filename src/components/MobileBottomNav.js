@@ -121,7 +121,7 @@ export default function MobileBottomNav({ signedIn = false, isPro = false, profi
               </>
             ) : (
               <div className="space-y-2 p-1">
-                <p className="px-2 pt-1 text-sm text-muted">Log in to save progress, get AI feedback and track your streak.</p>
+                <p className="px-2 pt-1 text-sm text-muted">Log in to save progress and track your streak.</p>
                 <Link href="/login" className="flex h-11 items-center justify-center rounded-xl border border-line text-base font-semibold hover:bg-surface-2">
                   Log in
                 </Link>

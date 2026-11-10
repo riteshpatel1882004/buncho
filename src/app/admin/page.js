@@ -30,6 +30,12 @@ const ICONS = {
       <path d="M3 9h18M9 9v11" />
     </>
   ),
+  docs: (
+    <>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M14 3v5h5M9 13h6M9 17h6" />
+    </>
+  ),
   reports: (
     <>
       <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" />
@@ -66,6 +72,13 @@ export default async function AdminHomePage() {
   // To add a new admin page later, add one object here.
   const sections = [
     {
+      href: '/docs/ai',
+      icon: 'docs',
+      title: 'Question documents',
+      text: 'Write, edit and delete questions. AI/ML is at /docs/ai, HR at /docs/hr and SQL at /docs/sql. Each tab is a topic and each Heading 2 is a question.',
+      stat: 'AI · HR · SQL',
+    },
+    {
       href: '/admin/users',
       icon: 'users',
       title: 'Users',
@@ -98,6 +111,8 @@ export default async function AdminHomePage() {
   ];
 
   const quick = [
+    { href: '/docs/hr', label: 'Edit HR questions' },
+    { href: '/docs/sql', label: 'Edit SQL questions' },
     { href: '/admin/users/export', label: 'Download all users (CSV)', plain: true },
     { href: '/pricing', label: 'View pricing page' },
     { href: '/advertise', label: 'View advertise page' },

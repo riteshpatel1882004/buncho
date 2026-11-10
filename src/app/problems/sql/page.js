@@ -1,9 +1,8 @@
-import { categoryMetadata } from '@/components/CategoryPage';
-import SqlLibrary from '@/components/sql/SqlLibrary';
+import CategoryPage, { categoryMetadata } from '@/components/CategoryPage';
 
 export const generateMetadata = ({ searchParams }) => categoryMetadata('sql', searchParams);
 
-// SQL has its own list layout (hero + card list); AI and HR still use CategoryPage.
+// Same list as AI and HR: topics (document tabs) with their questions.
 export default function SqlProblemsPage({ searchParams }) {
-  return <SqlLibrary searchParams={searchParams} />;
+  return <CategoryPage category="sql" searchParams={searchParams} />;
 }

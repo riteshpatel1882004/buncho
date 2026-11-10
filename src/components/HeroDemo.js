@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Mic } from './icons';
 
-// Decorative preview of the problem workspace: dictation, submit, then AI feedback.
+// Decorative preview of the problem workspace: the question on the left, dictation and submit on the right.
 const SCRIPT =
   'I’d start by finding where it fails. First I’d log the retrieved chunks for the bad answers and check whether the right evidence was retrieved at all. If it was, the problem is in generation, so I’d tighten the prompt to answer only from the context.';
 const WORDS = SCRIPT.split(' ');
@@ -11,75 +11,36 @@ const WORDS = SCRIPT.split(' ');
 // The newest words are shown dimmed, like the interim results a browser's speech recognition returns
 const INTERIM = 3;
 
-// Rubric from the real feedback: the total is the sum of the four parts
-const RUBRIC = [
-  { label: 'Coverage', value: 30, max: 40 },
-  { label: 'Accuracy', value: 26, max: 30 },
-  { label: 'Reasoning', value: 13, max: 20 },
-  { label: 'Clarity', value: 9, max: 10 },
-];
-const TARGET = RUBRIC.reduce((s, r) => s + r.value, 0); // 78
-
-const band = (s) => {
-  if (s < 1) return { label: 'Scoring…', cls: 'text-muted' };
-  if (s >= 70) return { label: 'Good', cls: 'text-easy' };
-  if (s >= 50) return { label: 'Partial', cls: 'text-medium' };
-  return { label: 'Needs work', cls: 'text-hard' };
-};
-
 const BARS = [0.1, 0.35, 0.2, 0.5, 0.05, 0.4, 0.25, 0.45, 0.15, 0.3];
 
 export default function HeroDemo() {
-  // phase: 'typing' -> 'typed' -> 'analysing' -> 'feedback' -> (loops)
+  // phase: 'typing' -> 'typed' -> 'saving' -> 'saved' -> (loops)
   const [phase, setPhase] = useState('typing');
   const [count, setCount] = useState(0);
-  const [score, setScore] = useState(0);
-  const [step, setStep] = useState(0); // how many feedback blocks are visible
 
   useEffect(() => {
     // Respect reduced-motion: show the finished state, no animation
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
       setCount(WORDS.length);
-      setPhase('feedback');
-      setScore(TARGET);
-      setStep(3);
+      setPhase('saved');
       return;
     }
 
     const timers = [];
-    let raf;
     const later = (fn, ms) => timers.push(setTimeout(fn, ms));
 
     const restart = () => {
       setCount(0);
-      setScore(0);
-      setStep(0);
       setPhase('typing');
       later(() => type(0), 900);
     };
 
-    const showFeedback = () => {
-      setPhase('feedback');
-      setScore(0);
-      setStep(0);
-
-      // Score counts up (ease-out); the rubric bars follow the same progress
-      const start = performance.now();
-      const frame = (now) => {
-        const p = Math.min(1, (now - start) / 1400);
-        setScore(Math.round(TARGET * (1 - Math.pow(1 - p, 3))));
-        if (p < 1) raf = requestAnimationFrame(frame);
-      };
-      raf = requestAnimationFrame(frame);
-
-      // Feedback blocks appear one after another
-      [1500, 2300, 3100].forEach((ms, i) => later(() => setStep(i + 1), ms));
-      later(restart, 9500);
-    };
-
-    const submit = () => {
-      setPhase('analysing');
-      later(showFeedback, 1800);
+    const save = () => {
+      setPhase('saving');
+      later(() => {
+        setPhase('saved');
+        later(restart, 4500);
+      }, 900);
     };
 
     const type = (n) => {
@@ -92,29 +53,20 @@ export default function HeroDemo() {
         later(() => type(n + 1), delay);
       } else {
         setPhase('typed');
-        later(submit, 1300);
+        later(save, 1300);
       }
     };
 
     later(() => type(0), 800);
-    return () => {
-      timers.forEach(clearTimeout);
-      cancelAnimationFrame(raf);
-    };
+    return () => timers.forEach(clearTimeout);
   }, []);
 
   const listening = phase === 'typing';
-  const showFeedback = phase === 'feedback';
+  const saved = phase === 'saved';
 
   const finalEnd = listening ? Math.max(0, count - INTERIM) : count;
   const finalText = WORDS.slice(0, finalEnd).join(' ');
   const interimText = WORDS.slice(finalEnd, count).join(' ');
-
-  const progress = score / TARGET;
-  const b = band(score);
-  const tab = (on) => (on ? 'border-b-2 border-ink pb-2 text-ink' : 'pb-2 text-muted');
-  const reveal = (n) =>
-    `transition-all duration-500 ${step >= n ? 'translate-y-0 opacity-100' : 'translate-y-1 opacity-0'}`;
 
   return (
     <div className="relative min-w-0" aria-hidden="true">
@@ -127,73 +79,20 @@ export default function HeroDemo() {
         </div>
 
         <div className="grid grid-cols-[minmax(0,1fr)] sm:grid-cols-2">
-          {/* Left: problem description, then the AI feedback tab after submit */}
+          {/* Left: the problem description */}
           <div className="min-w-0 p-4">
             <div className="flex gap-4 border-b border-line pb-0 text-xs font-medium">
-              <span className={tab(!showFeedback)}>Description</span>
-              <span className={tab(showFeedback)}>AI Feedback</span>
-             
+              <span className="border-b-2 border-ink pb-2 text-ink">Description</span>
             </div>
 
-            {showFeedback ? (
-              <div className="mt-4 h-[15.5rem] overflow-hidden sm:h-[14rem]">
-                <div className="flex items-center gap-4 rounded-xl bg-surface-2 p-3">
-                  <div className="w-20 shrink-0">
-                    <p className={`text-2xl font-semibold tabular-nums ${b.cls}`}>
-                      {score}
-                      <span className="text-sm font-medium text-muted">/100</span>
-                    </p>
-                    <p className={`text-xs font-semibold ${b.cls}`}>{b.label}</p>
-                  </div>
-                  <ul className="grid min-w-0 flex-1 grid-cols-2 gap-x-3 gap-y-1.5">
-                    {RUBRIC.map((r) => (
-                      <li key={r.label}>
-                        <div className="flex justify-between gap-2 text-[0.65rem] text-muted">
-                          <span>{r.label}</span>
-                          <span className="tabular-nums">
-                            {Math.round(r.value * progress)}/{r.max}
-                          </span>
-                        </div>
-                        <div className="mt-0.5 h-1 overflow-hidden rounded-full bg-line">
-                          <div className="h-full rounded-full bg-accent" style={{ width: `${(r.value / r.max) * progress * 100}%` }} />
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* Score is above 75, so only the improvement tips and follow-ups are shown */}
-                <p className={`mt-3 text-xs leading-relaxed ${reveal(1)}`}>
-                  Strong diagnosis-first approach. You are interview ready.
-                </p>
-
-                <div className={`mt-3 ${reveal(2)}`}>
-                  <p className="text-xs font-semibold">How to improve your answer</p>
-                  <ul className="mt-1 space-y-1 text-xs text-muted">
-                    <li>Add retrieval metrics such as recall@k, and reranking.</li>
-                    <li>Let the model say &ldquo;I don&rsquo;t know&rdquo; when evidence is absent.</li>
-                  </ul>
-                </div>
-
-                <div className={`mt-3 ${reveal(3)}`}>
-                  <p className="text-xs font-semibold">Follow-up questions an interviewer might ask</p>
-                  <ul className="mt-1 space-y-1 text-xs text-muted">
-                    <li>How would you measure the hallucination rate automatically?</li>
-                  </ul>
-                </div>
-              </div>
-            ) : (
-              <>
-                <p className="mt-4 text-base font-semibold leading-snug">How would you reduce hallucinations in a RAG application?</p>
-                <div className="mt-2 flex flex-wrap gap-2 text-xs">
-                  <span className="rounded-full bg-medium/12 px-2.5 py-0.5 font-semibold text-medium">Medium</span>
-                  <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-muted">RAG and Vector Databases</span>
-                </div>
-                <p className="mt-3 hidden text-sm leading-relaxed text-muted sm:block">
-                  Your support bot answers confidently, but sometimes with facts that are not in your documents. Walk through how you would find the cause and fix it.
-                </p>
-              </>
-            )}
+            <p className="mt-4 text-base font-semibold leading-snug">How would you reduce hallucinations in a RAG application?</p>
+            <div className="mt-2 flex flex-wrap gap-2 text-xs">
+              <span className="rounded-full bg-medium/12 px-2.5 py-0.5 font-semibold text-medium">Medium</span>
+              <span className="rounded-full bg-surface-2 px-2.5 py-0.5 text-muted">RAG and Vector Databases</span>
+            </div>
+            <p className="mt-3 hidden text-sm leading-relaxed text-muted sm:block">
+              Your support bot answers confidently, but sometimes with facts that are not in your documents. Walk through how you would find the cause and fix it.
+            </p>
           </div>
 
           {/* Right: the answer editor */}
@@ -228,16 +127,16 @@ export default function HeroDemo() {
                     ))}
                   </span>
                 )}
-                {phase === 'analysing' && <span className="animate-pulse truncate text-xs text-muted">Analysing your answer…</span>}
-                {showFeedback && <span className="truncate text-xs font-medium text-easy">Feedback ready</span>}
+                {phase === 'saving' && <span className="animate-pulse truncate text-xs text-muted">Saving…</span>}
+                {saved && <span className="truncate text-xs font-medium text-easy">Answer saved</span>}
               </span>
 
               <span
                 className={`shrink-0 rounded-lg bg-go px-4 py-1.5 text-xs font-semibold text-go-ink transition-opacity ${
-                  phase === 'analysing' ? 'animate-pulse' : ''
-                } ${showFeedback ? 'opacity-50' : ''}`}
+                  phase === 'saving' ? 'animate-pulse' : ''
+                } ${saved ? 'opacity-50' : ''}`}
               >
-                {phase === 'analysing' ? 'Getting feedback…' : showFeedback ? 'Re-evaluate' : 'Submit'}
+                {phase === 'saving' ? 'Saving…' : saved ? 'Saved' : 'Submit'}
               </span>
             </div>
           </div>

@@ -1,14 +1,11 @@
 // The question library has three categories:
-//   ai  -> /problems      (every topic except the ones listed below; /problems/ai shows the same list)
-//   hr  -> /problems/hr   (behavioural / HR questions, content in prisma/content/hr/)
-//   sql -> /problems/sql  (SQL questions: description + all possible answers and optimisation, no AI feedback,
-//                          content in prisma/content/sql/)
-// A topic belongs to HR when its slug is in HR_TOPIC_SLUGS, and to SQL when it is in SQL_TOPIC_SLUGS.
-// To add another HR-style or SQL-style topic, add its slug to the matching list.
-export const HR_TOPIC_SLUGS = ['hr'];
-export const SQL_TOPIC_SLUGS = ['sql'];
-// Everything that is not an AI/ML topic (used to keep the AI list, job plans and mocks free of HR and SQL questions)
-export const NON_AI_TOPIC_SLUGS = [...HR_TOPIC_SLUGS, ...SQL_TOPIC_SLUGS];
+//   ai  -> /problems      (/problems/ai shows the same list)
+//   hr  -> /problems/hr
+//   sql -> /problems/sql
+// All three work the same way: the admin writes one document per category at /docs/<category>, each tab of it is a
+// topic, and every Heading 2 is a question. A topic belongs to HR when its slug is "hr" or starts with "hr-", to SQL
+// when it is "sql" or starts with "sql-", and to AI otherwise (the doc code makes sure AI slugs never look like HR/SQL).
+const hasPrefix = (slug, p) => slug === p || String(slug ?? '').startsWith(`${p}-`);
 
 export const CATEGORIES = {
   ai: {
@@ -25,7 +22,7 @@ export const CATEGORIES = {
     short: 'HR',
     path: '/problems/hr',
     title: 'HR interview questions for AI engineers',
-    description: 'Behavioural and HR questions, each with an expert answer you can learn from.',
+    description: 'Behavioural and HR questions to practise your own answers.',
   },
   sql: {
     key: 'sql',
@@ -33,21 +30,25 @@ export const CATEGORIES = {
     short: 'SQL',
     path: '/problems/sql',
     title: 'SQL interview questions for AI engineers',
-    description: 'SQL questions with every possible answer and how to optimise each one.',
+    description: 'SQL questions for AI, ML and data roles to practise on your own.',
   },
 };
 
-export const isHrTopic = (topicSlug) => HR_TOPIC_SLUGS.includes(topicSlug);
-export const isSqlTopic = (topicSlug) => SQL_TOPIC_SLUGS.includes(topicSlug);
+export const isHrTopic = (topicSlug) => hasPrefix(topicSlug, 'hr');
+export const isSqlTopic = (topicSlug) => hasPrefix(topicSlug, 'sql');
 export const categoryOf = (topicSlug) => (isHrTopic(topicSlug) ? 'hr' : isSqlTopic(topicSlug) ? 'sql' : 'ai');
 
 /** Prisma filter for `topic` that keeps only one category. 'all' (or anything else) means no filter. */
 export function topicCategoryWhere(category) {
-  if (category === 'hr') return { slug: { in: HR_TOPIC_SLUGS } };
-  if (category === 'sql') return { slug: { in: SQL_TOPIC_SLUGS } };
-  if (category === 'ai') return { slug: { notIn: NON_AI_TOPIC_SLUGS } };
+  const is = (p) => ({ OR: [{ slug: p }, { slug: { startsWith: `${p}-` } }] });
+  if (category === 'hr') return is('hr');
+  if (category === 'sql') return is('sql');
+  if (category === 'ai') return { NOT: [is('hr'), is('sql')] };
   return undefined;
 }
 
-/** Page URL for one question. HR questions open under /problems/hr/<slug>, SQL ones under /problems/sql/<slug>, AI ones stay at /problems/<slug>. */
-export const problemHref = (slug, topicSlug) => `${CATEGORIES[categoryOf(topicSlug)].path}/${slug}`;
+/** The document tab for a topic, e.g. /docs/ai/python-basics */
+export const docHref = (topicSlug) => `/docs/${categoryOf(topicSlug)}/${topicSlug}`;
+
+/** Page URL for one question: its place in the document. A question's slug is its heading anchor. */
+export const problemHref = (slug, topicSlug) => `${docHref(topicSlug)}#${slug}`;

@@ -1,6 +1,3 @@
-
-
-
 import { DIFFICULTY_LABEL } from './constants';
 import { CATEGORIES, categoryOf, problemHref } from './categories';
 
@@ -10,9 +7,9 @@ import { CATEGORIES, categoryOf, problemHref } from './categories';
 /* ------------------------------------------------------------------ */
 
 export const SITE_NAME = 'Buncho';
-export const SITE_TAGLINE = 'AI, ML and GenAI interview practice with AI feedback';
+export const SITE_TAGLINE = 'AI, ML and GenAI interview practice';
 export const SITE_DESCRIPTION =
-  'Practice AI, ML and GenAI interview questions out loud or in writing. Get AI feedback, study reference solutions and track your progress. Free to start.';
+  'Practice AI, ML and GenAI interview questions out loud or in writing. Save your answers and track your progress. Free to start.';
 
 function resolveSiteUrl() {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL;

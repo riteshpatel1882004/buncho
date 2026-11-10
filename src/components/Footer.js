@@ -46,7 +46,7 @@ export default async function Footer() {
               <Logo />
             </Link>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-muted">
-              Practice for AI, ML and GenAI engineering interviews. Answer out loud or in writing, then learn from the reference solution.
+              Practice for AI, ML and GenAI engineering interviews. Answer out loud or in writing, every day.
             </p>
             <Link
               href="/problems"

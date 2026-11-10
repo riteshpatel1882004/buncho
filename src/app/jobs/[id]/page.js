@@ -126,7 +126,7 @@ export default async function JobPage({ params }) {
               </span>
             </summary>
             <p className="mt-3 text-muted">
-              It is the weighted average of your skill scores, where each skill score is the average AI feedback score of your latest answers to plan questions for that skill. Core skills weigh three times more than nice-to-haves, and a skill is scaled down until you have answered a few questions for it. Skills the question bank cannot test yet are left out. It is a practice indicator, not a prediction of interview results.
+              It is the weighted average of your skill scores, where each skill score comes from your latest answers to plan questions for that skill. Core skills weigh three times more than nice-to-haves, and a skill is scaled down until you have answered a few questions for it. Skills the question bank cannot test yet are left out. It is a practice indicator, not a prediction of interview results.
             </p>
           </details>
         </div>
@@ -142,7 +142,7 @@ export default async function JobPage({ params }) {
               <span className="grid h-11 w-11 place-items-center rounded-xl bg-accent text-accent-ink shadow-md shadow-accent/30"><Flask width={22} height={22} /></span>
               <h2 id="mock-h" className="mt-4 text-lg font-semibold">Mock assessment</h2>
               <p className="mt-1.5 text-sm text-muted">
-                A timed set of questions across this job&rsquo;s main skills, with AI feedback at the end. It uses questions you haven&rsquo;t answered yet when possible. If it picks one you already answered, your new answer replaces the old one.
+                A timed set of questions across this job&rsquo;s main skills, scored on completion at the end. It uses questions you haven&rsquo;t answered yet when possible. If it picks one you already answered, your new answer replaces the old one.
               </p>
               {open || ent.mocks.canStart ? (
                 <>
@@ -156,7 +156,7 @@ export default async function JobPage({ params }) {
                   {open && <p className="mt-2 text-center text-xs font-medium text-accent">You have a mock in progress.</p>}
                   {!pro && !open && (
                     <p className="mt-2 text-center text-xs text-muted">
-                      {FREE_MOCK_LIMIT} free attempt included for your account, with the full result and AI feedback.
+                      {FREE_MOCK_LIMIT} free attempt included for your account.
                     </p>
                   )}
                 </>
@@ -164,7 +164,7 @@ export default async function JobPage({ params }) {
                 <div className="mt-5 rounded-xl border border-dashed border-accent/40 bg-surface/60 p-4">
                   <p className="flex items-center gap-2 text-sm font-semibold"><Lock width={15} height={15} /> Free mock assessment used</p>
                   <p className="mt-1.5 text-xs text-muted">
-                    Your result and feedback stay free to review. With Pro you can retake after practising your weak skills and watch your score move.
+                    Your result stays free to review. With Pro you can retake after practising your weak skills and watch your score move.
                   </p>
                   <Link href="/pricing" className={`${ctaBtn} mt-4 w-full`}>Unlock unlimited mocks · ₹{proPrice}</Link>
                 </div>

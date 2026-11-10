@@ -6,7 +6,6 @@ const PERKS = [
   'Pro-only system design and case study questions',
   'Multiple role preparation plans',
   'Unlimited mock assessment attempts while subscribed',
-  'AI feedback after every assessment',
   'Assessment history and score comparisons',
   'Company-wise question insights',
   'Question frequency data',

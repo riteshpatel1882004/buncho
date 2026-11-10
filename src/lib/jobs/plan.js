@@ -107,7 +107,7 @@
 
 import { prisma } from '@/lib/prisma';
 import { getSkill } from './skills';
-import { NON_AI_TOPIC_SLUGS } from '@/lib/categories';
+import { topicCategoryWhere } from '@/lib/categories';
 import { PLAN_SIZE, PLAN_MAX_PER_SKILL, RELEVANCE_THRESHOLD } from '@/lib/constants';
 
 const DIFF_ORDER = { EASY: 0, MEDIUM: 1, HARD: 2 };
@@ -138,8 +138,8 @@ function relevance(skill, p) {
 export async function buildPlan(skills, { pro = false } = {}) {
   const problems = await prisma.problem.findMany({
     // Pro-only questions are only planned for Pro users, so a free plan never links to a locked question.
-    // HR and SQL questions are never planned against a job description (mocks are graded by AI, SQL questions have no AI feedback).
-    where: { published: true, topic: { slug: { notIn: NON_AI_TOPIC_SLUGS } }, ...(pro ? {} : { proOnly: false }) },
+    // HR and SQL questions are never planned against a job description (they are not part of the AI/ML role plans).
+    where: { published: true, topic: topicCategoryWhere('ai'), ...(pro ? {} : { proOnly: false }) },
     select: {
       id: true, title: true, subcategory: true, description: true, difficulty: true, estimatedMinutes: true,
       topic: { select: { slug: true } },

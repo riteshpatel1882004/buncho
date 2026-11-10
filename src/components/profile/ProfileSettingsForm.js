@@ -196,7 +196,7 @@ export default function ProfileSettingsForm({ initial, siteUrl, lockedDays = 0, 
         <p className="mt-1 text-sm text-muted">You decide what visitors see. Your email and private answers are never shown.</p>
         <div className="mt-4 space-y-3">
           <Toggle checked={f.profilePublic} onChange={setBool('profilePublic')} title="Profile is public" desc="Anyone with your link can view it. Turn off to make the page visible only to you." />
-          <Toggle checked={f.showStats} onChange={setBool('showStats')} title="Show level, stats and badges" desc="Solved count, streak, AI score, topic strengths and the activity grid." />
+          <Toggle checked={f.showStats} onChange={setBool('showStats')} title="Show level, stats and badges" desc="Solved count, streak, topic strengths and the activity grid." />
          
         </div>
       </section>

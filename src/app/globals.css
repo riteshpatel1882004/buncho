@@ -496,3 +496,43 @@ html, body { overflow-x: clip; }
 @media (prefers-reduced-motion: reduce) {
   .logo-sweep, .logo-b, .logo-letter, .logo-dot, .marquee-track { animation: none; }
 }
+/* ---------- Question documents (/docs/...) ---------- */
+.doc { --doc-serif: Georgia, 'Times New Roman', serif; --doc-sans: var(--font-sans); font-size: 1.0625rem; line-height: 1.7; color: var(--ink); }
+.doc-h-serif h1, .doc-h-serif h2, .doc-h-serif h3 { font-family: var(--doc-serif); }
+.doc-h-sans h1, .doc-h-sans h2, .doc-h-sans h3 { font-family: var(--doc-sans); }
+.doc-t-serif { font-family: var(--doc-serif); }
+.doc-t-sans { font-family: var(--doc-sans); }
+.doc h1 { font-size: 2rem; line-height: 1.2; font-weight: 700; margin: 2.4rem 0 .8rem; }
+.doc h2 { font-size: 1.35rem; line-height: 1.35; font-weight: 650; margin: 2rem 0 .6rem; scroll-margin-top: 5.5rem; border-radius: .5rem; }
+.doc h3 { font-size: 1.1rem; font-weight: 650; margin: 1.5rem 0 .4rem; scroll-margin-top: 5.5rem; }
+.doc h1:first-child, .doc h2:first-child { margin-top: 0; }
+.doc h2:target { background: var(--accent-soft); box-shadow: 0 0 0 .5rem var(--accent-soft); }
+.doc p { margin: .6rem 0; }
+.doc a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.doc ul, .doc ol { margin: .6rem 0; padding-left: 1.5rem; }
+.doc ul { list-style: disc; }
+.doc ol { list-style: decimal; }
+.doc li > p { margin: .2rem 0; }
+.doc blockquote { border-left: 3px solid var(--line); padding-left: 1rem; color: var(--muted); margin: .9rem 0; }
+.doc hr { border: 0; border-top: 1px solid var(--line); margin: 1.6rem 0; }
+.doc code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em; background: var(--surface-2); border-radius: .35rem; padding: .1em .35em; }
+.doc pre { background: var(--surface-2); border: 1px solid var(--line); border-radius: .75rem; padding: 1rem 1.1rem; overflow-x: auto; margin: .9rem 0; }
+.doc pre code { background: none; padding: 0; font-size: .85rem; line-height: 1.6; }
+.doc img { max-width: 100%; height: auto; border-radius: .6rem; margin: .8rem 0; }
+.doc mark { border-radius: .25rem; padding: 0 .12em; }
+.doc table { border-collapse: collapse; margin: 1rem 0; width: 100%; table-layout: fixed; overflow: hidden; display: block; overflow-x: auto; }
+.doc th, .doc td { border: 1px solid var(--line); padding: .45rem .7rem; text-align: left; vertical-align: top; min-width: 5rem; }
+.doc th { background: var(--surface-2); font-weight: 650; }
+.doc .selectedCell { background: var(--accent-soft); }
+.doc ul[data-type='taskList'] { list-style: none; padding-left: .2rem; }
+.doc ul[data-type='taskList'] li { display: flex; gap: .55rem; align-items: flex-start; }
+.doc ul[data-type='taskList'] li > label { margin-top: .35rem; user-select: none; }
+.doc ul[data-type='taskList'] li > div { flex: 1; }
+.doc ul[data-type='taskList'] input { accent-color: var(--accent); width: 1rem; height: 1rem; }
+.doc details { border: 1px solid var(--line); border-radius: .6rem; padding: .5rem .8rem; margin: .8rem 0; }
+.doc summary { cursor: pointer; font-weight: 600; }
+.doc details > div { margin-top: .4rem; }
+.doc .ProseMirror { outline: none; min-height: 60vh; }
+.doc .ProseMirror p.is-editor-empty:first-child::before { content: attr(data-placeholder); color: var(--muted); float: left; height: 0; pointer-events: none; }
+.doc .ProseMirror-selectednode { outline: 2px solid var(--accent); }
+.doc .ProseMirror h2, .doc .ProseMirror h1 { position: relative; }

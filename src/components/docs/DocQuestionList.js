@@ -1,0 +1,82 @@
+import Link from 'next/link';
+import { prisma } from '@/lib/prisma';
+import { CATEGORIES, problemHref, topicCategoryWhere } from '@/lib/categories';
+import { getDocQuestions } from '@/lib/docs/store';
+import RowCheck from './RowCheck';
+
+// The list on /problems, /problems/hr and /problems/sql. All three are identical: topics (the tabs of the
+// document) with their questions one under another. A question links to its place in the document.
+export default async function DocQuestionList({ category, userId, admin }) {
+  const topics = await getDocQuestions(category);
+
+  // Problem rows only exist to carry progress; they mirror the document (see lib/docs/store.js)
+  const [rows, doneRows] = await Promise.all([
+    prisma.problem.findMany({ where: { published: true, topic: topicCategoryWhere(category) }, select: { id: true, slug: true } }),
+    userId
+      ? prisma.problemProgress.findMany({
+          where: { userId, status: 'COMPLETED', problem: { topic: topicCategoryWhere(category) } },
+          select: { problem: { select: { slug: true } } },
+        })
+      : [],
+  ]);
+  const idBySlug = new Map(rows.map((r) => [r.slug, r.id]));
+  const done = new Set(doneRows.map((r) => r.problem.slug));
+
+  if (topics.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-line bg-surface p-8 text-center">
+        <p className="font-medium">No questions yet.</p>
+        <p className="mt-1 text-sm text-muted">{CATEGORIES[category].label.trim()} questions are being added.</p>
+        {admin && (
+          <Link href={`/docs/${category}`} className="mt-4 inline-block rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-ink">
+            Write the first questions
+          </Link>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {topics.map((t) => (
+          <a key={t.slug} href={`#topic-${t.slug}`} className="rounded-full border border-line bg-surface px-3 py-1 text-xs font-medium hover:border-muted">
+            {t.name} <span className="text-muted">{t.questions.length}</span>
+          </a>
+        ))}
+        {admin && (
+          <Link href={`/docs/${category}`} className="ml-auto rounded-full bg-accent-soft px-3 py-1 text-xs font-semibold text-accent">
+            Edit questions
+          </Link>
+        )}
+      </div>
+
+      <div className="space-y-5">
+        {topics.map((t) => {
+          const doneCount = t.questions.filter((q) => done.has(q.id)).length;
+          return (
+            <section key={t.slug} id={`topic-${t.slug}`} className="scroll-mt-24 overflow-hidden rounded-2xl border border-line bg-surface">
+              <header className="flex items-center justify-between gap-3 border-b border-line bg-surface-2/60 px-4 py-3">
+                <h2 className="font-semibold">
+                  <Link href={`/docs/${category}/${t.slug}`} className="hover:text-accent">{t.name}</Link>
+                </h2>
+                <span className="text-xs text-muted">{userId ? `${doneCount} / ${t.questions.length} done` : `${t.questions.length} questions`}</span>
+              </header>
+              <ol>
+                {t.questions.map((q, i) => (
+                  <li key={q.id} className="flex items-center gap-3 border-b border-line px-4 py-2.5 last:border-b-0 hover:bg-surface-2/40">
+                    <span className="w-7 shrink-0 text-right text-xs tabular-nums text-muted">{i + 1}</span>
+                    <Link href={problemHref(q.id, t.slug)} className="min-w-0 flex-1 text-sm hover:text-accent">
+                      {q.title}
+                    </Link>
+                    <RowCheck problemId={idBySlug.get(q.id) ?? null} completed={done.has(q.id)} signedIn={Boolean(userId)} />
+                  </li>
+                ))}
+              </ol>
+            </section>
+          );
+        })}
+      </div>
+    </div>
+  );
+}

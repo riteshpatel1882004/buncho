@@ -55,12 +55,12 @@ function Headline({ title, highlight = [], size }) {
   );
 }
 
-/** A small "AI feedback" card, so the picture shows what the product gives you. */
+/** A small "daily practice" card, so the picture shows what the product gives you. */
 function PreviewCard() {
   const bars = [
-    ['Coverage', 92],
-    ['Accuracy', 84],
-    ['Clarity', 78],
+    ['RAG', 80],
+    ['LLMs', 64],
+    ['SQL', 45],
   ];
   return (
     <div style={{ display: 'flex', position: 'relative', width: 430, height: 410, alignItems: 'center', justifyContent: 'center' }}>
@@ -93,7 +93,7 @@ function PreviewCard() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', fontSize: 19, color: MUTED, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>AI feedback</div>
+          <div style={{ display: 'flex', fontSize: 19, color: MUTED, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase' }}>Daily practice</div>
           <div
             style={{
               display: 'flex',
@@ -110,15 +110,15 @@ function PreviewCard() {
         </div>
 
         <div style={{ display: 'flex', alignItems: 'baseline', marginTop: 14 }}>
-          <div style={{ display: 'flex', fontSize: 84, fontWeight: 800, letterSpacing: -3, lineHeight: 1, color: TEXT }}>86</div>
-          <div style={{ display: 'flex', fontSize: 28, color: MUTED, marginLeft: 8 }}>/100</div>
+          <div style={{ display: 'flex', fontSize: 84, fontWeight: 800, letterSpacing: -3, lineHeight: 1, color: TEXT }}>7</div>
+          <div style={{ display: 'flex', fontSize: 28, color: MUTED, marginLeft: 8 }}>day streak</div>
         </div>
 
         {bars.map(([label, value]) => (
           <div key={label} style={{ display: 'flex', flexDirection: 'column', marginTop: 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 20, color: MUTED }}>
               <span>{label}</span>
-              <span style={{ color: TEXT, fontWeight: 700 }}>{value}</span>
+              <span style={{ color: TEXT, fontWeight: 700 }}>{value}%</span>
             </div>
             <div style={{ display: 'flex', height: 10, borderRadius: 999, background: 'rgba(255,255,255,0.1)', marginTop: 7 }}>
               <div style={{ display: 'flex', width: `${value}%`, height: 10, borderRadius: 999, background: GREEN }} />
@@ -139,7 +139,7 @@ function PreviewCard() {
             fontWeight: 700,
           }}
         >
-          Strong: RAG basics
+          Keep the streak going
         </div>
       </div>
     </div>
@@ -182,7 +182,7 @@ function CallToAction({ text }) {
  * Branded 1200x630 share card, used for the site default, every topic and every problem.
  * - chips: short labels shown under the text (topic, difficulty, time)
  * - highlight: words of the title to show in green
- * - preview: true adds the mock "AI feedback" card on the right (the site default and list pages)
+ * - preview: true adds the mock "daily practice" card on the right (the site default and list pages)
  * - cta: text of the button drawn in the bottom right
  * X draws the page title over the bottom-left of the image, so that corner is kept empty.
  */

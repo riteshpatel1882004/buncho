@@ -3,7 +3,6 @@
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { getOrCreateUser } from '@/lib/user';
-import { hashContent } from '@/lib/ai/evaluate';
 import { extractSkills, guessTitle } from '@/lib/jobs/extract';
 import { buildPlan } from '@/lib/jobs/plan';
 import { getEntitlements } from '@/lib/subscription';
@@ -197,7 +196,7 @@ export async function startMock(jobId) {
   return { ok: true, id: mock.id };
 }
 
-/** Saves the mock answers as the user's submissions (each answered question counts as solved). Feedback is requested afterwards, one question at a time. */
+/** Saves the mock answers as the user's submissions (each answered question counts as solved). */
 export async function submitMock(mockId, answers) {
   const user = await requireUser();
   const mock = await prisma.mockAssessment.findFirst({ where: { id: String(mockId), userId: user.id }, select: { id: true, status: true, problemIds: true } });
@@ -224,7 +223,7 @@ export async function submitMock(mockId, answers) {
   return { ok: true, saved };
 }
 
-/** Scores the mock from the AI evaluations of the answers just submitted. Blank answers count as 0; failed evaluations are left out and flagged. */
+/** Finishes the mock. Without AI feedback there is no score: each question is recorded as answered or skipped. */
 export async function completeMock(mockId) {
   const user = await requireUser();
   const mock = await prisma.mockAssessment.findFirst({ where: { id: String(mockId), userId: user.id } });
@@ -243,28 +242,12 @@ export async function completeMock(mockId) {
   const questions = [];
   for (const problemId of mock.problemIds) {
     const sub = subBy.get(problemId);
-    let score = 0;
-    let state = 'skipped';
-    if (sub) {
-      const ev = await prisma.evaluation.findFirst({
-        where: { submissionId: sub.id, contentHash: hashContent(sub.content) },
-        orderBy: { createdAt: 'desc' },
-        select: { score: true },
-      });
-      if (ev) {
-        score = ev.score;
-        state = 'scored';
-      } else {
-        score = null;
-        state = 'no-feedback';
-      }
-    }
-    questions.push({ problemId, title: titleBy.get(problemId) ?? 'Question', skillKeys: skillsBy.get(problemId) ?? [], score, state });
+    const state = sub ? 'answered' : 'skipped';
+    questions.push({ problemId, title: titleBy.get(problemId) ?? 'Question', skillKeys: skillsBy.get(problemId) ?? [], score: null, state });
   }
 
-  const counted = questions.filter((q) => q.score !== null);
-  const partial = counted.length < questions.length;
-  const score = counted.length ? Math.round(counted.reduce((a, q) => a + q.score, 0) / counted.length) : null;
+  const partial = false;
+  const score = null;
 
   await prisma.mockAssessment.update({
     where: { id: mock.id },

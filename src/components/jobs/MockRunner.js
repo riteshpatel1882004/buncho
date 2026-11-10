@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { completeMock, submitMock } from '@/app/job-actions';
-import { requestFeedback } from '@/lib/ai-client';
 import { useSpeechRecognition } from '@/hooks/useSpeechRecognition';
 import { MAX_ANSWER_LENGTH, MIN_ANSWER_LENGTH } from '@/lib/constants';
 import DifficultyBadge from '@/components/DifficultyBadge';
@@ -23,9 +22,8 @@ export default function MockRunner({ mockId, jobId, endsAt, questions }) {
   const [answers, setAnswers] = useState({});
   const [active, setActive] = useState(0);
   const [left, setLeft] = useState(() => Math.max(0, Math.round((end - Date.now()) / 1000)));
-  const [phase, setPhase] = useState('writing'); // writing | saving | evaluating | error
+  const [phase, setPhase] = useState('writing'); // writing | saving | error
   const [progress, setProgress] = useState('');
-  const [ev, setEv] = useState({ i: 0, n: 0 });
   const [error, setError] = useState(null);
 
   const answersRef = useRef(answers);
@@ -79,13 +77,6 @@ export default function MockRunner({ mockId, jobId, endsAt, questions }) {
       return;
     }
 
-    setPhase('evaluating');
-    for (let i = 0; i < saved.saved.length; i += 1) {
-      setEv({ i: i + 1, n: saved.saved.length });
-      setProgress(`Getting AI feedback ${i + 1} of ${saved.saved.length}…`);
-      await requestFeedback(saved.saved[i]); // a failure is reported on the results page
-    }
-
     await completeMock(mockId);
     try {
       localStorage.removeItem(storageKey);
@@ -106,19 +97,19 @@ export default function MockRunner({ mockId, jobId, endsAt, questions }) {
   function confirmFinish() {
     const blank = questions.filter((q) => (answers[q.id] ?? '').trim().length < MIN_ANSWER_LENGTH).length;
     const msg = blank
-      ? `${blank} ${blank === 1 ? 'question has' : 'questions have'} no answer and will score 0. Submit anyway?`
-      : 'Submit your answers for AI feedback? You cannot change them afterwards.';
+      ? `${blank} ${blank === 1 ? 'question has' : 'questions have'} no answer. Submit anyway?`
+      : 'Submit your answers? You cannot change them afterwards.';
     if (window.confirm(msg)) finish();
   }
 
   const q = questions[active];
-  const busy = phase === 'saving' || phase === 'evaluating';
+  const busy = phase === 'saving';
   const low = left <= 300;
   const isFilled = (id) => (answers[id] ?? '').trim().length >= MIN_ANSWER_LENGTH;
   const answered = questions.filter((x) => isFilled(x.id)).length;
   const pct = questions.length ? Math.round((answered / questions.length) * 100) : 0;
   const len = (answers[q.id] ?? '').length;
-  const evalPct = phase === 'evaluating' && ev.n ? Math.round((ev.i / ev.n) * 100) : phase === 'saving' ? 8 : 0;
+  const evalPct = phase === 'saving' ? 60 : 0;
 
   const navBtn = 'inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-4 py-2 text-sm font-medium transition hover:border-muted disabled:opacity-40 disabled:hover:border-line';
 
@@ -251,17 +242,17 @@ export default function MockRunner({ mockId, jobId, endsAt, questions }) {
         </div>
       </div>
 
-      {/* Full-screen state while answers are saved and evaluated */}
+      {/* Full-screen state while answers are saved */}
       {busy && (
         <div role="status" aria-live="polite" className="fixed inset-0 z-50 grid place-items-center bg-bg/80 px-4 backdrop-blur-sm">
           <div className="w-full max-w-sm rounded-3xl border border-line bg-surface p-8 text-center shadow-2xl">
             <span className="mx-auto grid h-14 w-14 place-items-center rounded-2xl bg-accent-soft text-accent"><Spinner size={28} /></span>
-            <h2 className="mt-5 text-lg font-semibold">{phase === 'saving' ? 'Saving your answers' : 'Evaluating your answers'}</h2>
+            <h2 className="mt-5 text-lg font-semibold">Saving your answers</h2>
             <p className="mt-1 text-sm text-muted">{progress}</p>
             <div className="mt-5 h-2 overflow-hidden rounded-full bg-line/60" aria-hidden="true">
               <div className="h-full rounded-full bg-accent transition-all duration-500" style={{ width: `${evalPct}%` }} />
             </div>
-            <p className="mt-4 text-xs text-muted">Please keep this page open. You will see your results automatically.</p>
+            <p className="mt-4 text-xs text-muted">Please keep this page open. You will be taken to your summary automatically.</p>
           </div>
         </div>
       )}

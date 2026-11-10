@@ -15,20 +15,6 @@ export const MIN_ANSWER_LENGTH = 20;
 export const MAX_ANSWER_LENGTH = 12000;
 export const PAGE_SIZE = 20;
 
-/* ---------- Phase 4: AI feedback ---------- */
-
-export const AI_EVAL_LIMIT_PER_HOUR = 10;
-export const AI_EVAL_LIMIT_PER_DAY = 30;
-
-// Max points per rubric dimension. The total is 100.
-export const AI_RUBRIC = { coverage: 40, accuracy: 30, reasoning: 20, clarity: 10 };
-export const AI_RUBRIC_LABEL = {
-  coverage: 'Coverage',
-  accuracy: 'Technical accuracy',
-  reasoning: 'Reasoning depth',
-  clarity: 'Clarity',
-};
-
 /* ---------- Phase 6: readiness ---------- */
 
 // One entry per topic, in the order shown on the dashboard. Weights add up to 100 and favour LLM and RAG work

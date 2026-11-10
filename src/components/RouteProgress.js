@@ -7,7 +7,7 @@ import { progress } from '@/lib/progress';
 // Should this fetch show the loading bar?
 //  - Server actions (Next-Action header)
 //  - Route fetches triggered by navigation or router.refresh (RSC header, but not background prefetches)
-//  - Same-origin POST/PUT/PATCH/DELETE calls to /api/* (e.g. AI feedback)
+//  - Same-origin POST/PUT/PATCH/DELETE calls to /api/*
 function shouldTrack(input, init) {
   try {
     const req = typeof Request !== 'undefined' && input instanceof Request ? input : null;

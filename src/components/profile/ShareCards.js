@@ -77,7 +77,6 @@ function rankOf(solved) {
   return { i, cur, nxt, frac, toNext: nxt ? nxt.at - solved : 0 };
 }
 
-const scoreTier = (s) => (s >= 90 ? 'OUTSTANDING' : s >= 80 ? 'EXCELLENT' : s >= 65 ? 'STRONG' : s >= 50 ? 'RISING' : 'WARMING UP');
 
 /* ------------------------------ helpers ------------------------------ */
 
@@ -301,7 +300,6 @@ export function ShareCard({ svgRef, type, fmt, color, design, d, featured, locke
   const bigR = big * 0.4;
   const topBadge = d.earned[0] ?? null;
   const hasEarned = d.earned.length > 0;
-  const score = d.avgScore ?? 0;
 
   /* ----- text for each card type ----- */
   let eyebrow = '';
@@ -335,10 +333,6 @@ export function ShareCard({ svgRef, type, fmt, color, design, d, featured, locke
     eyebrow = 'MILESTONE ROADMAP';
     title = d.next ? `Next: ${d.next}` : 'Road complete';
     sub = d.next ? `${d.toNext} more problem${d.toNext === 1 ? '' : 's'} to go. ${d.solved} solved so far.` : `${d.solved} problems solved. Every milestone unlocked.`;
-  } else if (type === 'score') {
-    eyebrow = 'AI FEEDBACK';
-    title = d.avgScore != null ? `${d.avgScore} average score` : 'AI scored answers';
-    sub = 'Average AI score across my interview answers, judged problem by problem.';
   } else if (type === 'hard') {
     eyebrow = 'SUMMIT';
     title = `${d.hard} hard problem${d.hard === 1 ? '' : 's'}`;
@@ -350,7 +344,7 @@ export function ShareCard({ svgRef, type, fmt, color, design, d, featured, locke
   } else if (type === 'invite') {
     eyebrow = 'JOIN ME';
     title = 'Practise with me';
-    sub = 'Real AI, ML and GenAI interview problems with instant AI feedback.';
+    sub = 'Real AI, ML and GenAI interview problems to practise every day.';
   } else {
     eyebrow = 'AI INTERVIEW PROFILE';
     title = d.name;
@@ -365,7 +359,7 @@ export function ShareCard({ svgRef, type, fmt, color, design, d, featured, locke
   const stats = [
     { v: d.solved, l: 'Solved' },
     { v: d.streak, l: 'Day streak' },
-    { v: d.avgScore ?? '–', l: 'Avg AI score' },
+    { v: d.hard, l: 'Hard solved' },
     { v: d.days, l: 'Days active' },
   ];
 
@@ -484,21 +478,6 @@ export function ShareCard({ svgRef, type, fmt, color, design, d, featured, locke
             </g>
           );
         })}
-      </g>
-    );
-  } else if (type === 'score') {
-    const R = 152;
-    const C = 2 * Math.PI * R;
-    const arc = C * 0.75;
-    const frac = Math.max(0.02, Math.min(1, score / 100));
-    visual = (
-      <g>
-        <circle r={R} fill={p.ringFill} />
-        <circle r={R} fill="none" stroke={p.track} strokeWidth="26" strokeLinecap="round" strokeDasharray={`${arc} ${C}`} transform="rotate(135)" />
-        <circle r={R} fill="none" stroke={url('ring')} strokeWidth="26" strokeLinecap="round" strokeDasharray={`${arc * frac} ${C}`} transform="rotate(135)" />
-        <text y="26" textAnchor="middle" fontFamily={F} fontWeight="800" fontSize="128" fill={p.text}>{d.avgScore ?? '–'}</text>
-        <text y="68" textAnchor="middle" fontFamily={F} fontWeight="600" fontSize="25" fill={p.soft} opacity="0.9">out of 100</text>
-        <text y="150" textAnchor="middle" fontFamily={F} fontWeight="800" fontSize="21" letterSpacing="5" fill={p.hi}>{scoreTier(score)}</text>
       </g>
     );
   } else if (type === 'hard') {
@@ -901,7 +880,6 @@ function captionFor(item, d, url) {
     case 'rank': return `Level ${d.rank.i + 1}: ${d.rank.cur.name} on Buncho, with ${d.solved} AI interview problems solved.${tail}`;
     case 'progress': return `${d.pct}% of the Buncho AI interview question bank done. ${d.solved} of ${d.total} problems solved.${tail}`;
     case 'roadmap': return d.next ? `${d.solved} problems solved on Buncho and ${d.toNext} to go until ${d.next}.${tail}` : `Every milestone unlocked on Buncho with ${d.solved} problems solved.${tail}`;
-    case 'score': return `My average AI score on Buncho is ${d.avgScore} out of 100 across my interview answers.${tail}`;
     case 'hard': return `${d.hard} hard AI interview problem${d.hard === 1 ? '' : 's'} solved on Buncho.${tail}`;
     case 'active': return `${d.days} days of AI interview practice on Buncho and counting.${tail}`;
     case 'invite': return `Come practise AI, ML and GenAI interview problems with me on Buncho.${tail}`;
@@ -920,7 +898,6 @@ function hintFor(b, m) {
     case 'streak7': return `Reach a 7 day streak (now ${m.streak})`;
     case 'streak30': return `Reach a 30 day streak (now ${m.streak})`;
     case 'hard': return `${Math.max(0, 5 - m.hard)} more hard problems`;
-    case 'scholar': return m.evals < 5 ? `${5 - m.evals} more AI-scored answers` : 'Raise your average AI score to 80+';
     case 'regular': return `${Math.max(0, 20 - m.activeDays)} more practice days`;
     case 'pro': return 'Upgrade to Pro';
     default: return b.desc;
@@ -1022,7 +999,6 @@ export default function ShareCards({ name, username, url, metrics, badges, total
     total,
     pct: total ? Math.min(100, Math.round((solved / total) * 100)) : 0,
     streak: metrics.streak,
-    avgScore: metrics.evals ? metrics.avgScore : null,
     hard: metrics.hard ?? 0,
     days: metrics.activeDays,
     earned,
@@ -1046,7 +1022,6 @@ export default function ShareCards({ name, username, url, metrics, badges, total
     { key: 'profile', type: 'profile', label: 'Profile summary', locked: solved < 1, hint: 'Solve your first problem' },
     { key: 'progress', type: 'progress', label: 'Question bank progress', locked: solved < 1, hint: 'Solve your first problem' },
     { key: 'roadmap', type: 'roadmap', label: 'Milestone roadmap', locked: solved < 1, hint: 'Solve your first problem' },
-    { key: 'score', type: 'score', label: 'Average AI score', locked: metrics.evals < 1, hint: 'Get your first AI-scored answer' },
     { key: 'hard', type: 'hard', label: 'Hard problems', locked: d.hard < 1, hint: 'Solve a hard problem' },
     { key: 'active', type: 'active', label: 'Active days', locked: metrics.activeDays < 1, hint: 'Practise today' },
     { key: 'invite', type: 'invite', label: 'Invite friends', locked: false, hint: '' },

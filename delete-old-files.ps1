@@ -1,0 +1,43 @@
+# Run from your project root (the folder that contains package.json):  powershell -ExecutionPolicy Bypass -File delete-old-files.ps1
+$files = @(
+  'prisma/insights.csv',
+  'prisma/remove-empty-duplicate-topics.js',
+  'prisma/seed-data.js',
+  'prisma/seed-hr.js',
+  'prisma/seed-insights.js',
+  'prisma/seed-sql.js',
+  'src/app/api/ai/evaluate/route.js',
+  'src/app/problems/[slug]/loading.js',
+  'src/app/problems/hr/[slug]/loading.js',
+  'src/app/problems/sql/[slug]/loading.js',
+  'src/components/AnswerEditor.js',
+  'src/components/BookmarkButton.js',
+  'src/components/CodeEditor.js',
+  'src/components/FeedbackControls.js',
+  'src/components/FeedbackView.js',
+  'src/components/Hints.js',
+  'src/components/InsightLists.js',
+  'src/components/ProLock.js',
+  'src/components/ProblemListPopup.js',
+  'src/components/ProblemTabs.js',
+  'src/components/ReadinessCard.js',
+  'src/components/SolutionControls.js',
+  'src/components/Timer.js',
+  'src/components/WeeklyActivity.js',
+  'src/components/Workspace.js',
+  'src/components/sql/SqlCode.js',
+  'src/components/sql/SqlLibrary.js',
+  'src/components/sql/SqlList.js',
+  'src/components/sql/SqlProblem.js',
+  'src/components/sql/SqlTabs.js',
+  'src/lib/ai-client.js',
+  'src/lib/ai/evaluate.js',
+  'src/lib/ai/providers.js',
+  'src/lib/code-answer.js',
+  'src/lib/insights.js',
+  'src/lib/sql-answers.js',
+  'src/lib/steps.js'
+)
+foreach ($f in $files) { if (Test-Path -LiteralPath $f) { Remove-Item -LiteralPath $f -Force; Write-Host "deleted $f" } }
+foreach ($d in @('prisma/content', 'src/lib/ai', 'src/app/api/ai', '.next')) { if (Test-Path -LiteralPath $d) { Remove-Item -LiteralPath $d -Recurse -Force; Write-Host "deleted folder $d" } }
+Write-Host 'Done. Now: npm i (tiptap packages), npx prisma db push, npm run dev'

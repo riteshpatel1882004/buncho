@@ -19,16 +19,15 @@ export const metadata = buildMetadata({
 const FREE = [
   '1 role preparation plan',
   '1 mock assessment attempt total',
-  'Full result and AI feedback for that attempt',
+  'Full result for that attempt',
   'Access to the free question bank',
   'Basic progress tracking',
 ];
 
 const PRO = [
-  'Pro-only questions: in-depth system design and case study scenarios, with AI feedback and full reference answers',
+  'Pro-only questions: in-depth system design and case study scenarios',
   'Multiple role preparation plans',
   'Unlimited mock assessment attempts while subscribed',
-  'AI feedback after every assessment',
   'Assessment history and score comparisons',
   'Company-wise question insights',
   'Question frequency data',
@@ -74,7 +73,7 @@ export default async function PricingPage() {
             Start free. <Gradient>Upgrade when you&rsquo;re ready.</Gradient>
           </h1>
           <p className="mt-3 max-w-2xl text-base text-muted">
-            Try Buncho with one role and one full mock assessment, including the complete result and AI feedback. Upgrade for more roles, unlimited mocks and interview insights.
+            Try Buncho with one role and one full mock assessment, including the complete result. Upgrade for more roles, unlimited mocks and interview insights.
           </p>
         </div>
       </Hero>

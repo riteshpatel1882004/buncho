@@ -2,11 +2,9 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { getOrCreateUser } from '@/lib/user';
-import ReadinessCard from '@/components/ReadinessCard';
 import { StatsCard } from '@/components/StatsCard';
 import { getUserStats, dayKey } from '@/lib/problems';
 import { getDayTopics } from '@/lib/day-topics';
-import { getInsights } from '@/lib/insights';
 import { getUserBadges, publicName } from '@/lib/profile';
 import { profileTheme } from '@/lib/profile-theme';
 import ShareCards from '@/components/profile/ShareCards';
@@ -38,7 +36,7 @@ export default async function DashboardPage() {
   // Stats are needed by both the dashboard and the badges, so fetch them once and share the promise
   const statsPromise = getUserStats(user.id);
 
-  const [bookmarks, stats, insights, jobs, badgeData, dayTopics] = await Promise.all([
+  const [bookmarks, stats, jobs, badgeData, dayTopics] = await Promise.all([
     prisma.bookmark.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: 'desc' },
@@ -46,7 +44,6 @@ export default async function DashboardPage() {
       include: { problem: { select: { slug: true, title: true, difficulty: true } } },
     }),
     statsPromise,
-    getInsights(user.id),
     listJobs(user.id),
     statsPromise.then((s) => getUserBadges(user.id, { pro, stats: s })),
     // Topics solved per day, shown in the Activity chart hover card
@@ -111,13 +108,6 @@ export default async function DashboardPage() {
       icon: 'milestones',
       hint: 'Badges and levels',
       content: <MilestoneJourney solved={stats.solved} badges={badgeData.badges} />,
-    },
-    {
-      id: 'readiness',
-      label: 'AI Engineering Readiness',
-      icon: 'readiness',
-      hint: 'Skill breakdown',
-      content: <ReadinessCard readiness={insights.readiness} competencies={insights.competencies} />,
     },
     // Pro members see their plan in the "Plan details" popup on the banner
     ...(!pro

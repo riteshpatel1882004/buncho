@@ -19,7 +19,7 @@ export const metadata = buildMetadata({
 const FAQ = [
   {
     q: 'What is Buncho?',
-    a: 'Buncho is an interview practice platform for AI, machine learning and generative AI engineers. You answer real interview questions by speaking or typing, then compare your answer with a reference solution and AI feedback.',
+    a: 'Buncho is an interview practice platform for AI, machine learning and generative AI engineers. You answer real interview questions by speaking or typing, then practise again until it comes out clearly.',
   },
   {
     q: 'Which topics and question types are covered?',
@@ -30,8 +30,8 @@ const FAQ = [
     a: 'Yes. Use the microphone to dictate your answer, or type it. Explaining a long scenario out loud is closer to a real interview.',
   },
   {
-    q: 'How does the AI feedback work?',
-    a: 'After you submit an answer, it is scored against a rubric covering coverage, technical accuracy, reasoning depth and clarity. The reference solution unlocks at the same time so you can compare approaches.',
+    q: 'Do I get model answers or AI feedback?',
+    a: 'No. Buncho gives you real interview questions to practise on. Your answers are private and saved for you to revisit, and there are no model answers or AI scoring.',
   },
   {
     q: 'Is Buncho free?',
@@ -42,7 +42,7 @@ const FAQ = [
 const STEPS = [
   { n: '1', title: 'Pick a problem', body: 'Browse by topic, difficulty or type from the problem list, or search for a concept.', time: 'About 1 min' },
   { n: '2', title: 'Answer it first', body: 'Use the two-pane workspace: the problem on the left, your spoken or written answer on the right.', time: '5 to 15 min' },
-  { n: '3', title: 'Compare and learn', body: ' Unlock the expert solution and compare it with your answer, then mark the problem complete.', time: 'About 5 min' },
+  { n: '3', title: 'Review and repeat', body: 'Save your answer, mark the problem complete, and come back to it later.', time: 'About 5 min' },
 ];
 
 const FALLBACK_TOPICS = [
@@ -55,13 +55,6 @@ const FALLBACK_TOPICS = [
 ];
 
 const WAVE = [0.1, 0.45, 0.2, 0.6, 0.05, 0.5, 0.3, 0.7, 0.15, 0.55, 0.25, 0.4, 0.1, 0.65, 0.35, 0.2, 0.5, 0.05, 0.45, 0.3, 0.6, 0.15];
-
-const RUBRIC = [
-  ['Coverage', 30, 40],
-  ['Accuracy', 26, 30],
-  ['Reasoning', 13, 20],
-  ['Clarity', 9, 10],
-];
 
 function SectionHeader({ title, body, action, id }) {
   return (
@@ -149,7 +142,7 @@ export default async function LandingPage() {
               className="rise mt-4 max-w-xl text-[0.95rem] leading-relaxed text-muted sm:mt-5 sm:text-lg"
               style={{ '--i': 2 }}
             >
-              Answer by voice or text, get a rubric score, then compare your thinking with an expert solution and with other learners.
+              Answer real interview questions by voice or text, and build a daily practice streak.
             </p>
 
             <div className="rise mt-6 flex flex-col gap-3 sm:mt-7 sm:flex-row" style={{ '--i': 3 }}>
@@ -173,7 +166,7 @@ export default async function LandingPage() {
               className="rise mt-5 grid grid-cols-3 divide-x divide-line rounded-xl border border-line bg-surface/60 py-3 text-center text-xs text-muted sm:flex sm:gap-x-5 sm:divide-x-0 sm:rounded-none sm:border-0 sm:bg-transparent sm:py-0 sm:text-left sm:text-sm"
               style={{ '--i': 4 }}
             >
-              {['Free to start', 'Voice and text', 'Expert solutions'].map((t) => (
+              {['Free to start', 'Voice and text', 'Real questions'].map((t) => (
                 <li key={t} className="flex flex-col items-center gap-1 px-1 sm:flex-row sm:gap-1.5 sm:px-0">
                   <Check width={16} height={16} className="text-accent" />
                   {t}
@@ -301,66 +294,6 @@ export default async function LandingPage() {
             </div>
           </div>
 
-          {/* Score */}
-          <div className="reveal">
-            <div className="lift h-full overflow-hidden rounded-3xl border border-line bg-surface p-6 sm:p-8">
-              <IconChip>
-                <Check width={22} height={22} />
-              </IconChip>
-              <h3 className="mt-5 text-xl font-bold tracking-tight">A rubric score, not a vague “good job”</h3>
-              <p className="mt-2 leading-relaxed text-muted">
-                Coverage, accuracy, reasoning and clarity are each scored, with clear tips on what to fix next.
-              </p>
-              <ul className="mt-6 space-y-3 rounded-2xl bg-surface-2 p-4" aria-hidden="true">
-                {RUBRIC.map(([label, value, max]) => (
-                  <li key={label}>
-                    <div className="flex justify-between gap-3 text-xs font-medium">
-                      <span>{label}</span>
-                      <span className="tabular-nums text-muted">
-                        {value}/{max}
-                      </span>
-                    </div>
-                    <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-line">
-                      <div className="grow-x h-full rounded-full bg-accent" style={{ width: `${(value / max) * 100}%` }} />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {/* Expert + community */}
-          <div className="reveal">
-            <div className="lift h-full overflow-hidden rounded-3xl border border-line bg-surface p-6 sm:p-8">
-              <IconChip>
-                <Users width={22} height={22} />
-              </IconChip>
-              <h3 className="mt-5 text-xl font-bold tracking-tight">Compare with the experts</h3>
-              <p className="mt-2 leading-relaxed text-muted">
-               Submitting your answer unlocks the expert solution, so you learn from the gap.
-              </p>
-              <div className="mt-6 grid grid-cols-2 gap-3" aria-hidden="true">
-                <div className="rounded-2xl bg-surface-2 p-3">
-                  <p className="text-xs font-semibold text-muted">Your answer</p>
-                  <div className="mt-3 space-y-2">
-                    <div className="h-1.5 w-full rounded-full bg-line" />
-                    <div className="h-1.5 w-4/5 rounded-full bg-line" />
-                    <div className="h-1.5 w-3/5 rounded-full bg-line" />
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-accent/30 bg-accent-soft p-3">
-                  <p className="text-xs font-semibold text-accent">Expert solution</p>
-                  <div className="mt-3 space-y-2">
-                    <div className="h-1.5 w-full rounded-full bg-accent/40" />
-                    <div className="h-1.5 w-full rounded-full bg-accent/40" />
-                    <div className="h-1.5 w-4/5 rounded-full bg-accent/40" />
-                    <div className="h-1.5 w-2/3 rounded-full bg-accent/40" />
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Follow-ups */}
           <div className="reveal">
             <div className="lift h-full overflow-hidden rounded-3xl border border-line bg-surface p-6 sm:p-8">
@@ -390,7 +323,7 @@ export default async function LandingPage() {
           <SectionHeader
             id="how"
             title="Three steps, ten minutes a day"
-            body="A simple loop that mirrors a real interview: think, answer, then check yourself against the best version."
+            body="A simple loop that mirrors a real interview: think, answer, then come back and improve it."
           />
 
           <ol className="mt-10 grid gap-4 md:grid-cols-3 md:gap-5">
@@ -552,7 +485,7 @@ export default async function LandingPage() {
           <div className="relative max-w-2xl">
             <h2 className="text-3xl font-extrabold tracking-tight sm:text-5xl">Start with one question today.</h2>
             <p className="mt-3 max-w-lg text-[#04140a]/75 sm:text-lg">
-              It takes about ten minutes, and your first answer unlocks the expert solution.
+              It takes about ten minutes, and your first answer is saved to your streak.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
               <Link

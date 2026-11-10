@@ -54,7 +54,7 @@ export const metadata = {
     'RAG interview questions',
     'AI engineer interview preparation',
     'ML engineer interview practice',
-    'mock interview AI feedback',
+    'mock interview practice',
   ],
   authors: [{ name: SITE_NAME }],
   creator: SITE_NAME,

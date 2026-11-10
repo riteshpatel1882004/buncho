@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { SITE_URL } from '@/lib/seo';
-import { problemHref } from '@/lib/categories';
+import { docHref } from '@/lib/categories';
 
 // Rebuilt at most once an hour, so new problems show up without hitting the database on every crawl.
 export const revalidate = 3600;
@@ -23,9 +23,10 @@ export default async function sitemap() {
 
   try {
     const [problems, profiles] = await Promise.all([
-      prisma.problem.findMany({
-        where: { published: true },
-        select: { slug: true, updatedAt: true, topic: { select: { slug: true } } },
+      // One entry per document tab (a question is an anchor inside its tab, so it has no URL of its own)
+      prisma.topic.findMany({
+        where: { content: { not: null } },
+        select: { slug: true, updatedAt: true },
         orderBy: { updatedAt: 'desc' },
       }),
       // Public profiles with at least one solved problem (empty profiles are noindex, so keep them out)
@@ -41,13 +42,8 @@ export default async function sitemap() {
       entries.push({ url: `${SITE_URL}/user/${u.username}`, lastModified: u.updatedAt, changeFrequency: 'weekly', priority: 0.4 });
     });
 
-    problems.forEach((p) => {
-      entries.push({
-        url: `${SITE_URL}${problemHref(p.slug, p.topic.slug)}`,
-        lastModified: p.updatedAt,
-        changeFrequency: 'monthly',
-        priority: 0.7,
-      });
+    problems.forEach((t) => {
+      entries.push({ url: `${SITE_URL}${docHref(t.slug)}`, lastModified: t.updatedAt, changeFrequency: 'weekly', priority: 0.7 });
     });
   } catch (err) {
     // If the database is unreachable the static pages are still returned instead of failing the build

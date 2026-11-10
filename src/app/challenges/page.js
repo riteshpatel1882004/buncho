@@ -8,7 +8,7 @@ import JsonLd from '@/components/JsonLd';
 import { buildMetadata, collectionPageJsonLd, breadcrumbJsonLd, graph, hasActiveFilters } from '@/lib/seo';
 
 const DESCRIPTION =
-  'Realistic production AI incidents with logs and data. Diagnose the failure, explain your decisions step by step and get feedback checked against a rubric.';
+  'Realistic production AI incidents with logs and data. Diagnose the failure, explain your decisions step by step.';
 
 export async function generateMetadata({ searchParams }) {
   const filters = parseFilters(await searchParams);
@@ -50,8 +50,8 @@ export default async function ChallengesPage({ searchParams }) {
         <p className="text-xs font-semibold uppercase tracking-widest text-accent">Production AI engineering</p>
         <h1 className="mt-1 text-3xl font-semibold tracking-tight sm:text-4xl">Production AI engineering challenges</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted">
-          Realistic incidents with logs and data. Diagnose the failure, explain your decisions step by step, and get feedback
-          checked against a rubric. These test practical reasoning, not memorisation.
+          Realistic incidents with logs and data. Diagnose the failure, explain your decisions step by step.
+          These test practical reasoning, not memorisation.
         </p>
       </header>
 

@@ -1,5 +1,5 @@
-// Radar chart of the average AI score per topic. Pure SVG, rendered on the server, themed with CSS variables.
-// topics: [{ slug, name, avg }]. avg = null means "no AI score": the axis stays at the centre and is labelled N/A.
+// Radar chart of the percent solved per category. Pure SVG, rendered on the server, themed with CSS variables.
+// topics: [{ slug, name, avg }]. avg is 0-100 (percent solved); null keeps the axis at the centre and labels it N/A.
 
 const SIZE = 340; // a little padding around the 320 chart so labels never get clipped
 const C = SIZE / 2;
@@ -20,7 +20,7 @@ export default function SkillRadar({ topics, color }) {
   const poly = data.map((t, i) => point(i, n, val(t)).join(',')).join(' ');
 
   return (
-    <svg viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label={`Average AI score by topic: ${data.map((t) => `${t.name} ${t.avg ?? 'no score'}`).join(', ')}`} className="mx-auto w-full max-w-[22rem] overflow-visible">
+    <svg viewBox={`0 0 ${SIZE} ${SIZE}`} role="img" aria-label={`Percent solved by category: ${data.map((t) => `${t.name} ${t.avg ?? 0}%`).join(', ')}`} className="mx-auto w-full max-w-[22rem] overflow-visible">
       <defs>
         <radialGradient id="radar-fill" cx="50%" cy="50%" r="60%">
           <stop offset="0%" stopColor={color} stopOpacity="0.55" />
@@ -46,7 +46,7 @@ export default function SkillRadar({ topics, color }) {
               {short(t.name)}
             </text>
             <text x={lx} y={ly + 13} textAnchor={anchor} dominantBaseline="middle" fontSize="10.5" fill="var(--muted)">
-              {t.avg == null ? 'N/A' : `${t.avg}/100`}
+              {t.avg == null ? 'N/A' : `${t.avg}%`}
             </text>
           </g>
         );

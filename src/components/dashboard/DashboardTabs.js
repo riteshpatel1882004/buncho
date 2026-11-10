@@ -25,12 +25,6 @@ const ICONS = {
       <path d="M8.5 14L7 21l5-3 5 3-1.5-7" />
     </>
   ),
-  readiness: (
-    <>
-      <path d="M12 3a9 9 0 1 0 9 9" />
-      <path d="M12 12l5-5M12 7v5h5" />
-    </>
-  ),
   plan: <path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" />,
   share: (
     <>
@@ -48,7 +42,6 @@ const TONES = {
   jobs: 'bg-violet-500/12 text-violet-500',
   saved: 'bg-amber-500/12 text-amber-500',
   milestones: 'bg-pink-500/12 text-pink-500',
-  readiness: 'bg-teal-500/12 text-teal-500',
   plan: 'bg-yellow-500/12 text-yellow-600',
   share: 'bg-indigo-500/12 text-indigo-500',
 };

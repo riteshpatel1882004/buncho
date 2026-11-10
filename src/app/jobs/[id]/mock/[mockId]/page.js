@@ -12,7 +12,7 @@ import { ChevronRight, Lock } from '@/components/icons';
 
 export const metadata = { title: 'Mock assessment results' };
 
-const STATE = { scored: null, skipped: 'Not answered, counted as 0', 'no-feedback': 'AI feedback unavailable, not counted' };
+const STATE = { answered: 'Answered', skipped: 'Not answered' };
 
 export default async function MockResultPage({ params }) {
   const user = await getOrCreateUser();
@@ -32,7 +32,7 @@ export default async function MockResultPage({ params }) {
     select: { score: true },
   });
 
-  const { questions, partial } = mock.results;
+  const { questions } = mock.results;
   const pro = await getIsPro(user.id);
   const proPrice = await getProPriceInr();
   const problemRows = await attachInsights(
@@ -53,7 +53,7 @@ export default async function MockResultPage({ params }) {
   const skills = [...bySkill.entries()].map(([k, e]) => ({ key: k, label: getSkill(k)?.label ?? k, avg: Math.round(e.sum / e.n) })).sort((a, b) => a.avg - b.avg);
 
   const tone = toneOf(mock.score);
-  const verdict = mock.score === null ? 'No score' : mock.score >= 70 ? 'Strong result' : mock.score >= 50 ? 'Solid start' : 'Room to grow';
+  const verdict = mock.score === null ? 'Assessment submitted' : mock.score >= 70 ? 'Strong result' : mock.score >= 50 ? 'Solid start' : 'Room to grow';
   const delta = previous && mock.score !== null ? mock.score - previous.score : null;
   const answeredCount = questions.filter((q) => q.state !== 'skipped').length;
   const strongest = skills.length ? skills[skills.length - 1] : null;
@@ -82,12 +82,7 @@ export default async function MockResultPage({ params }) {
                 </span>
               </p>
             )}
-            {partial && (
-              <p className="mt-3 max-w-lg rounded-xl bg-medium/12 px-3.5 py-2.5 text-xs text-medium md:max-w-xl">
-                AI feedback failed for some answers, so this score covers only the questions that were evaluated. Open those questions to retry feedback.
-              </p>
-            )}
-            <p className="mt-3 max-w-xl text-xs text-muted">This is a practice indicator from AI feedback on your answers. It does not predict how an interview will go.</p>
+            <p className="mt-3 max-w-xl text-xs text-muted">Your answers are saved privately. Open any question below to review or improve your answer.</p>
             <div className="mt-5 flex flex-wrap justify-center gap-3 md:justify-start">
               <Link href={`/jobs/${id}`} className={ctaBtn}>Back to practice plan</Link>
             </div>
@@ -97,7 +92,7 @@ export default async function MockResultPage({ params }) {
 
       {/* Highlights */}
       <section aria-label="Highlights" className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Stat label="Questions answered" value={`${answeredCount}/${questions.length}`} hint={answeredCount === questions.length ? 'every question attempted' : 'unanswered count as 0'} />
+        <Stat label="Questions answered" value={`${answeredCount}/${questions.length}`} hint={answeredCount === questions.length ? 'every question attempted' : 'some left unanswered'} />
         <Stat label="Skills assessed" value={skills.length} hint="from scored answers" />
         <Stat label="Strongest skill" value={strongest ? `${strongest.avg}/100` : '–'} hint={strongest?.label} tone={strongest ? toneOf(strongest.avg) : undefined} />
         <Stat label="Focus next" value={weakest ? `${weakest.avg}/100` : '–'} hint={weakest?.label} tone={weakest ? toneOf(weakest.avg) : undefined} />
@@ -151,7 +146,7 @@ export default async function MockResultPage({ params }) {
 
         <section aria-labelledby="questions-h" className={`${card} p-5 sm:p-6 ${skills.length === 0 ? 'lg:col-span-2' : ''}`}>
           <h2 id="questions-h" className="text-xl font-semibold tracking-tight">Questions</h2>
-          <p className="text-xs text-muted">Open a question to see feedback and the expert solution.</p>
+          <p className="text-xs text-muted">Open a question to review or improve your answer.</p>
           <ul className="-mx-2 mt-4 space-y-1">
             {questions.map((q, i) => {
               const t = toneOf(q.score);
@@ -161,7 +156,7 @@ export default async function MockResultPage({ params }) {
                     <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl text-sm font-semibold tabular-nums ${TONE_SOFT[t]}`}>{i + 1}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-medium group-hover:text-accent">{q.title}</span>
-                      <span className="block truncate text-xs text-muted">{STATE[q.state] ?? 'View feedback and the expert solution'}</span>
+                      <span className="block truncate text-xs text-muted">{STATE[q.state] ?? 'Review your answer'}</span>
                       <InsightsInline pro={pro} problem={insightsBy[q.problemId]} className="mt-1" />
                     </span>
                     <span className="flex shrink-0 items-center gap-2">

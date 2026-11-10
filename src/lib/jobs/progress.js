@@ -25,12 +25,10 @@ export async function getJobDetail(userId, jobId, { pro = false } = {}) {
   const items = job.planItems.filter((i) => i.problem.published);
   const ids = items.map((i) => i.problemId);
 
-  const [progress, evals] = await Promise.all([
-    ids.length ? prisma.problemProgress.findMany({ where: { userId, status: 'COMPLETED', problemId: { in: ids } }, select: { problemId: true, status: true } }) : [],
-    ids.length
-      ? prisma.evaluation.findMany({ where: { userId, problemId: { in: ids } }, orderBy: { createdAt: 'desc' }, select: { problemId: true, score: true, createdAt: true } })
-      : [],
-  ]);
+  const progress = ids.length
+    ? await prisma.problemProgress.findMany({ where: { userId, status: 'COMPLETED', problemId: { in: ids } }, select: { problemId: true, status: true } })
+    : [];
+  const evals = []; // AI feedback was removed, so there are no scores
   const status = new Map(progress.map((p) => [p.problemId, p.status]));
   const latest = new Map();
   for (const e of evals) if (!latest.has(e.problemId)) latest.set(e.problemId, e);

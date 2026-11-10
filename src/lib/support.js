@@ -7,7 +7,7 @@ export const KIND_LABEL = {
 };
 
 export const KIND_HELP = {
-  PROBLEM: 'A mistake in a question or in its reference solution.',
+  PROBLEM: 'A mistake in a question.',
   PRO_PLAN: 'Paid but no access, a failed or double payment, a promo code.',
   OTHER: 'A bug, an account problem, missing content or a suggestion.',
 };
@@ -16,7 +16,6 @@ export const KIND_HELP = {
 export const ISSUES = {
   PROBLEM: [
     { id: 'incorrect-question', label: 'The question is incorrect' },
-    { id: 'incorrect-solution', label: 'The reference solution is incorrect' },
     { id: 'unclear', label: 'The question is unclear or confusing' },
     { id: 'typo', label: 'Typo or formatting mistake' },
     { id: 'other', label: 'Something else about this question' },

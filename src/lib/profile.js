@@ -48,23 +48,15 @@ function displayName(name) {
  * ignores the public-profile privacy toggles. Pass `stats` (from getUserStats) to avoid a second query.
  */
 export async function getUserBadges(userId, { pro = false, stats } = {}) {
-  const [s, hard, evals] = await Promise.all([
+  const [s, hard] = await Promise.all([
     stats ?? getUserStats(userId),
     prisma.problemProgress.count({ where: { userId, status: 'COMPLETED', problem: { published: true, difficulty: 'HARD' } } }),
-    prisma.evaluation.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, select: { problemId: true, score: true } }),
   ]);
-
-  const latest = new Map();
-  for (const e of evals) if (!latest.has(e.problemId)) latest.set(e.problemId, e.score);
-  const scores = [...latest.values()];
-  const avgScore = scores.length ? Math.round(scores.reduce((sum, x) => sum + x, 0) / scores.length) : 0;
 
   const metrics = {
     solved: s.solved,
     streak: s.streak,
     hard,
-    evals: scores.length,
-    avgScore,
     activeDays: Object.keys(s.activeDays).length,
     pro,
   };
@@ -103,18 +95,15 @@ export const publicName = (u) => u.profileName || displayName(u.name);
 /** Everything the profile page and the share image show. Cached per request. */
 export const getProfileData = cache(async (user) => {
   const pro = await getIsPro(user.id);
-  const base = { name: publicName(user), pro, stats: null, level: null, topics: [], categories: [], avgScore: null, evals: 0, badges: [] };
+  const base = { name: publicName(user), pro, stats: null, level: null, topics: [], categories: [], badges: [] };
 
-  const [stats, completed, evals, totals] = await Promise.all([
+  const [stats, completed, totals] = await Promise.all([
     user.showStats ? getUserStats(user.id) : null,
     user.showStats
       ? prisma.problemProgress.findMany({
           where: { userId: user.id, status: 'COMPLETED', problem: { published: true } },
           select: { problemId: true, problem: { select: { difficulty: true, topic: { select: { name: true, slug: true } } } } },
         })
-      : [],
-    user.showStats
-      ? prisma.evaluation.findMany({ where: { userId: user.id }, orderBy: { createdAt: 'desc' }, select: { problemId: true, score: true } })
       : [],
     // Published questions per category (AI/ML, HR, SQL), to show "solved of total"
     user.showStats
@@ -126,37 +115,23 @@ export const getProfileData = cache(async (user) => {
 
   if (!stats) return out;
 
-  // Latest AI score per problem
-  const latest = new Map();
-  for (const e of evals) if (!latest.has(e.problemId)) latest.set(e.problemId, e.score);
-  const scores = [...latest.values()];
-  const avgScore = scores.length ? Math.round(scores.reduce((s, x) => s + x, 0) / scores.length) : null;
-
-  // Strength per topic: solved count, and the average AI score over solved problems that were evaluated
+  // Strength per topic: solved count
   const byTopic = new Map();
   // Same numbers one level up: per category (AI/ML, HR, SQL) instead of per sub-topic
-  const byCategory = new Map(Object.keys(CATEGORIES).map((key, i) => [key, { key, solved: 0, sum: 0, n: 0, total: totals[i] ?? 0 }]));
+  const byCategory = new Map(Object.keys(CATEGORIES).map((key, i) => [key, { key, solved: 0, total: totals[i] ?? 0 }]));
   let hard = 0;
   completed.forEach((c) => {
     if (c.problem.difficulty === 'HARD') hard += 1;
     const t = c.problem.topic;
     const cat = byCategory.get(categoryOf(t.slug));
     cat.solved += 1;
-    if (latest.has(c.problemId)) {
-      cat.sum += latest.get(c.problemId);
-      cat.n += 1;
-    }
-    const row = byTopic.get(t.slug) ?? { slug: t.slug, name: t.name, solved: 0, sum: 0, n: 0 };
+    const row = byTopic.get(t.slug) ?? { slug: t.slug, name: t.name, solved: 0 };
     row.solved += 1;
-    if (latest.has(c.problemId)) {
-      row.sum += latest.get(c.problemId);
-      row.n += 1;
-    }
     byTopic.set(t.slug, row);
   });
   const topics = [...byTopic.values()]
-    .map((t) => ({ slug: t.slug, name: t.name, solved: t.solved, avg: t.n ? Math.round(t.sum / t.n) : null }))
-    .sort((a, b) => b.solved - a.solved || (b.avg ?? 0) - (a.avg ?? 0))
+    .map((t) => ({ slug: t.slug, name: t.name, solved: t.solved }))
+    .sort((a, b) => b.solved - a.solved || a.name.localeCompare(b.name))
     .slice(0, 8);
 
   const categories = [...byCategory.values()].map((c) => ({
@@ -164,15 +139,12 @@ export const getProfileData = cache(async (user) => {
     label: CATEGORIES[c.key].label.trim(),
     solved: c.solved,
     total: c.total,
-    avg: c.n ? Math.round(c.sum / c.n) : null, // null = no AI feedback yet (always the case for SQL)
   }));
 
   const metrics = {
     solved: stats.solved,
     streak: stats.streak,
     hard,
-    evals: scores.length,
-    avgScore: avgScore ?? 0,
     activeDays: Object.keys(stats.activeDays).length,
     pro,
   };
@@ -183,8 +155,6 @@ export const getProfileData = cache(async (user) => {
     level: getLevel(stats.solved),
     topics,
     categories,
-    avgScore,
-    evals: scores.length,
     badges: badgeList(metrics),
   };
 });

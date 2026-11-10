@@ -2,7 +2,7 @@
 //
 // Free visitors can see a Pro question in lists and on its page (title, topic, difficulty and a short preview), so it
 // can be found and shared. Everything else is withheld on the SERVER: the full question, hints, steps, scenario data,
-// answer editor, AI feedback, reference answer and community answers. Server actions and the AI route call
+// answer editor and community answers. Server actions call
 // `assertProblemAccess`, so the lock cannot be bypassed by calling them directly.
 
 import { getIsPro } from './subscription';
