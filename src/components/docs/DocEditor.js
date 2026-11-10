@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useEditor, EditorContent } from '@tiptap/react';
 import { BubbleMenu } from '@tiptap/react/menus';
@@ -8,6 +8,11 @@ import { buildExtensions } from '@/lib/docs/extensions';
 import { saveTab } from '@/app/docs-actions';
 
 const MAX_IMAGE_BYTES = 1_500_000;
+
+// These two MUST stay outside the component. BubbleMenu re-registers itself whenever they change identity, and each
+// re-registration triggers a render, which would loop forever ("Maximum update depth exceeded", React error #185).
+const BUBBLE_OPTIONS = { placement: 'top' };
+const showBubble = ({ editor, state }) => editor.isEditable && !state.selection.empty && !editor.isActive('image');
 
 const TEXT_COLORS = [
   ['Default', null, '#e5e5e5'],
@@ -96,8 +101,10 @@ export default function DocEditor({ slug, initialContent, initialSettings }) {
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
 
+  const extensions = useMemo(() => buildExtensions({ placeholder: 'Start writing. Every Heading 2 becomes a question in the list.' }), []);
+
   const editor = useEditor({
-    extensions: buildExtensions({ placeholder: 'Start writing. Every Heading 2 becomes a question in the list.' }),
+    extensions,
     content: initialContent,
     immediatelyRender: false,
     shouldRerenderOnTransaction: true,
@@ -295,7 +302,7 @@ export default function DocEditor({ slug, initialContent, initialSettings }) {
       )}
 
       {/* Floating toolbar on selected text */}
-      <BubbleMenu editor={editor} options={{ placement: 'top' }} shouldShow={({ editor: e, state }) => e.isEditable && !state.selection.empty && !e.isActive('image')}>
+      <BubbleMenu editor={editor} options={BUBBLE_OPTIONS} shouldShow={showBubble}>
         <div className="flex items-center gap-0.5 rounded-xl border border-line bg-surface p-1 shadow-xl">
           <div className="relative">
             <button type="button" onMouseDown={(e) => e.preventDefault()} className={`${btn} gap-1`} onClick={() => setMenu(menu === 'style' ? null : 'style')} aria-label="Text style">
