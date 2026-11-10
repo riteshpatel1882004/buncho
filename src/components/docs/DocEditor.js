@@ -114,7 +114,8 @@ const I = {
   ),
 };
 
-function Menu({ open, onClose, children, className = '' }) {
+// rail: the menu belongs to the vertical toolbar on the right, so it opens towards the left instead of downwards
+function Menu({ open, onClose, children, className = '', rail = false }) {
   const ref = useRef(null);
   useEffect(() => {
     if (!open) return undefined;
@@ -126,7 +127,10 @@ function Menu({ open, onClose, children, className = '' }) {
   }, [open, onClose]);
   if (!open) return null;
   return (
-    <div ref={ref} className={`absolute left-0 top-full z-40 mt-1.5 min-w-48 rounded-xl border border-line bg-surface p-1.5 shadow-xl ${className}`}>
+    <div
+      ref={ref}
+      className={`absolute z-40 min-w-48 rounded-xl border border-line bg-surface p-1.5 shadow-xl ${rail ? 'right-full top-0 mr-2' : 'left-0 top-full mt-1.5'} ${className}`}
+    >
       {children}
     </div>
   );
@@ -443,150 +447,6 @@ export default function DocEditor({ slug, title, initialCount, initialContent, i
           </div>
         </div>
 
-        {/* The toolbar: folded away until the bar above is clicked */}
-        {!readOnly && toolsOpen && (
-          <div className="flex flex-wrap items-center gap-1 border-b border-line py-2">
-            <div className="relative">
-              <button type="button" className={`${btn} ${menu === 'font' ? btnOn : ''}`} aria-label="Fonts" title="Fonts" onClick={() => setMenu(menu === 'font' ? null : 'font')}>
-                {I.tt}
-              </button>
-              <Menu open={menu === 'font'} onClose={closeMenu}>
-                <Label>Headings</Label>
-                <MenuItem active={settings.headingFont === 'serif'} onClick={() => changeSetting({ headingFont: 'serif' })}>
-                  <span style={{ fontFamily: 'Georgia, serif' }}>Serif</span>
-                </MenuItem>
-                <MenuItem active={settings.headingFont === 'sans'} onClick={() => changeSetting({ headingFont: 'sans' })}>
-                  Sans
-                </MenuItem>
-                <div className="my-1 border-t border-line" />
-                <Label>Text</Label>
-                <MenuItem active={settings.textFont === 'serif'} onClick={() => changeSetting({ textFont: 'serif' })}>
-                  <span style={{ fontFamily: 'Georgia, serif' }}>Serif</span>
-                </MenuItem>
-                <MenuItem active={settings.textFont === 'sans'} onClick={() => changeSetting({ textFont: 'sans' })}>
-                  Sans
-                </MenuItem>
-              </Menu>
-            </div>
-
-            <button
-              type="button"
-              className={`${btn} ${settings.wide ? btnOn : ''}`}
-              aria-label="Wide layout"
-              title="Wide layout"
-              onClick={() => changeSetting({ wide: !settings.wide })}
-            >
-              {I.wide}
-            </button>
-
-            <span className="mx-1 h-5 w-px bg-line" />
-
-            <button type="button" className={btn} aria-label="Table" title="Table" onClick={() => chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
-              {I.table}
-            </button>
-
-            <div className="relative">
-              <button
-                type="button"
-                className={`${btn} ${menu === 'image' ? btnOn : ''}`}
-                aria-label="Image"
-                title="Image"
-                onClick={() => setMenu(menu === 'image' ? null : 'image')}
-              >
-                {I.image}
-              </button>
-              <Menu open={menu === 'image'} onClose={closeMenu}>
-                <MenuItem
-                  onClick={() => {
-                    closeMenu();
-                    fileRef.current?.click();
-                  }}
-                >
-                  Upload from device
-                </MenuItem>
-                <MenuItem
-                  onClick={() => {
-                    closeMenu();
-                    const src = window.prompt('Image link (https://…)');
-                    if (src && /^https?:\/\//i.test(src.trim())) chain().setImage({ src: src.trim() }).run();
-                  }}
-                >
-                  From a link
-                </MenuItem>
-              </Menu>
-              <input
-                ref={fileRef}
-                type="file"
-                accept="image/*"
-                hidden
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) insertImageFile(f);
-                  e.target.value = '';
-                }}
-              />
-            </div>
-
-            <button
-              type="button"
-              className={`${btn} ${editor.isActive('taskList') ? btnOn : ''}`}
-              aria-label="Checklist"
-              title="Checklist (Ctrl+Shift+9)"
-              onClick={() => chain().toggleTaskList().run()}
-            >
-              {I.check}
-            </button>
-
-            <div className="relative">
-              <button
-                type="button"
-                className={`${btn} gap-1 ${menu === 'plus' ? btnOn : ''}`}
-                aria-label="Insert"
-                title="Insert"
-                onClick={() => setMenu(menu === 'plus' ? null : 'plus')}
-              >
-                {I.plus}
-                {I.caret}
-              </button>
-              <Menu open={menu === 'plus'} onClose={closeMenu} className="max-h-96 overflow-y-auto">
-                <MenuItem icon={I.list} onClick={run(() => chain().toggleBulletList().run())}>
-                  Bulleted list
-                </MenuItem>
-                <MenuItem icon={I.check} onClick={run(() => chain().toggleTaskList().run())}>
-                  Checklist
-                </MenuItem>
-                <MenuItem icon={<span className="text-xs">{'<>'}</span>} onClick={run(() => chain().toggleCodeBlock().run())}>
-                  Code block (Python)
-                </MenuItem>
-                <MenuItem icon={<span className="text-xs">▦</span>} onClick={run(() => chain().insertContent(today()).run())}>
-                  Date
-                </MenuItem>
-                <MenuItem icon={<span>—</span>} onClick={run(() => chain().setHorizontalRule().run())}>
-                  Divider
-                </MenuItem>
-                <MenuItem icon={<span className="text-xs">▾</span>} onClick={run(() => chain().setDetails().run())}>
-                  Dropdown
-                </MenuItem>
-                <MenuItem icon={<H n={1} />} onClick={run(() => chain().toggleHeading({ level: 1 }).run())}>
-                  Heading 1
-                </MenuItem>
-                <MenuItem icon={<H n={2} />} onClick={run(() => chain().toggleHeading({ level: 2 }).run())}>
-                  Heading 2 (a question)
-                </MenuItem>
-                <MenuItem icon={<H n={3} />} onClick={run(() => chain().toggleHeading({ level: 3 }).run())}>
-                  Heading 3
-                </MenuItem>
-                <MenuItem icon={<span className="text-xs">1.</span>} onClick={run(() => chain().toggleOrderedList().run())}>
-                  Numbered list
-                </MenuItem>
-                <MenuItem icon={<span className="text-xs">❝</span>} onClick={run(() => chain().toggleBlockquote().run())}>
-                  Quote
-                </MenuItem>
-              </Menu>
-            </div>
-          </div>
-        )}
-
         {/* Table tools, only while the cursor is in a table */}
         {!readOnly && editor.isActive('table') && (
           <div className="mt-2 flex flex-wrap items-center gap-1 rounded-lg border border-line bg-surface px-2 py-1.5 text-xs">
@@ -757,9 +617,160 @@ export default function DocEditor({ slug, title, initialCount, initialContent, i
         </div>
       </BubbleMenu>
 
-      {readOnly && <p className="mb-3 text-xs text-muted">Reading mode: the page is locked and nothing can be changed. Click Edit to make changes.</p>}
-      <div className={`doc doc-h-${settings.headingFont} doc-t-${settings.textFont}`}>
-        <EditorContent editor={editor} />
+      <div className="flex items-start gap-3">
+        <div className="min-w-0 flex-1">
+          {readOnly && <p className="mb-3 text-xs text-muted">Reading mode: the page is locked and nothing can be changed. Click Edit to make changes.</p>}
+          <div className={`doc doc-h-${settings.headingFont} doc-t-${settings.textFont}`}>
+            <EditorContent editor={editor} />
+          </div>
+        </div>
+
+        {/* Vertical toolbar on the right: folded away until the title bar is clicked */}
+        {!readOnly && toolsOpen && (
+          <aside
+            aria-label="Editing tools"
+            className="sticky top-[9rem] z-20 flex w-11 shrink-0 flex-col items-center gap-1 self-start rounded-xl border border-line bg-surface p-1"
+          >
+            <div className="relative">
+              <button type="button" className={`${btn} ${menu === 'font' ? btnOn : ''}`} aria-label="Fonts" title="Fonts" onClick={() => setMenu(menu === 'font' ? null : 'font')}>
+                {I.tt}
+              </button>
+              <Menu rail open={menu === 'font'} onClose={closeMenu}>
+                <Label>Headings</Label>
+                <MenuItem active={settings.headingFont === 'serif'} onClick={() => changeSetting({ headingFont: 'serif' })}>
+                  <span style={{ fontFamily: 'Georgia, serif' }}>Serif</span>
+                </MenuItem>
+                <MenuItem active={settings.headingFont === 'sans'} onClick={() => changeSetting({ headingFont: 'sans' })}>
+                  Sans
+                </MenuItem>
+                <div className="my-1 border-t border-line" />
+                <Label>Text</Label>
+                <MenuItem active={settings.textFont === 'serif'} onClick={() => changeSetting({ textFont: 'serif' })}>
+                  <span style={{ fontFamily: 'Georgia, serif' }}>Serif</span>
+                </MenuItem>
+                <MenuItem active={settings.textFont === 'sans'} onClick={() => changeSetting({ textFont: 'sans' })}>
+                  Sans
+                </MenuItem>
+              </Menu>
+            </div>
+
+            <button
+              type="button"
+              className={`${btn} ${settings.wide ? btnOn : ''}`}
+              aria-label="Wide layout"
+              title="Wide layout"
+              onClick={() => changeSetting({ wide: !settings.wide })}
+            >
+              {I.wide}
+            </button>
+
+            <span className="my-1 h-px w-5 bg-line" />
+
+            <button type="button" className={btn} aria-label="Table" title="Table" onClick={() => chain().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}>
+              {I.table}
+            </button>
+
+            <div className="relative">
+              <button
+                type="button"
+                className={`${btn} ${menu === 'image' ? btnOn : ''}`}
+                aria-label="Image"
+                title="Image"
+                onClick={() => setMenu(menu === 'image' ? null : 'image')}
+              >
+                {I.image}
+              </button>
+              <Menu rail open={menu === 'image'} onClose={closeMenu}>
+                <MenuItem
+                  onClick={() => {
+                    closeMenu();
+                    fileRef.current?.click();
+                  }}
+                >
+                  Upload from device
+                </MenuItem>
+                <MenuItem
+                  onClick={() => {
+                    closeMenu();
+                    const src = window.prompt('Image link (https://…)');
+                    if (src && /^https?:\/\//i.test(src.trim())) chain().setImage({ src: src.trim() }).run();
+                  }}
+                >
+                  From a link
+                </MenuItem>
+              </Menu>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                hidden
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) insertImageFile(f);
+                  e.target.value = '';
+                }}
+              />
+            </div>
+
+            <button
+              type="button"
+              className={`${btn} ${editor.isActive('taskList') ? btnOn : ''}`}
+              aria-label="Checklist"
+              title="Checklist (Ctrl+Shift+9)"
+              onClick={() => chain().toggleTaskList().run()}
+            >
+              {I.check}
+            </button>
+
+            <div className="relative">
+              <button
+                type="button"
+                className={`${btn} gap-1 ${menu === 'plus' ? btnOn : ''}`}
+                aria-label="Insert"
+                title="Insert"
+                onClick={() => setMenu(menu === 'plus' ? null : 'plus')}
+              >
+                {I.plus}
+                {I.caret}
+              </button>
+              <Menu rail open={menu === 'plus'} onClose={closeMenu} className="max-h-96 overflow-y-auto">
+                <MenuItem icon={I.list} onClick={run(() => chain().toggleBulletList().run())}>
+                  Bulleted list
+                </MenuItem>
+                <MenuItem icon={I.check} onClick={run(() => chain().toggleTaskList().run())}>
+                  Checklist
+                </MenuItem>
+                <MenuItem icon={<span className="text-xs">{'<>'}</span>} onClick={run(() => chain().toggleCodeBlock().run())}>
+                  Code block (Python)
+                </MenuItem>
+                <MenuItem icon={<span className="text-xs">▦</span>} onClick={run(() => chain().insertContent(today()).run())}>
+                  Date
+                </MenuItem>
+                <MenuItem icon={<span>—</span>} onClick={run(() => chain().setHorizontalRule().run())}>
+                  Divider
+                </MenuItem>
+                <MenuItem icon={<span className="text-xs">▾</span>} onClick={run(() => chain().setDetails().run())}>
+                  Dropdown
+                </MenuItem>
+                <MenuItem icon={<H n={1} />} onClick={run(() => chain().toggleHeading({ level: 1 }).run())}>
+                  Heading 1
+                </MenuItem>
+                <MenuItem icon={<H n={2} />} onClick={run(() => chain().toggleHeading({ level: 2 }).run())}>
+                  Heading 2 (a question)
+                </MenuItem>
+                <MenuItem icon={<H n={3} />} onClick={run(() => chain().toggleHeading({ level: 3 }).run())}>
+                  Heading 3
+                </MenuItem>
+                <MenuItem icon={<span className="text-xs">1.</span>} onClick={run(() => chain().toggleOrderedList().run())}>
+                  Numbered list
+                </MenuItem>
+                <MenuItem icon={<span className="text-xs">❝</span>} onClick={run(() => chain().toggleBlockquote().run())}>
+                  Quote
+                </MenuItem>
+              </Menu>
+            </div>
+          </aside>
+        )}
       </div>
     </div>
   );
