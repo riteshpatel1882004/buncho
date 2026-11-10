@@ -114,7 +114,7 @@ const I = {
   ),
 };
 
-// rail: the menu belongs to the right-hand sidebar, so it opens towards the left instead of downwards
+// rail: the menu belongs to the left-hand sidebar, so it opens towards the right instead of downwards
 function Menu({ open, onClose, children, className = '', rail = false }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -129,7 +129,7 @@ function Menu({ open, onClose, children, className = '', rail = false }) {
   return (
     <div
       ref={ref}
-      className={`absolute z-40 min-w-48 rounded-xl border border-line bg-surface p-1.5 shadow-xl ${rail ? 'right-full top-0 mr-2' : 'left-0 top-full mt-1.5'} ${className}`}
+      className={`absolute z-40 min-w-48 rounded-xl border border-line bg-surface p-1.5 shadow-xl ${rail ? 'left-full top-0 ml-2' : 'left-0 top-full mt-1.5'} ${className}`}
     >
       {children}
     </div>
@@ -548,8 +548,8 @@ export default function DocEditor({ slug, title, initialCount, initialContent, i
           </div>
         </div>
 
-        {/* Right sidebar: header + tools. Stays on screen while scrolling (on small screens it sits above the page). */}
-        <aside aria-label="Editor panel" className="z-30 order-first flex w-full shrink-0 flex-col gap-2 md:sticky md:top-[4.75rem] md:order-last md:w-56">
+        {/* Left sidebar: header + tools. Stays on screen while scrolling (on small screens it sits above the page). */}
+        <aside aria-label="Editor panel" className="z-30 order-first flex w-full shrink-0 flex-col gap-2 md:sticky md:top-[4.75rem] md:w-48">
           {/* Header card: click the title to fold the tools in or out */}
           <div className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-2">
             <button
@@ -604,7 +604,7 @@ export default function DocEditor({ slug, title, initialCount, initialContent, i
             </button>
           </div>
 
-          {/* Editing tools: folded away until the title above is clicked. Menus open towards the left. */}
+          {/* Editing tools: folded away until the title above is clicked. Menus open towards the right. */}
           {!readOnly && toolsOpen && (
             <div aria-label="Editing tools" className="flex flex-wrap items-center gap-1 rounded-xl border border-line bg-surface p-1.5">
               <div className="relative">
