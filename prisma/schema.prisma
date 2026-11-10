@@ -109,8 +109,6 @@ model User {
   submissions      Submission[]
   bookmarks        Bookmark[]
   progress         ProblemProgress[]
-  // Phase 4
-  evaluations      Evaluation[]
   // Phase 7
   jobTargets       JobTarget[]
   mockAssessments  MockAssessment[]
@@ -128,12 +126,18 @@ model User {
   @@index([email])
 }
 
+// A Topic is one tab of a question document (/docs/<category>/<topic slug>). The admin writes the document in the
+// editor; every Heading 2 in `content` is a question and is mirrored into a Problem row (see lib/docs/store.js).
+// Slugs: AI/ML topics have plain slugs, HR topics start with "hr-" and SQL topics with "sql-" (see lib/categories.js).
 model Topic {
   id          String    @id @default(cuid())
   slug        String    @unique
   name        String
-  description String
+  description String    @default("")
   order       Int       @default(0)
+  content     Json? // rich-text document (Tiptap JSON). Null for legacy topics that have no document
+  settings    Json? // { headingFont: 'serif' | 'sans', textFont: 'serif' | 'sans', wide: boolean }
+  updatedAt   DateTime  @default(now()) @updatedAt
   problems    Problem[]
 }
 
@@ -141,7 +145,7 @@ model Problem {
   id                String      @id @default(cuid())
   slug              String      @unique
   title             String
-  description       String      @db.Text // Markdown
+  description       String      @default("") @db.Text // unused for document questions (the text lives in Topic.content)
   topicId           String
   topic             Topic       @relation(fields: [topicId], references: [id])
   subcategory       String?
@@ -150,10 +154,8 @@ model Problem {
   roles             String[]
   estimatedMinutes  Int         @default(10)
   hints             String[]
-  // If true, users may reveal the solution without submitting an attempt
-  allowDirectReveal Boolean     @default(false)
-  // Pro-only question: free users see the title and a short preview, but not the full question, hints, answer editor,
-  // AI feedback or reference answer. Enforced on the server (see lib/pro-access.js).
+  allowDirectReveal Boolean     @default(false) // legacy flag, no longer used
+  // Pro-only question: free users see the title and a short preview, but not the full question, hints or answer editor. Enforced on the server (see lib/pro-access.js).
   proOnly           Boolean     @default(false)
   published         Boolean     @default(true)
   position          Int         @default(0)
@@ -169,16 +171,13 @@ model Problem {
   isChallenge  Boolean @default(false)
   scenarioData Json? // [{ title, kind, content }] logs, configs, sample data
   steps        Json? // [{ title, prompt }] step-by-step answer
-  rubric       Json? // [{ id, criterion, weight }] used by the AI, shown after feedback
+  rubric       Json? // [{ id, criterion, weight }] challenge checklist (no longer used for AI feedback)
 
-  expertSolution   ExpertSolution?
   related          Problem[]         @relation("RelatedProblems")
   relatedBy        Problem[]         @relation("RelatedProblems")
   submissions      Submission[]
   bookmarks        Bookmark[]
   progress         ProblemProgress[]
-  // Phase 4
-  evaluations      Evaluation[]
   // Phase 7
   jobPlanItems     JobPlanItem[]
   // User reports (/report)
@@ -188,21 +187,6 @@ model Problem {
   @@index([published, difficulty])
   @@index([isChallenge, published])
   @@index([proOnly, published])
-}
-
-// Authoritative, admin-curated. Kept separate from user content on purpose.
-model ExpertSolution {
-  id           String    @id @default(cuid())
-  problemId    String    @unique
-  problem      Problem   @relation(fields: [problemId], references: [id], onDelete: Cascade)
-  content      String    @db.Text // Markdown
-  // Phase 5: alternative approaches and trade-offs (Markdown)
-  alternatives String?   @db.Text
-  // Only set these after a real human review
-  reviewedBy   String?
-  reviewedAt   DateTime?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
 }
 
 // Private to the user.
@@ -216,8 +200,6 @@ model Submission {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Phase 4
-  evaluations Evaluation[]
 
   @@unique([userId, problemId])
   @@index([problemId])
@@ -251,31 +233,6 @@ model ProblemProgress {
   @@index([userId, status])
 }
 
-/* ---------- AI feedback (Phase 4) ---------- */
-
-// One row per evaluation run; the newest row for a submission is shown.
-model Evaluation {
-  id           String     @id @default(cuid())
-  submissionId String
-  submission   Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
-  userId       String
-  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  problemId    String
-  problem      Problem    @relation(fields: [problemId], references: [id], onDelete: Cascade)
-  contentHash  String // sha256 of the answer that was evaluated
-  score        Int // 0-100, summed from the rubric
-  scores       Json // { coverage, accuracy, reasoning, clarity }
-  feedback     Json // { summary, strengths, missing, inaccuracies, rubricResults, ... }
-  provider     String
-  model        String
-  latencyMs    Int
-  fallbacks    Int        @default(0) // providers that failed before this one answered
-  createdAt    DateTime   @default(now())
-
-  @@index([submissionId, createdAt])
-  @@index([userId, createdAt])
-}
-
 /* ---------- Job description preparation (Phase 7) ---------- */
 
 // A role the user is preparing for. The JD text is private to the user.
@@ -297,7 +254,7 @@ model JobTarget {
   @@index([userId, createdAt])
 }
 
-// One question in a role's practice plan. Progress is read from ProblemProgress and Evaluation, not stored here.
+// One question in a role's practice plan. Progress is read from ProblemProgress, not stored here.
 model JobPlanItem {
   id        String    @id @default(cuid())
   jobId     String

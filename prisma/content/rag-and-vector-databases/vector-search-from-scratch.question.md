@@ -1,1 +1,0 @@
-Implement the three distance functions and a small in-memory vector store with `add` and `search(query, k, metric)`. Explain how this relates to semantic search with embeddings and where it stops scaling.

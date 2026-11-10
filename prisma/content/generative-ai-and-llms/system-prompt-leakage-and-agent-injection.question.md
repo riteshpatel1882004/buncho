@@ -1,1 +1,0 @@
-Competitors extract your support bot's system prompt, which contains pricing rules and escalation logic. Your agent is also vulnerable to injected instructions in documents that make it print its prompt. What do you do?

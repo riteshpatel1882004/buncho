@@ -1,1 +1,0 @@
-Implement binary search on a sorted list. Return the index of the target or -1.

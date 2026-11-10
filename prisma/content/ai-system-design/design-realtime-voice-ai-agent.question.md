@@ -1,1 +1,0 @@
-Design a voice agent that holds a natural phone-style conversation: users speak, the system answers by voice, can be interrupted, and can call tools. Cover the latency budget, components and failure handling.

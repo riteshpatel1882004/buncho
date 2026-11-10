@@ -1,1 +1,0 @@
-Explain how you install Python, create isolated environments and pin dependencies for an ML project. What goes wrong with CUDA and with different team machines, and how do you reproduce the environment in CI and production?

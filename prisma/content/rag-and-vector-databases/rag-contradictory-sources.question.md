@@ -1,1 +1,0 @@
-The assistant says remote work requires manager approval in one answer and says it does not in another, because chunks from an old policy and a regional addendum are both retrieved. How do you prevent and handle conflicting evidence?

@@ -1,1 +1,0 @@
-Implement linear regression using NumPy and gradient descent. Then answer: why initialize weights to zero, what if the learning rate is too high or too low, why divide by n, why scale features, and what is batch vs stochastic gradient descent?
