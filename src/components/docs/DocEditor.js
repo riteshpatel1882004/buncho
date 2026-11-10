@@ -167,6 +167,8 @@ export default function DocEditor({ slug, title, initialCount, initialContent, i
   const [readOnly, setReadOnly] = useState(true);
   // The tools are folded away until you click the title in the sidebar, which saves space
   const [toolsOpen, setToolsOpen] = useState(false);
+  // The "Admin editing" section (save status, Save, mode switch) is shrunk by default
+  const [adminOpen, setAdminOpen] = useState(false);
   const fileRef = useRef(null);
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
@@ -394,8 +396,8 @@ export default function DocEditor({ slug, title, initialCount, initialContent, i
   return (
     <div>
       {/* Floating toolbar on selected text */}
-      <BubbleMenu editor={editor} options={BUBBLE_OPTIONS} shouldShow={showBubble}>
-        <div className="flex items-center gap-0.5 rounded-xl border border-line bg-surface p-1 shadow-xl">
+      <BubbleMenu editor={editor} options={BUBBLE_OPTIONS} shouldShow={showBubble} className="z-50">
+        <div className="relative z-50 flex items-center gap-0.5 rounded-xl border border-line bg-surface p-1 shadow-xl">
           <div className="relative">
             <button
               type="button"
@@ -549,7 +551,7 @@ export default function DocEditor({ slug, title, initialCount, initialContent, i
         </div>
 
         {/* Left sidebar: header + tools. Stays on screen while scrolling (on small screens it sits above the page). */}
-        <aside aria-label="Editor panel" className="z-30 order-first flex w-full shrink-0 flex-col gap-2 md:sticky md:top-[4.75rem] md:w-48">
+        <aside aria-label="Editor panel" className="z-20 order-first flex w-full shrink-0 flex-col gap-2 md:sticky md:top-[4.75rem] md:w-48">
           {/* Header card: click the title to fold the tools in or out */}
           <div className="flex flex-col gap-2 rounded-xl border border-line bg-surface p-2">
             <button
@@ -570,16 +572,26 @@ export default function DocEditor({ slug, title, initialCount, initialContent, i
               </span>
             </button>
 
-            <span className="w-fit rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent">Admin editing</span>
+            <button
+              type="button"
+              onClick={() => setAdminOpen((o) => !o)}
+              aria-expanded={adminOpen}
+              title={adminOpen ? 'Collapse' : 'Expand'}
+              className="flex w-full items-center gap-2 rounded-md px-1.5 py-1 text-left hover:bg-surface-2"
+            >
+              <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent">Admin editing</span>
+              {dirty && !adminOpen && <span className="h-1.5 w-1.5 rounded-full bg-accent" title="Unsaved changes" />}
+              <span className={`ml-auto text-muted transition-transform ${adminOpen ? 'rotate-180' : ''}`}>{I.caret}</span>
+            </button>
 
             {message && (
               <span role="status" className={`px-1.5 text-xs ${message.type === 'error' ? 'text-hard' : 'text-muted'}`}>
                 {message.text}
               </span>
             )}
-            {!readOnly && <span className="px-1.5 text-xs text-muted">{saving ? 'Saving…' : dirty ? 'Unsaved changes' : 'All changes saved'}</span>}
+            {adminOpen && !readOnly && <span className="px-1.5 text-xs text-muted">{saving ? 'Saving…' : dirty ? 'Unsaved changes' : 'All changes saved'}</span>}
 
-            {!readOnly && (
+            {adminOpen && !readOnly && (
               <button
                 type="button"
                 onClick={() => {
@@ -597,7 +609,7 @@ export default function DocEditor({ slug, title, initialCount, initialContent, i
               onClick={() => setMode(!readOnly)}
               aria-pressed={readOnly}
               title={readOnly ? 'Switch to editing' : 'Switch to reading mode (locks the page)'}
-              className={`flex w-full items-center justify-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium ${readOnly ? 'border-accent bg-accent-soft text-accent' : 'border-line text-muted hover:bg-surface-2 hover:text-ink'}`}
+              className={`${adminOpen ? 'flex' : 'hidden'} w-full items-center justify-center gap-1.5 rounded-lg border px-3 py-1.5 text-sm font-medium ${readOnly ? 'border-accent bg-accent-soft text-accent' : 'border-line text-muted hover:bg-surface-2 hover:text-ink'}`}
             >
               {readOnly ? I.pencil : I.eye}
               {readOnly ? 'Edit' : 'Reading mode'}
