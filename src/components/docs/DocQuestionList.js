@@ -6,6 +6,7 @@ import { getIsPro } from '@/lib/subscription';
 import { ProBadge } from '@/components/ProBadge';
 import { Lock } from '@/components/icons';
 import { Companies, Frequency, InsightsInline } from '@/components/Insights';
+import DifficultyBadge from '@/components/DifficultyBadge';
 import RowCheck from './RowCheck';
 
 // The list on /problems, /problems/hr and /problems/sql. All three are identical: topics (the tabs of the
@@ -74,6 +75,7 @@ export default async function DocQuestionList({ category, userId, admin }) {
                 <span className="min-w-0 flex-1">Question</span>
                 <span className="w-44 shrink-0">Company</span>
                 <span className="w-20 shrink-0">Asked</span>
+                <span className="w-16 shrink-0">Level</span>
                 <span className="w-7 shrink-0" />
               </div>
               <ol>
@@ -86,11 +88,13 @@ export default async function DocQuestionList({ category, userId, admin }) {
                         {q.pro && <ProBadge className="shrink-0" />}
                         {q.pro && !pro && !admin && <Lock width={13} height={13} className="shrink-0 text-muted" />}
                       </Link>
-                      {/* Narrow lists: the two values go on one line under the title (Pro users only) */}
+                      {/* Narrow lists: the level, and the two Pro values, go on one line under the title */}
+                      {q.difficulty && <span className="mt-1 inline-block @xl:hidden"><DifficultyBadge difficulty={q.difficulty} plain /></span>}
                       {insights && <InsightsInline pro problem={{ askedByCompanies: q.companies, askedFrequency: q.asked }} className="mt-1 @xl:hidden" />}
                     </div>
                     <span className="hidden w-44 shrink-0 @xl:block"><Companies pro={insights} list={q.companies} /></span>
                     <span className="hidden w-20 shrink-0 @xl:block"><Frequency pro={insights} value={q.asked} bar={false} /></span>
+                    <span className="hidden w-16 shrink-0 @xl:block">{q.difficulty ? <DifficultyBadge difficulty={q.difficulty} plain /> : <span className="text-xs text-muted">–</span>}</span>
                     <RowCheck problemId={idBySlug.get(q.id) ?? null} completed={done.has(q.id)} signedIn={Boolean(userId)} />
                   </li>
                 ))}

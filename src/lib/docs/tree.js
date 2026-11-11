@@ -57,6 +57,14 @@ export function cleanAsked(value) {
   return Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : null;
 }
 
+export const DIFFICULTIES = ['EASY', 'MEDIUM', 'HARD'];
+
+/** 'EASY' | 'MEDIUM' | 'HARD', or null when the admin has not set a level. */
+export function cleanDifficulty(value) {
+  const v = String(value ?? '').toUpperCase();
+  return DIFFICULTIES.includes(v) ? v : null;
+}
+
 /** The questions in a document: every Heading 2, in order. */
 export function extractQuestions(doc) {
   const out = [];
@@ -71,6 +79,7 @@ export function extractQuestions(doc) {
           pro: Boolean(node.attrs?.pro),
           companies: parseCompanies(node.attrs?.company),
           asked: cleanAsked(node.attrs?.asked),
+          difficulty: cleanDifficulty(node.attrs?.difficulty),
         });
       }
     }

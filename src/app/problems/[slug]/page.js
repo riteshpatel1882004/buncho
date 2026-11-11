@@ -18,6 +18,7 @@ import JsonLd from '@/components/JsonLd';
 import DocReadView from '@/components/docs/DocReadView';
 import QuestionActions from '@/components/problems/QuestionActions';
 import { InsightsPanel } from '@/components/Insights';
+import DifficultyBadge from '@/components/DifficultyBadge';
 
 // One question on its own page: the question (a Heading 2 of the document) and its answer (everything under it).
 // Used by /problems/<id>, /problems/hr/<id> and /problems/sql/<id>.
@@ -120,6 +121,7 @@ export default async function QuestionPage({ params }) {
       <header className="mt-4">
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="rounded-full border border-line bg-surface px-2.5 py-1 font-medium text-muted">{topic.name}</span>
+          {questions[at]?.difficulty && <DifficultyBadge difficulty={questions[at].difficulty} />}
           {problem.proOnly && <ProBadge />}
           {at >= 0 && <span className="text-muted">Question {at + 1} of {questions.length}</span>}
         </div>

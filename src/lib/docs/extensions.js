@@ -14,7 +14,7 @@ import CodeBlock from '@tiptap/extension-code-block';
 import { Extension, mergeAttributes } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import { newId, parseCompanies, cleanAsked } from './tree';
+import { newId, parseCompanies, cleanAsked, cleanDifficulty } from './tree';
 import { tokenizePython } from './highlight';
 
 // Every heading carries a stable `id`. For an H2 (a question) that id is the anchor in the URL, so a link
@@ -47,6 +47,12 @@ const HeadingWithId = Heading.extend({
         parseHTML: (el) => cleanAsked(el.getAttribute('data-asked')),
         renderHTML: (attrs) => (cleanAsked(attrs.asked) === null ? {} : { 'data-asked': String(cleanAsked(attrs.asked)) }),
       },
+      // Level of a question: EASY, MEDIUM or HARD (empty = not set, shown as Medium in the database).
+      difficulty: {
+        default: '',
+        parseHTML: (el) => cleanDifficulty(el.getAttribute('data-difficulty')) ?? '',
+        renderHTML: (attrs) => (cleanDifficulty(attrs.difficulty) ? { 'data-difficulty': cleanDifficulty(attrs.difficulty) } : {}),
+      },
     };
   },
 });
@@ -78,7 +84,7 @@ const HeadingIds = Extension.create({
   },
 });
 
-// Three small buttons at the end of every Heading 2 while editing: Companies, Asked %, and Pro. They are decorations, so
+// Small buttons at the end of every Heading 2 while editing: Level, Companies, Asked % and Pro. They are decorations, so
 // they are never saved into the document and readers never see them.
 const QuestionTools = Extension.create({
   name: 'questionTools',
@@ -94,6 +100,7 @@ const QuestionTools = Extension.create({
               const pro = Boolean(node.attrs.pro);
               const companies = parseCompanies(node.attrs.company);
               const asked = cleanAsked(node.attrs.asked);
+              const level = cleanDifficulty(node.attrs.difficulty);
               decos.push(
                 Decoration.widget(
                   pos + node.nodeSize - 1,
@@ -124,6 +131,17 @@ const QuestionTools = Extension.create({
                       });
                       return b;
                     };
+
+                    // Click to go Easy -> Medium -> Hard -> not set
+                    const LEVELS = { EASY: 'Easy', MEDIUM: 'Medium', HARD: 'Hard' };
+                    const NEXT = { '': 'EASY', EASY: 'MEDIUM', MEDIUM: 'HARD', HARD: '' };
+                    const levelBtn = make(
+                      level ? `⚡ ${LEVELS[level]}` : '⚡ Set level',
+                      'Level of this question: click to go Easy, Medium, Hard, then back to not set.',
+                      false,
+                      () => change({ difficulty: NEXT[level ?? ''] }),
+                    );
+                    if (level) levelBtn.classList.add('is-set', `lvl-${level.toLowerCase()}`);
 
                     const companyBtn = make(
                       companies.length ? `🏢 ${companies.join(', ')}` : '🏢 Add companies',
@@ -157,10 +175,10 @@ const QuestionTools = Extension.create({
                       () => change({ pro: !pro }),
                     );
 
-                    wrap.append(companyBtn, askedBtn, proBtn);
+                    wrap.append(levelBtn, companyBtn, askedBtn, proBtn);
                     return wrap;
                   },
-                  { side: 1, key: `tools-${node.attrs.id}-${pro}-${companies.join('|')}-${asked}` },
+                  { side: 1, key: `tools-${node.attrs.id}-${pro}-${companies.join('|')}-${asked}-${level}` },
                 ),
               );
             });

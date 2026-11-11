@@ -580,3 +580,6 @@ html, body { overflow-x: clip; }
 .doc .doc-pro-btn.is-on { opacity: 1; border-color: #d99a06; background: linear-gradient(135deg, #fcd34d, #f59e0b); color: #451a03; }
 .doc .ProseMirror[contenteditable='false'] .doc-pro-btn:not(.is-on):not(.is-set) { display: none; }
 .doc .ProseMirror[contenteditable='false'] .doc-pro-btn { cursor: default; pointer-events: none; }
+.doc .doc-pro-btn.lvl-easy { color: var(--easy, #22c55e); }
+.doc .doc-pro-btn.lvl-medium { color: var(--medium, #f59e0b); }
+.doc .doc-pro-btn.lvl-hard { color: var(--hard, #ef4444); }
