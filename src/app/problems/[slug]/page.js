@@ -17,6 +17,7 @@ import { ChevronLeft, ChevronRight, Lock } from '@/components/icons';
 import JsonLd from '@/components/JsonLd';
 import DocReadView from '@/components/docs/DocReadView';
 import QuestionActions from '@/components/problems/QuestionActions';
+import { InsightsPanel } from '@/components/Insights';
 
 // One question on its own page: the question (a Heading 2 of the document) and its answer (everything under it).
 // Used by /problems/<id>, /problems/hr/<id> and /problems/sql/<id>.
@@ -124,6 +125,12 @@ export default async function QuestionPage({ params }) {
         </div>
         <h1 className="mt-3 text-2xl font-semibold leading-snug tracking-tight sm:text-3xl">{problem.title}</h1>
       </header>
+
+      {/* Company and Asked %: set by the admin in the docs editor, shown to Pro users (free users see the lock banner) */}
+      <InsightsPanel
+        pro={pro || isAdmin(user)}
+        problem={{ askedByCompanies: questions[at]?.companies ?? [], askedFrequency: questions[at]?.asked ?? null }}
+      />
 
       <div className="mt-5">
         <QuestionActions problemId={problem.id} completed={progress?.status === 'COMPLETED'} bookmarked={Boolean(bookmark)} signedIn={Boolean(user)} />

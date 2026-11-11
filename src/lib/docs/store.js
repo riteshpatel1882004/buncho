@@ -73,7 +73,8 @@ export async function getDocQuestions(category) {
 /**
  * Mirrors the questions (Heading 2s) of a saved tab into Problem rows, so progress, streaks, bookmarks and
  * stats keep working. A question's slug is its heading id. Questions that were removed from the document are
- * deleted together with their progress (cascade). A Heading 2 marked Pro in the editor becomes proOnly here.
+ * deleted together with their progress (cascade). A Heading 2 marked Pro in the editor becomes proOnly here, and its
+ * companies / asked % become askedByCompanies / askedFrequency (the Pro insights).
  */
 export async function syncQuestions(topicId, doc) {
   const questions = extractQuestions(doc);
@@ -85,7 +86,7 @@ export async function syncQuestions(topicId, doc) {
       const q = questions[i];
       await tx.problem.upsert({
         where: { slug: q.id },
-        update: { title: q.title.slice(0, 300), topicId, position: i, published: true, proOnly: q.pro },
+        update: { title: q.title.slice(0, 300), topicId, position: i, published: true, proOnly: q.pro, askedByCompanies: q.companies, askedFrequency: q.asked },
         create: {
           slug: q.id,
           title: q.title.slice(0, 300),
@@ -95,6 +96,8 @@ export async function syncQuestions(topicId, doc) {
           type: 'CONCEPTUAL',
           published: true,
           proOnly: q.pro,
+          askedByCompanies: q.companies,
+          askedFrequency: q.asked,
         },
       });
     }

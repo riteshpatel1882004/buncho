@@ -35,6 +35,28 @@ export function ensureHeadingIds(doc) {
   return walk(doc);
 }
 
+/** "Google, Amazon,  Google" -> ['Google', 'Amazon']. At most 10 names of up to 40 characters. */
+export function parseCompanies(value) {
+  const seen = new Set();
+  const out = [];
+  for (const part of String(value ?? '').split(/[,\n;]/)) {
+    const name = part.trim().replace(/\s+/g, ' ').slice(0, 40);
+    const key = name.toLowerCase();
+    if (!name || seen.has(key)) continue;
+    seen.add(key);
+    out.push(name);
+    if (out.length === 10) break;
+  }
+  return out;
+}
+
+/** "How often is this asked" as a whole percent from 0 to 100, or null when it is not set. */
+export function cleanAsked(value) {
+  if (value === null || value === undefined || value === '') return null;
+  const n = Math.round(Number(value));
+  return Number.isFinite(n) ? Math.min(100, Math.max(0, n)) : null;
+}
+
 /** The questions in a document: every Heading 2, in order. */
 export function extractQuestions(doc) {
   const out = [];
@@ -42,7 +64,15 @@ export function extractQuestions(doc) {
     if (!node) return;
     if (node.type === 'heading' && node.attrs?.level === 2 && node.attrs?.id) {
       const title = plainText(node).trim();
-      if (title) out.push({ id: node.attrs.id, title, pro: Boolean(node.attrs?.pro) });
+      if (title) {
+        out.push({
+          id: node.attrs.id,
+          title,
+          pro: Boolean(node.attrs?.pro),
+          companies: parseCompanies(node.attrs?.company),
+          asked: cleanAsked(node.attrs?.asked),
+        });
+      }
     }
     (node.content ?? []).forEach(walk);
   };

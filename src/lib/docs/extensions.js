@@ -14,7 +14,7 @@ import CodeBlock from '@tiptap/extension-code-block';
 import { Extension, mergeAttributes } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import { newId } from './tree';
+import { newId, parseCompanies, cleanAsked } from './tree';
 import { tokenizePython } from './highlight';
 
 // Every heading carries a stable `id`. For an H2 (a question) that id is the anchor in the URL, so a link
@@ -34,6 +34,18 @@ const HeadingWithId = Heading.extend({
         default: false,
         parseHTML: (el) => el.getAttribute('data-pro') === 'true',
         renderHTML: (attrs) => (attrs.pro ? { 'data-pro': 'true' } : {}),
+      },
+      // Pro insights of a question, set by the admin next to the Pro button. Saved in the document, and saveTab copies
+      // them to Problem.askedByCompanies / Problem.askedFrequency.
+      company: {
+        default: '',
+        parseHTML: (el) => el.getAttribute('data-company') || '',
+        renderHTML: (attrs) => (attrs.company ? { 'data-company': attrs.company } : {}),
+      },
+      asked: {
+        default: null,
+        parseHTML: (el) => cleanAsked(el.getAttribute('data-asked')),
+        renderHTML: (attrs) => (cleanAsked(attrs.asked) === null ? {} : { 'data-asked': String(cleanAsked(attrs.asked)) }),
       },
     };
   },
@@ -66,44 +78,89 @@ const HeadingIds = Extension.create({
   },
 });
 
-// A small "Pro" button at the end of every Heading 2 while editing. Click it to make that question Pro (or free again).
-// It is a decoration, so it is never saved into the document and readers never see it.
-const ProToggle = Extension.create({
-  name: 'proToggle',
+// Three small buttons at the end of every Heading 2 while editing: Companies, Asked %, and Pro. They are decorations, so
+// they are never saved into the document and readers never see them.
+const QuestionTools = Extension.create({
+  name: 'questionTools',
   addProseMirrorPlugins() {
     return [
       new Plugin({
-        key: new PluginKey('proToggle'),
+        key: new PluginKey('questionTools'),
         props: {
           decorations(state) {
             const decos = [];
             state.doc.descendants((node, pos) => {
               if (node.type.name !== 'heading' || node.attrs.level !== 2) return;
-              const on = Boolean(node.attrs.pro);
+              const pro = Boolean(node.attrs.pro);
+              const companies = parseCompanies(node.attrs.company);
+              const asked = cleanAsked(node.attrs.asked);
               decos.push(
                 Decoration.widget(
                   pos + node.nodeSize - 1,
                   (view) => {
-                    const btn = document.createElement('button');
-                    btn.type = 'button';
-                    btn.contentEditable = 'false';
-                    btn.className = `doc-pro-btn${on ? ' is-on' : ''}`;
-                    btn.textContent = on ? '★ Pro' : '☆ Make Pro';
-                    btn.title = on ? 'Pro question: only Pro users can open it. Click to make it free.' : 'Click to make this question Pro-only';
-                    btn.addEventListener('mousedown', (e) => e.preventDefault()); // keep the cursor where it is
-                    btn.addEventListener('click', (e) => {
-                      e.preventDefault();
+                    const wrap = document.createElement('span');
+                    wrap.className = 'doc-q-tools';
+                    wrap.contentEditable = 'false';
+
+                    // Change attributes of the heading this widget sits in
+                    const change = (patch) => {
                       if (!view.editable) return;
-                      const at = view.posAtDOM(btn, 0);
-                      const $pos = view.state.doc.resolve(at);
+                      const $pos = view.state.doc.resolve(view.posAtDOM(wrap, 0));
                       const headingPos = $pos.before($pos.depth);
                       const heading = view.state.doc.nodeAt(headingPos);
                       if (!heading || heading.type.name !== 'heading') return;
-                      view.dispatch(view.state.tr.setNodeMarkup(headingPos, undefined, { ...heading.attrs, pro: !heading.attrs.pro }));
-                    });
-                    return btn;
+                      view.dispatch(view.state.tr.setNodeMarkup(headingPos, undefined, { ...heading.attrs, ...patch }));
+                    };
+                    const make = (text, title, on, onClick) => {
+                      const b = document.createElement('button');
+                      b.type = 'button';
+                      b.className = `doc-pro-btn${on ? ' is-on' : ''}`;
+                      b.textContent = text;
+                      b.title = title;
+                      b.addEventListener('mousedown', (e) => e.preventDefault()); // keep the cursor where it is
+                      b.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        if (view.editable) onClick();
+                      });
+                      return b;
+                    };
+
+                    const companyBtn = make(
+                      companies.length ? `🏢 ${companies.join(', ')}` : '🏢 Add companies',
+                      'Companies that ask this question (Pro insight). Click to edit.',
+                      false,
+                      () => {
+                        const next = window.prompt('Companies that ask this question, separated by commas.\nLeave empty to clear.', companies.join(', '));
+                        if (next !== null) change({ company: parseCompanies(next).join(', ') });
+                      },
+                    );
+                    if (companies.length) companyBtn.classList.add('is-set');
+
+                    const askedBtn = make(
+                      asked === null ? '📊 Add asked %' : `📊 ${asked}% asked`,
+                      'How often this question is asked, in % of interviews (Pro insight). Click to edit.',
+                      false,
+                      () => {
+                        const next = window.prompt('How often is this question asked, in % of interviews (0 to 100)?\nLeave empty to clear.', asked === null ? '' : String(asked));
+                        if (next === null) return;
+                        const value = cleanAsked(next.trim());
+                        if (next.trim() !== '' && value === null) return; // not a number: keep what was there
+                        change({ asked: value });
+                      },
+                    );
+                    if (asked !== null) askedBtn.classList.add('is-set');
+
+                    const proBtn = make(
+                      pro ? '★ Pro' : '☆ Make Pro',
+                      pro ? 'Pro question: only Pro users can open it. Click to make it free.' : 'Click to make this question Pro-only',
+                      pro,
+                      () => change({ pro: !pro }),
+                    );
+
+                    wrap.append(companyBtn, askedBtn, proBtn);
+                    return wrap;
                   },
-                  { side: 1, key: `pro-${node.attrs.id}-${on}` },
+                  { side: 1, key: `tools-${node.attrs.id}-${pro}-${companies.join('|')}-${asked}` },
                 ),
               );
             });
@@ -167,7 +224,7 @@ export function buildExtensions({ placeholder } = {}) {
     StarterKit.configure({ heading: false, code: false, codeBlock: false, link: { openOnClick: false, autolink: true, HTMLAttributes: { rel: 'noopener noreferrer nofollow', target: '_blank' } } }),
     HeadingWithId.configure({ levels: [1, 2, 3] }),
     HeadingIds,
-    ProToggle,
+    QuestionTools,
     InlineCode,
     PythonCodeBlock,
     PythonColors,

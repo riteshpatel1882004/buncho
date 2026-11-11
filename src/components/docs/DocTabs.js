@@ -15,7 +15,7 @@ function readEditorOutline() {
   return [...document.querySelectorAll('.doc .ProseMirror h2[id]')]
     .map((el) => {
       const copy = el.cloneNode(true);
-      copy.querySelectorAll('.doc-pro-btn').forEach((b) => b.remove()); // the "Make Pro" button is not part of the title
+      copy.querySelectorAll('.doc-q-tools').forEach((b) => b.remove()); // the Companies / Asked % / Pro buttons are not part of the title
       return { id: el.id, title: copy.textContent.trim(), pro: el.getAttribute('data-pro') === 'true' };
     })
     .filter((q) => q.title);
