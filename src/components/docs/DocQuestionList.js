@@ -2,12 +2,16 @@ import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import { CATEGORIES, problemHref, topicCategoryWhere } from '@/lib/categories';
 import { getDocQuestions } from '@/lib/docs/store';
+import { getIsPro } from '@/lib/subscription';
+import { ProBadge } from '@/components/ProBadge';
+import { Lock } from '@/components/icons';
 import RowCheck from './RowCheck';
 
 // The list on /problems, /problems/hr and /problems/sql. All three are identical: topics (the tabs of the
-// document) with their questions one under another. A question links to its place in the document.
+// document) with their questions one under another. A question links to its own page (the question and its answer).
 export default async function DocQuestionList({ category, userId, admin }) {
   const topics = await getDocQuestions(category);
+  const pro = userId ? await getIsPro(userId) : false; // free users see a lock on Pro questions (they can still open the page and read the teaser)
 
   // Problem rows only exist to carry progress; they mirror the document (see lib/docs/store.js)
   const [rows, doneRows] = await Promise.all([
@@ -60,14 +64,16 @@ export default async function DocQuestionList({ category, userId, admin }) {
                 <h2 className="font-semibold">
                   <Link href={`/docs/${category}/${t.slug}`} className="hover:text-accent">{t.name}</Link>
                 </h2>
-                <span className="text-xs text-muted">{userId ? `${doneCount} / ${t.questions.length} done` : `${t.questions.length} questions`}</span>
+                <span className="text-xs text-muted">{userId ? `${doneCount} / ${t.questions.length} done` : `${t.questions.length} topic${t.questions.length === 1 ? '' : 's'}`}</span>
               </header>
               <ol>
                 {t.questions.map((q, i) => (
                   <li key={q.id} className="flex items-center gap-3 border-b border-line px-4 py-2.5 last:border-b-0 hover:bg-surface-2/40">
                     <span className="w-7 shrink-0 text-right text-xs tabular-nums text-muted">{i + 1}</span>
-                    <Link href={problemHref(q.id, t.slug)} className="min-w-0 flex-1 text-sm hover:text-accent">
-                      {q.title}
+                    <Link href={problemHref(q.id, t.slug)} className="flex min-w-0 flex-1 items-center gap-2 text-sm hover:text-accent">
+                      <span className="min-w-0">{q.title}</span>
+                      {q.pro && <ProBadge className="shrink-0" />}
+                      {q.pro && !pro && !admin && <Lock width={13} height={13} className="shrink-0 text-muted" />}
                     </Link>
                     <RowCheck problemId={idBySlug.get(q.id) ?? null} completed={done.has(q.id)} signedIn={Boolean(userId)} />
                   </li>

@@ -92,7 +92,7 @@ export default function DocLayout({ aside, children, wide = false }) {
   return (
     <main className="mx-auto flex w-full max-w-[110rem] flex-col gap-6 px-4 py-6 md:flex-row md:gap-0" style={{ '--doc-side': `${side}px` }}>
       {/* Left column */}
-      <aside className={`md:sticky md:top-[4.75rem] md:w-[var(--doc-side)] md:shrink-0 md:self-start ${collapsed ? 'md:hidden' : ''}`}>{aside}</aside>
+      <aside className={`md:sticky md:top-[4.75rem] md:max-h-[calc(100dvh-5.75rem)] md:w-[var(--doc-side)] md:shrink-0 md:self-start md:overflow-y-auto md:pr-1 ${collapsed ? 'md:hidden' : ''}`}>{aside}</aside>
 
       {/* Handle between the columns */}
       <div

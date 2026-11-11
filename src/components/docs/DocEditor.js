@@ -349,7 +349,7 @@ export default function DocEditor({ slug, title, initialCount, initialContent, i
             setDirty(false);
           }
           setCount(res.questions);
-          setMessage(auto ? null : { type: 'ok', text: `Saved. ${res.questions} question${res.questions === 1 ? '' : 's'} in this tab.` });
+          setMessage(auto ? null : { type: 'ok', text: `Saved. ${res.questions} topic${res.questions === 1 ? '' : 's'} in this tab.` });
           if (!auto) router.refresh();
         } else {
           setMessage({ type: 'error', text: `Autosave failed: ${res.error}` });
@@ -618,7 +618,7 @@ export default function DocEditor({ slug, title, initialCount, initialContent, i
               <span className="min-w-0 flex-1">
                 <span className="block break-words text-sm font-medium text-muted">{title}</span>
                 <span className="block text-xs font-normal text-muted">
-                  {count} question{count === 1 ? '' : 's'}
+                  {count} topic{count === 1 ? '' : 's'}
                 </span>
                 {!readOnly && <span className="mt-0.5 block text-xs text-muted">{toolsOpen ? 'Hide tools' : 'Show tools'}</span>}
               </span>

@@ -558,3 +558,23 @@ html, body { overflow-x: clip; }
 .doc .ProseMirror p.is-editor-empty:first-child::before { content: attr(data-placeholder); color: var(--muted); float: left; height: 0; pointer-events: none; }
 .doc .ProseMirror-selectednode { outline: 2px solid var(--accent); }
 .doc .ProseMirror h2, .doc .ProseMirror h1 { position: relative; }
+
+/* ---- Reader view of a document: tables (see components/docs/DocReadView.js) ---- */
+.doc-read .tableWrapper { margin: 1.1rem 0; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.doc-read table { table-layout: auto; width: 100%; }
+.doc-read th, .doc-read td { min-width: 7rem; overflow-wrap: break-word; word-break: normal; }
+.doc-read table[data-fitted] th, .doc-read table[data-fitted] td { min-width: 0; }
+.doc-read .doc-grip { position: absolute; top: 0; bottom: 0; right: -5px; width: 10px; cursor: col-resize; touch-action: none; user-select: none; z-index: 3; outline: none; }
+.doc-read .doc-grip.doc-grip-last { right: 0; width: 8px; }
+.doc-read .doc-grip::after { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; transform: translateX(-50%); border-radius: 1px; background: transparent; transition: background .15s; }
+.doc-read table:hover .doc-grip::after { background: var(--line); }
+.doc-read .doc-grip:hover::after, .doc-read .doc-grip:focus-visible::after, .doc-read .doc-grip.is-active::after { background: var(--accent); }
+@media (hover: none) { .doc-read .doc-grip::after { background: var(--line); } }
+
+/* ---- Editor: the "Make Pro" button at the end of every Heading 2 ---- */
+.doc .doc-pro-btn { margin-left: .6rem; vertical-align: middle; border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 999px; padding: .1rem .6rem; font: 600 .7rem/1.4 var(--font-sans, system-ui, sans-serif); letter-spacing: .02em; cursor: pointer; user-select: none; opacity: 0; transition: opacity .15s; }
+.doc h2:hover .doc-pro-btn, .doc .doc-pro-btn:focus-visible { opacity: 1; }
+.doc .doc-pro-btn:hover { border-color: var(--muted); color: var(--ink); }
+.doc .doc-pro-btn.is-on { opacity: 1; border-color: #d99a06; background: linear-gradient(135deg, #fcd34d, #f59e0b); color: #451a03; }
+.doc .ProseMirror[contenteditable='false'] .doc-pro-btn:not(.is-on) { display: none; }
+.doc .ProseMirror[contenteditable='false'] .doc-pro-btn { cursor: default; pointer-events: none; }

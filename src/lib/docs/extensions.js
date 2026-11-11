@@ -28,6 +28,13 @@ const HeadingWithId = Heading.extend({
         parseHTML: (el) => el.getAttribute('id'),
         renderHTML: (attrs) => (attrs.id ? { id: attrs.id } : {}),
       },
+      // Pro question: an admin switches this on a Heading 2 (the "Pro" button at the end of the heading). The question
+      // then opens for Pro users only. It is saved in the document, and saveTab copies it to Problem.proOnly.
+      pro: {
+        default: false,
+        parseHTML: (el) => el.getAttribute('data-pro') === 'true',
+        renderHTML: (attrs) => (attrs.pro ? { 'data-pro': 'true' } : {}),
+      },
     };
   },
 });
@@ -53,6 +60,55 @@ const HeadingIds = Extension.create({
             seen.add(id);
           });
           return tr;
+        },
+      }),
+    ];
+  },
+});
+
+// A small "Pro" button at the end of every Heading 2 while editing. Click it to make that question Pro (or free again).
+// It is a decoration, so it is never saved into the document and readers never see it.
+const ProToggle = Extension.create({
+  name: 'proToggle',
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey('proToggle'),
+        props: {
+          decorations(state) {
+            const decos = [];
+            state.doc.descendants((node, pos) => {
+              if (node.type.name !== 'heading' || node.attrs.level !== 2) return;
+              const on = Boolean(node.attrs.pro);
+              decos.push(
+                Decoration.widget(
+                  pos + node.nodeSize - 1,
+                  (view) => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.contentEditable = 'false';
+                    btn.className = `doc-pro-btn${on ? ' is-on' : ''}`;
+                    btn.textContent = on ? '★ Pro' : '☆ Make Pro';
+                    btn.title = on ? 'Pro question: only Pro users can open it. Click to make it free.' : 'Click to make this question Pro-only';
+                    btn.addEventListener('mousedown', (e) => e.preventDefault()); // keep the cursor where it is
+                    btn.addEventListener('click', (e) => {
+                      e.preventDefault();
+                      if (!view.editable) return;
+                      const at = view.posAtDOM(btn, 0);
+                      const $pos = view.state.doc.resolve(at);
+                      const headingPos = $pos.before($pos.depth);
+                      const heading = view.state.doc.nodeAt(headingPos);
+                      if (!heading || heading.type.name !== 'heading') return;
+                      view.dispatch(view.state.tr.setNodeMarkup(headingPos, undefined, { ...heading.attrs, pro: !heading.attrs.pro }));
+                    });
+                    return btn;
+                  },
+                  { side: 1, key: `pro-${node.attrs.id}-${on}` },
+                ),
+              );
+            });
+            return DecorationSet.create(state.doc, decos);
+          },
         },
       }),
     ];
@@ -111,6 +167,7 @@ export function buildExtensions({ placeholder } = {}) {
     StarterKit.configure({ heading: false, code: false, codeBlock: false, link: { openOnClick: false, autolink: true, HTMLAttributes: { rel: 'noopener noreferrer nofollow', target: '_blank' } } }),
     HeadingWithId.configure({ levels: [1, 2, 3] }),
     HeadingIds,
+    ProToggle,
     InlineCode,
     PythonCodeBlock,
     PythonColors,

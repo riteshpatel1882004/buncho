@@ -51,4 +51,4 @@ export function topicCategoryWhere(category) {
 export const docHref = (topicSlug) => `/docs/${categoryOf(topicSlug)}/${topicSlug}`;
 
 /** Page URL for one question: its place in the document. A question's slug is its heading anchor. */
-export const problemHref = (slug, topicSlug) => `${docHref(topicSlug)}#${slug}`;
+export const problemHref = (slug, topicSlug) => `${CATEGORIES[categoryOf(topicSlug)].path}/${slug}`;

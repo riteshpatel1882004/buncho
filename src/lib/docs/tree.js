@@ -42,12 +42,43 @@ export function extractQuestions(doc) {
     if (!node) return;
     if (node.type === 'heading' && node.attrs?.level === 2 && node.attrs?.id) {
       const title = plainText(node).trim();
-      if (title) out.push({ id: node.attrs.id, title });
+      if (title) out.push({ id: node.attrs.id, title, pro: Boolean(node.attrs?.pro) });
     }
     (node.content ?? []).forEach(walk);
   };
   walk(doc);
   return out;
+}
+
+/**
+ * One question of a document: its Heading 2 and everything under it, up to the next Heading 1 or 2.
+ * Returns { heading, body } (body = the answer, as document nodes) or null when the question is not there.
+ */
+export function findQuestion(doc, id) {
+  const stops = (n) => n.type === 'heading' && (n.attrs?.level ?? 1) <= 2;
+  const walk = (content) => {
+    if (!Array.isArray(content)) return null;
+    const i = content.findIndex((n) => n.type === 'heading' && n.attrs?.level === 2 && n.attrs?.id === id);
+    if (i >= 0) {
+      let j = i + 1;
+      while (j < content.length && !stops(content[j])) j += 1;
+      return { heading: content[i], body: content.slice(i + 1, j) };
+    }
+    for (const n of content) {
+      const found = walk(n.content);
+      if (found) return found;
+    }
+    return null;
+  };
+  return walk(doc?.content);
+}
+
+/** First paragraph of an answer as short plain text. Used as the teaser of a Pro question for free users. */
+export function teaser(nodes, max = 220) {
+  const first = (nodes ?? []).map((n) => (n.type === 'paragraph' ? plainText(n).trim() : '')).find(Boolean) ?? '';
+  if (first.length <= max) return first;
+  const cut = first.slice(0, max).replace(/\s+\S*$/, '');
+  return `${cut}…`;
 }
 
 /** Light validation so a bad client payload cannot be stored. */

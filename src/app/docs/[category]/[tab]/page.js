@@ -10,6 +10,7 @@ import { buildExtensions } from '@/lib/docs/extensions';
 import DocTabs from '@/components/docs/DocTabs';
 import DocEditor from '@/components/docs/DocEditor';
 import DocLayout from '@/components/docs/DocLayout';
+import DocReadView from '@/components/docs/DocReadView';
 import { enhanceDocHtml } from '@/lib/docs/highlight';
 import { buildMetadata } from '@/lib/seo';
 
@@ -38,7 +39,8 @@ export default async function DocTabPage({ params }) {
   const tabs = admin ? await getTabsForAdmin(category) : await getTabs(category);
   const settings = readSettings(tab.settings);
   const doc = isDoc(tab.content) ? ensureHeadingIds(tab.content) : EMPTY_DOC;
-  const count = extractQuestions(doc).length;
+  const questions = extractQuestions(doc); // the sub-topics shown under the open topic
+  const count = questions.length;
   const html = admin ? null : enhanceDocHtml(generateHTML(doc, buildExtensions()));
 
   return (
@@ -50,7 +52,7 @@ export default async function DocTabPage({ params }) {
             ← {CATEGORIES[category].label.trim()} questions
           </Link>
           <p className="mb-2 px-3 text-xs font-medium uppercase tracking-wide text-muted">Topics</p>
-          <DocTabs category={category} tabs={tabs} activeSlug={slug} admin={admin} />
+          <DocTabs category={category} tabs={tabs} activeSlug={slug} admin={admin} outline={questions} />
         </>
       }
     >
@@ -62,10 +64,10 @@ export default async function DocTabPage({ params }) {
           <>
             <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
               <h1 className="text-sm font-medium text-muted">
-                {tab.name} <span className="font-normal">· {count} question{count === 1 ? '' : 's'}</span>
+                {tab.name} <span className="font-normal">· {count} topic{count === 1 ? '' : 's'}</span>
               </h1>
             </div>
-            <div className={`doc doc-h-${settings.headingFont} doc-t-${settings.textFont}`} dangerouslySetInnerHTML={{ __html: html }} />
+            <DocReadView slug={slug} html={html} headingFont={settings.headingFont} textFont={settings.textFont} />
           </>
         )}
       </article>
