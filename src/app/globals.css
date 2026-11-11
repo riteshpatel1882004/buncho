@@ -583,3 +583,123 @@ html, body { overflow-x: clip; }
 .doc .doc-pro-btn.lvl-easy { color: var(--easy, #22c55e); }
 .doc .doc-pro-btn.lvl-medium { color: var(--medium, #f59e0b); }
 .doc .doc-pro-btn.lvl-hard { color: var(--hard, #ef4444); }
+
+/* ---------- Question page ---------- */
+
+/* Outline: resize handle line, collapsed strip, and content width */
+.q-main { max-width: 64rem; }
+.q-rail-handle::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  transform: translateX(-50%);
+  border-radius: 1px;
+  background: transparent;
+  transition: background .15s;
+}
+.q-rail-handle:hover::after,
+.q-rail-handle:focus-visible::after,
+.q-rail-handle.is-active::after { background: var(--muted); }
+.q-rail-handle:focus-visible { outline: none; }
+
+@media (min-width: 1024px) {
+  html[data-rail='collapsed'] .q-grid { grid-template-columns: 1.75rem minmax(0, 1fr); column-gap: 1.25rem; }
+  html[data-rail='collapsed'] .q-rail-body,
+  html[data-rail='collapsed'] .q-rail-handle { display: none; }
+  /* Sidebar hidden: the answer uses the whole page width */
+  html[data-rail='collapsed'] .q-main { max-width: none; }
+}
+
+/* Answer card: flat, neutral */
+.q-answer {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: 1.25rem;
+}
+@media (min-width: 640px) { .q-answer { padding: 1.75rem 2.25rem; } }
+
+/* Answer typography */
+.q-read .doc { font-size: 1.0625rem; line-height: 1.8; }
+.q-read .doc > :first-child { margin-top: 0; }
+.q-read .doc p { margin: .9rem 0; }
+.q-read .doc strong { font-weight: 650; }
+.q-read .doc li > p { margin: 0; }
+.q-read .doc h2 { font-size: 1.3rem; margin: 2.2rem 0 .6rem; padding-top: 1.5rem; border-top: 1px solid var(--line); }
+.q-read .doc h2:first-child { padding-top: 0; border-top: 0; }
+.q-read .doc h3 { font-size: 1.1rem; margin: 1.8rem 0 .4rem; }
+
+/* Bullets: small neutral dots */
+.q-read .doc ul:not([data-type='taskList']) { list-style: none; padding-left: 0; margin: 1rem 0; }
+.q-read .doc ul:not([data-type='taskList']) > li { position: relative; padding-left: 1.4rem; margin: .6rem 0; }
+.q-read .doc ul:not([data-type='taskList']) > li::before {
+  content: '';
+  position: absolute;
+  left: .2rem;
+  top: .8em;
+  width: .35rem;
+  height: .35rem;
+  border-radius: 999px;
+  background: var(--muted);
+}
+
+/* Numbered lists: neutral circles */
+.q-read .doc ol { list-style: none; counter-reset: q; padding-left: 0; margin: 1rem 0; }
+.q-read .doc ol > li { counter-increment: q; position: relative; padding-left: 2.2rem; margin: .8rem 0; }
+.q-read .doc ol > li::before {
+  content: counter(q);
+  position: absolute;
+  left: 0;
+  top: .22em;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--muted);
+  font: 600 .75rem/1.5rem var(--font-sans, system-ui, sans-serif);
+  text-align: center;
+}
+
+/* Inline code: same chip colour as the numbered-list circles */
+.q-read .doc :not(pre) > code { background: var(--surface-2); color: inherit; border-radius: .4rem; padding: .12em .45em; font-size: .86em; font-weight: 400; }
+
+/* Code blocks: flat panel */
+.q-read .doc pre { border: 0; background: var(--surface-2); border-radius: .875rem; padding: 2.1rem 1.1rem 1rem; margin: 1.2rem 0; }
+.dark .q-read .doc pre { background: rgb(0 0 0 / .35); }
+.q-read .doc pre code { background: none; color: inherit; padding: 0; }
+
+/* Tables: horizontal rules only */
+.q-read .doc th, .q-read .doc td { border-width: 0 0 1px 0; padding: .65rem .8rem; }
+.q-read .doc th { background: transparent; color: var(--muted); font-size: .8rem; font-weight: 600; letter-spacing: .02em; border-bottom-color: var(--muted); }
+.q-read .doc blockquote { border-left: 3px solid var(--line); background: none; border-radius: 0; padding: .1rem 1rem; color: var(--muted); }
+.q-read .doc details { border: 0; border-left: 2px solid var(--line); border-radius: 0; padding: .1rem .9rem; }
+
+/* Focus mode: no outline, one centred column, bigger text (must stay after the collapsed rules) */
+html[data-focus] .q-rail { display: none; }
+html[data-focus] .q-grid { grid-template-columns: minmax(0, 1fr); }
+html[data-focus] .q-main { margin-inline: auto; max-width: 48rem; }
+html[data-focus] .q-read .doc { font-size: 1.1875rem; line-height: 1.9; }
+
+/* ---------- Code blocks: always wrap, never scroll sideways ---------- */
+.doc-read pre,
+.q-read .doc pre {
+  overflow: hidden !important;
+  max-width: 100%;
+  white-space: pre-wrap !important;
+  overflow-wrap: anywhere !important;
+  word-break: normal !important;
+  tab-size: 4;
+}
+.doc-read pre code,
+.q-read .doc pre code {
+  display: block;
+  min-width: 0;
+  white-space: pre-wrap !important;
+  overflow-wrap: anywhere !important;
+  line-height: 1.65;
+}
+.doc-read pre code span,
+.q-read .doc pre code span { white-space: inherit; }

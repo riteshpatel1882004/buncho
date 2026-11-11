@@ -17,6 +17,8 @@ import { ChevronLeft, ChevronRight, Lock } from '@/components/icons';
 import JsonLd from '@/components/JsonLd';
 import DocReadView from '@/components/docs/DocReadView';
 import QuestionActions from '@/components/problems/QuestionActions';
+import QuestionControls from '@/components/problems/QuestionControls';
+import RailToggle from '@/components/problems/RailToggle';
 import { InsightsPanel } from '@/components/Insights';
 import DifficultyBadge from '@/components/DifficultyBadge';
 
@@ -84,6 +86,10 @@ export default async function QuestionPage({ params }) {
   const at = questions.findIndex((q) => q.id === slug);
   const prev = at > 0 ? questions[at - 1] : null;
   const next = at >= 0 && at < questions.length - 1 ? questions[at + 1] : null;
+  const percent = at >= 0 && questions.length ? ((at + 1) / questions.length) * 100 : 0;
+  const prevHref = prev ? problemHref(prev.id, topic.slug) : null;
+  const nextHref = next ? problemHref(next.id, topic.slug) : null;
+  const pad = (n) => String(n).padStart(2, '0');
 
   const [progress, bookmark] = user
     ? await Promise.all([
@@ -106,88 +112,146 @@ export default async function QuestionPage({ params }) {
     problemJsonLd({ ...problem, description: teaser(found.body, 300) }),
   );
 
-  const nav = 'group flex min-w-0 flex-1 items-center gap-3 rounded-2xl border border-line bg-surface p-4 transition-colors hover:border-muted';
+  const difficulty = questions[at]?.difficulty;
 
   return (
-    <main className="mx-auto w-full max-w-4xl px-4 pb-20 pt-6 sm:px-6">
+    <main className="mx-auto w-full max-w-7xl px-4 pb-24 pt-6 sm:px-6 lg:px-8">
       <JsonLd data={jsonLd} />
 
-      <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-xs text-muted">
-        <Link href={listPath} className="hover:text-ink">{CATEGORIES[category].label.trim()} questions</Link>
-        <span aria-hidden="true">/</span>
-        <Link href={`${listPath}#topic-${topic.slug}`} className="hover:text-ink">{topic.name}</Link>
-      </nav>
-
-      <header className="mt-4">
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="rounded-full border border-line bg-surface px-2.5 py-1 font-medium text-muted">{topic.name}</span>
-          {questions[at]?.difficulty && <DifficultyBadge difficulty={questions[at].difficulty} />}
-          {problem.proOnly && <ProBadge />}
-          {at >= 0 && <span className="text-muted">Question {at + 1} of {questions.length}</span>}
-        </div>
-        <h1 className="mt-3 text-2xl font-semibold leading-snug tracking-tight sm:text-3xl">{problem.title}</h1>
-      </header>
-
-      {/* Company and Asked %: set by the admin in the docs editor, shown to Pro users (free users see the lock banner) */}
-      <InsightsPanel
-        pro={pro || isAdmin(user)}
-        problem={{ askedByCompanies: questions[at]?.companies ?? [], askedFrequency: questions[at]?.asked ?? null }}
-      />
-
-      <div className="mt-5">
-        <QuestionActions problemId={problem.id} completed={progress?.status === 'COMPLETED'} bookmarked={Boolean(bookmark)} signedIn={Boolean(user)} />
-      </div>
-
-      <article className="mt-8 min-w-0 rounded-2xl border border-line bg-surface p-5 sm:p-8">
-        {open ? (
-          hasAnswer ? (
-            <DocReadView slug={`q-${problem.slug}`} html={html} headingFont={settings.headingFont} textFont={settings.textFont} />
-          ) : (
-            <p className="text-muted">The answer to this question is being written.</p>
-          )
-        ) : (
-          <div>
-            {hint && <p className="text-[1.0625rem] leading-relaxed text-muted">{hint}</p>}
-            <div className="mt-6 rounded-xl border border-dashed border-amber-500/40 bg-amber-500/5 p-6 text-center">
-              <span className="mx-auto grid h-11 w-11 place-items-center rounded-full bg-accent-soft text-accent">
-                <Lock width={20} height={20} />
-              </span>
-              <p className="mt-3 font-semibold">This is a Pro question</p>
-              <p className="mx-auto mt-1 max-w-md text-sm text-muted">Upgrade to Buncho Pro to read the full question and its answer.</p>
-              <Link href="/pricing" className="mt-4 inline-block rounded-xl bg-accent px-5 py-2.5 text-sm font-semibold text-accent-ink hover:opacity-90">
-                See Pro plans
+     <div className="q-grid grid gap-x-10 lg:grid-cols-[var(--q-rail-w,17rem)_minmax(0,1fr)]">
+        {/* Outline of the topic: where you are, jump anywhere. Collapsible with the button or the B key. */}
+        <aside className="q-rail hidden lg:block" aria-label="Questions in this topic">
+          <div className="sticky top-24">
+            <RailToggle />
+            <div className="q-rail-body">
+              <Link href={listPath} className="inline-flex items-center gap-1 pr-9 text-xs text-muted transition-colors hover:text-ink">
+                <ChevronLeft width={14} height={14} /> {CATEGORIES[category].label.trim()} questions
               </Link>
+              <p className="mt-3 text-sm font-semibold">{topic.name}</p>
+              <p className="mt-0.5 text-xs text-muted">{questions.length} questions</p>
+
+              <div className="q-rail-scroll relative mt-4 max-h-[calc(100vh-13rem)] overflow-y-auto pr-2">
+                <ol className="space-y-0.5">
+                  {questions.map((q, i) => {
+                    const current = i === at;
+                    return (
+                      <li key={q.id}>
+                        <Link
+                          href={problemHref(q.id, topic.slug)}
+                          aria-current={current ? 'page' : undefined}
+                          data-q-current={current ? '' : undefined}
+                          className={`flex gap-2.5 rounded-lg px-2.5 py-2 text-[0.8125rem] leading-snug transition-colors ${
+                            current ? 'bg-surface-2 font-medium text-ink' : 'text-muted hover:bg-surface-2/60 hover:text-ink'
+                          }`}
+                        >
+                          <span className="w-5 shrink-0 pt-px text-right font-mono text-[0.7rem] tabular-nums opacity-70">{pad(i + 1)}</span>
+                          <span className="line-clamp-2">{q.title}</span>
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ol>
+              </div>
             </div>
           </div>
-        )}
-      </article>
+        </aside>
 
-      {(prev || next) && (
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-          {prev ? (
-            <Link href={problemHref(prev.id, topic.slug)} className={nav}>
-              <ChevronLeft width={18} height={18} className="shrink-0 text-muted group-hover:text-ink" />
-              <span className="min-w-0">
-                <span className="block text-xs text-muted">Previous</span>
-                <span className="line-clamp-2 text-sm font-medium">{prev.title}</span>
-              </span>
-            </Link>
-          ) : (
-            <span className="hidden flex-1 sm:block" />
+        <div className="q-main min-w-0 w-full">
+          {/* Mobile breadcrumb (the outline takes over on large screens) */}
+          <nav aria-label="Breadcrumb" className="mb-3 flex items-center gap-1.5 text-xs text-muted lg:hidden">
+            <Link href={listPath} className="hover:text-ink">{CATEGORIES[category].label.trim()} questions</Link>
+            <span aria-hidden="true">/</span>
+            <Link href={`${listPath}#topic-${topic.slug}`} className="truncate hover:text-ink">{topic.name}</Link>
+          </nav>
+
+          <header className="relative overflow-hidden rounded-2xl border border-line bg-surface px-5 pb-5 pt-4 sm:px-6">
+            <div className="flex items-center gap-2.5 text-xs">
+              {at >= 0 && <span className="font-mono font-bold tracking-widest text-accent">Q{pad(at + 1)}</span>}
+              <span className="truncate text-muted">{topic.name}</span>
+              {at >= 0 && <span className="ml-auto shrink-0 tabular-nums text-muted">{at + 1} of {questions.length}</span>}
+            </div>
+
+            <h1 className="mt-2 text-balance text-xl font-semibold leading-snug tracking-tight sm:text-2xl">{problem.title}</h1>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {difficulty && <DifficultyBadge difficulty={difficulty} />}
+              {problem.proOnly && <ProBadge />}
+              {/* Company and Asked %: set by the admin in the docs editor, shown to Pro users (free users see a lock chip) */}
+              <InsightsPanel
+                pro={pro || isAdmin(user)}
+                problem={{ askedByCompanies: questions[at]?.companies ?? [], askedFrequency: questions[at]?.asked ?? null }}
+              />
+              <div className="flex flex-wrap items-center gap-2 sm:ml-auto">
+                <QuestionActions problemId={problem.id} completed={progress?.status === 'COMPLETED'} bookmarked={Boolean(bookmark)} signedIn={Boolean(user)} />
+                <QuestionControls prevHref={prevHref} nextHref={nextHref} />
+              </div>
+            </div>
+
+            {at >= 0 && (
+              <div className="absolute inset-x-0 bottom-0 h-0.5 bg-line/60" role="progressbar" aria-valuemin={0} aria-valuemax={questions.length} aria-valuenow={at + 1} aria-label="Position in this topic">
+                <div className="h-full bg-accent" style={{ width: `${percent}%` }} />
+              </div>
+            )}
+          </header>
+
+          <article className="q-read q-answer mt-5 min-w-0">
+            {open ? (
+              hasAnswer ? (
+                <DocReadView slug={`q-${problem.slug}`} html={html} headingFont={settings.headingFont} textFont={settings.textFont} />
+              ) : (
+                <p className="text-muted">The answer to this question is being written.</p>
+              )
+            ) : (
+              <div className="text-center">
+                {hint && <p className="mx-auto max-w-xl text-left leading-relaxed text-muted">{hint}</p>}
+                <div className="mx-auto mt-6 max-w-md rounded-2xl bg-surface-2 px-6 py-7">
+                  <span className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-surface text-muted">
+                    <Lock width={18} height={18} />
+                  </span>
+                  <p className="mt-3 font-semibold">This is a Pro question</p>
+                  <p className="mt-1 text-sm text-muted">Upgrade to Buncho Pro to read the full answer.</p>
+                  <Link href="/pricing" className="mt-4 inline-flex h-9 items-center rounded-full bg-ink px-5 text-sm font-semibold text-bg transition-opacity hover:opacity-90">
+                    See Pro plans
+                  </Link>
+                </div>
+              </div>
+            )}
+          </article>
+
+          {(prev || next) && (
+            <nav aria-label="Question navigation" className="mt-5 grid gap-3 sm:grid-cols-2">
+              {prev ? (
+                <Link href={prevHref} className="group min-w-0 rounded-xl border border-line bg-surface p-3.5 transition-colors hover:bg-surface-2">
+                  <span className="flex items-center gap-1 text-xs text-muted">
+                    <ChevronLeft width={14} height={14} /> Previous
+                  </span>
+                  <span className="mt-1 line-clamp-2 text-sm font-medium">{prev.title}</span>
+                </Link>
+              ) : (
+                <span className="hidden sm:block" />
+              )}
+              {next ? (
+                <Link href={nextHref} className="group min-w-0 rounded-xl border border-line bg-surface p-3.5 transition-colors hover:bg-surface-2 sm:text-right">
+                  <span className="flex items-center gap-1 text-xs text-muted sm:justify-end">
+                    Next <ChevronRight width={14} height={14} />
+                  </span>
+                  <span className="mt-1 line-clamp-2 text-sm font-medium">{next.title}</span>
+                </Link>
+              ) : (
+                <span className="hidden sm:block" />
+              )}
+            </nav>
           )}
-          {next ? (
-            <Link href={problemHref(next.id, topic.slug)} className={`${nav} justify-end text-right`}>
-              <span className="min-w-0">
-                <span className="block text-xs text-muted">Next</span>
-                <span className="line-clamp-2 text-sm font-medium">{next.title}</span>
-              </span>
-              <ChevronRight width={18} height={18} className="shrink-0 text-muted group-hover:text-ink" />
-            </Link>
-          ) : (
-            <span className="hidden flex-1 sm:block" />
-          )}
+
+          <p className="mt-5 hidden text-center text-xs text-muted lg:block">
+            <kbd className="rounded border border-line px-1 font-mono">←</kbd> <kbd className="rounded border border-line px-1 font-mono">→</kbd> questions
+            <span className="mx-2 opacity-40">·</span>
+            <kbd className="rounded border border-line px-1 font-mono">B</kbd> sidebar
+            <span className="mx-2 opacity-40">·</span>
+            <kbd className="rounded border border-line px-1 font-mono">F</kbd> focus
+          </p>
         </div>
-      )}
+      </div>
     </main>
   );
 }
