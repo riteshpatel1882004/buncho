@@ -105,9 +105,9 @@ export const getProfileData = cache(async (user) => {
           select: { problemId: true, problem: { select: { difficulty: true, topic: { select: { name: true, slug: true } } } } },
         })
       : [],
-    // Published questions per category (AI/ML, HR, SQL), to show "solved of total"
+    // Published questions per category (AI/ML, HR, SQL), to show "solved of total". Only questions that live in a document count.
     user.showStats
-      ? Promise.all(Object.keys(CATEGORIES).map((key) => prisma.problem.count({ where: { published: true, topic: topicCategoryWhere(key) } })))
+      ? Promise.all(Object.keys(CATEGORIES).map((key) => prisma.problem.count({ where: { published: true, topic: { ...topicCategoryWhere(key), content: { not: null } } } })))
       : [],
   ]);
 

@@ -6,10 +6,11 @@ export const size = OG_SIZE;
 export const contentType = OG_TYPE;
 export const revalidate = 86400; // refresh the question count once a day
 
-// "500+ questions" (rounded down to the nearest 50). Falls back quietly if the database is not reachable.
+// "500+ questions" (rounded down to the nearest 50). Only questions that live in a document count.
+// Falls back quietly if the database is not reachable.
 async function questionChip() {
   try {
-    const n = await prisma.problem.count({ where: { published: true } });
+    const n = await prisma.problem.count({ where: { published: true, topic: { content: { not: null } } } });
     return n >= 50 ? `${Math.floor(n / 50) * 50}+ questions` : null;
   } catch {
     return null;
