@@ -5,25 +5,12 @@ import { previewPrice, startCheckout } from '@/app/billing-actions';
 import Spinner from '@/components/Spinner';
 import { ctaBtn } from '@/components/jobs/ui';
 import { formatMoney } from '@/lib/money';
+import { payWithRazorpay } from '@/lib/razorpay-client';
 import CurrencyDialog from './CurrencyDialog';
-
-const SDK = 'https://sdk.cashfree.com/js/v3/cashfree.js';
-
-function loadSdk() {
-  if (typeof window !== 'undefined' && window.Cashfree) return Promise.resolve();
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = SDK;
-    s.async = true;
-    s.onload = resolve;
-    s.onerror = () => reject(new Error('Could not load the payment window. Check your connection and try again.'));
-    document.head.appendChild(s);
-  });
-}
 
 /**
  * price: rupees the buyer pays now in INR (site-wide offer already included).
- * priceUsdCents: the same in US cents, for "other currency". usdEnabled: false when Dodo is not set up.
+ * priceUsdCents: the same in US cents, for "other currency". usdEnabled: false when paying in USD is switched off.
  * open: false when the admin paused upgrades.
  */
 export default function CheckoutButton({ signedIn, label = 'Upgrade to Pro', price, priceUsdCents, usdEnabled = false, open = true }) {
@@ -89,18 +76,17 @@ export default function CheckoutButton({ signedIn, label = 'Upgrade to Pro', pri
           setPayingWith(null);
           return setError(res.error);
         }
-        if (res.provider === 'DODO') {
-          window.location.assign(res.url); // Dodo hosted checkout
-          return;
-        }
-        await loadSdk();
-        const cashfree = window.Cashfree({ mode: res.mode });
-        await cashfree.checkout({ paymentSessionId: res.paymentSessionId, redirectTarget: '_self' });
+        // Razorpay opens its own window on top of the page. The native <dialog> would sit above it, so close that first.
+        setChooserOpen(false);
+        const { paymentId } = await payWithRazorpay(res);
+        // Paid. The return page asks Razorpay again before it switches Pro on.
+        window.location.assign(`/billing/return?order_id=${res.orderId}${paymentId ? `&payment_id=${paymentId}` : ''}`);
       } catch (err) {
         // Catch everything here so a failure shows a message instead of crashing the whole page.
-        console.error(err);
+        if (!err?.dismissed) console.error(err);
         setPayingWith(null);
-        setError(err?.message || 'Could not open the payment window. Please try again.');
+        // Closing the window is not an error. If a payment attempt failed before that, say why.
+        setError(err?.dismissed ? err.message || null : err?.message || 'Could not open the payment window. Please try again.');
       }
     });
   }
@@ -161,8 +147,9 @@ export default function CheckoutButton({ signedIn, label = 'Upgrade to Pro', pri
         {shownInr != null && ` · ${formatMoney(shownInr * 100, 'INR')}`}
       </button>
       <p className="text-center text-[0.7rem] text-muted">
-        Pay in INR (UPI, cards, net banking){usdEnabled && shownUsd != null ? ` or in another currency (${formatMoney(shownUsd, 'USD')} USD)` : ''}.
+        Pay in INR (UPI, cards, net banking){usdEnabled && shownUsd != null ? ` or with an international card (${formatMoney(shownUsd, 'USD')} USD)` : ''}. Secure payment by Razorpay.
       </p>
+      {error && !chooserOpen && <p role="alert" className="rounded-lg bg-hard/10 px-3 py-2 text-center text-sm font-medium text-hard">{error}</p>}
 
       <CurrencyDialog
         open={chooserOpen}

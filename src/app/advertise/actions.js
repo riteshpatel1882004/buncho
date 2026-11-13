@@ -4,16 +4,21 @@ import crypto from 'node:crypto';
 import { prisma } from '@/lib/prisma';
 import { getOrCreateUser } from '@/lib/user';
 import { AD_PERIOD_MONTHS, cleanUrl, getSlotAvailability, isEmail, slotFromParam, slotPriceCents, str } from '@/lib/ads';
-import { appUrl, createDodoCheckout } from '@/lib/dodo';
+import { createRazorpayOrder, razorpayConfigured, razorpayInternational, razorpayKeyId } from '@/lib/razorpay';
 
 const MAX_PENDING_PER_HOUR = 5;
 
-/** Saves the banner details, then starts a Dodo checkout. Returns { ok, url } or { ok: false, error }. */
+/**
+ * Saves the banner details, then creates the Razorpay order (USD). Returns { ok, orderId, ...checkout details } for the
+ * browser to open Razorpay's checkout window, or { ok: false, error }.
+ */
 export async function startAdCheckout(input) {
   // Never let an error escape: an uncaught throw in a server action replaces the whole page with an error screen.
   try {
     const user = await getOrCreateUser();
     if (!user) return { ok: false, error: 'Log in to book a banner.', code: 'AUTH' };
+
+    if (!razorpayConfigured() || !razorpayInternational()) return { ok: false, error: 'Banner payments are not available right now. Please try again later.' };
 
     const slot = slotFromParam(input?.slot);
     if (!slot) return { ok: false, error: 'Choose a column first.' };
@@ -64,16 +69,25 @@ export async function startAdCheckout(input) {
     });
 
     try {
-      const session = await createDodoCheckout({
-        orderId,
-        amountCents,
-        email: contactEmail,
-        name: user.name,
-        returnUrl: `${appUrl()}/advertise/return?order=${orderId}`,
-        metadata: { slot, user_id: user.id },
+      const order = await createRazorpayOrder({
+        receipt: orderId,
+        amount: amountCents,
+        currency: 'USD',
+        notes: { order_id: orderId, kind: 'ad', slot, user_id: user.id },
       });
-      await prisma.adBooking.update({ where: { orderId }, data: { dodoSessionId: session.session_id ?? null } });
-      return { ok: true, url: session.checkout_url };
+      if (!order?.id) throw new Error('No order returned.');
+      await prisma.adBooking.update({ where: { orderId }, data: { razorpayOrderId: order.id } });
+      return {
+        ok: true,
+        orderId,
+        razorpayOrderId: order.id,
+        keyId: razorpayKeyId(),
+        amount: amountCents,
+        currency: 'USD',
+        name: 'Buncho',
+        description: `Sponsored banner, ${AD_PERIOD_MONTHS} month${AD_PERIOD_MONTHS === 1 ? '' : 's'}`,
+        prefill: { ...(contactEmail && { email: contactEmail }), ...(user.name && { name: String(user.name).slice(0, 100) }) },
+      };
     } catch (err) {
       console.error('[ads] could not create checkout', err);
       await prisma.adBooking.update({ where: { orderId }, data: { status: 'FAILED' } }).catch(() => {});

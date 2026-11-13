@@ -40,10 +40,12 @@ enum PaymentStatus {
   FAILED
 }
 
-// Which gateway took (or was asked to take) a Pro payment: Cashfree for INR, Dodo Payments for other currencies
+// Which gateway took (or was asked to take) a Pro payment. Every new payment, in INR or another currency, goes through
+// Razorpay. CASHFREE and DODO stay in the list only so payments made before the switch still show up in the admin.
 enum PaymentProvider {
-  CASHFREE
-  DODO
+  RAZORPAY
+  CASHFREE // legacy
+  DODO // legacy
 }
 
 // Phase 8: offers and promo codes (set by the admin at /admin/billing)
@@ -76,7 +78,7 @@ enum AdStatus {
   PENDING_PAYMENT // checkout started, not paid yet
   PAID // paid, waiting for the admin to approve
   APPROVED // approved by the admin. Shown while startsAt <= now < endsAt
-  REJECTED // admin said no (refund by hand in the Dodo dashboard)
+  REJECTED // admin said no (refund by hand in the Razorpay dashboard)
   ENDED // admin ended it early
   FAILED // the checkout could not be created
 }
@@ -307,7 +309,7 @@ model BillingSettings {
   id            String    @id @default("default")
   proName       String    @default("Buncho Pro")
   priceInr      Int       @default(99)
-  // Price when paying in another currency (Dodo Payments), in US cents. 299 = $2.99
+  // Price when paying in another currency (Razorpay, USD), in US cents. 299 = $2.99
   priceUsdCents Int       @default(299)
   periodMonths  Int       @default(1)
   // Untick in the admin page to pause all new payments
@@ -338,7 +340,7 @@ model DiscountCode {
 }
 
 // One row per Pro payment attempt. orderId is our own id ("bnc_..."), sent to the gateway as order_id.
-// provider is CASHFREE for INR and DODO for other currencies. status: PENDING is shown as "Not paid" in the admin.
+// provider is RAZORPAY for every new payment (INR and USD). status: PENDING is shown as "Not paid" in the admin.
 // Price, period and bonus are stored on the row, so changing settings later never alters a payment already made.
 model Payment {
   id            String          @id @default(cuid())
@@ -346,14 +348,16 @@ model Payment {
   userId        String
   user          User            @relation(fields: [userId], references: [id])
   plan          String
-  provider      PaymentProvider @default(CASHFREE)
+  provider      PaymentProvider @default(RAZORPAY)
   // Minor units: paise when currency is INR, cents when it is USD (the column name is kept from the INR-only days)
   amountPaise   Int
   currency      String          @default("INR")
   status        PaymentStatus   @default(PENDING)
-  cfPaymentId   String? // Cashfree
-  dodoSessionId String? // Dodo checkout session
-  dodoPaymentId String? // Dodo payment
+  razorpayOrderId   String? @unique // Razorpay order (order_...), created for every attempt
+  razorpayPaymentId String? // Razorpay payment (pay_...), set once it is paid
+  cfPaymentId   String? // legacy: Cashfree
+  dodoSessionId String? // legacy: Dodo checkout session
+  dodoPaymentId String? // legacy: Dodo payment
   paymentMethod String? // UPI, CARD, ... as reported by the gateway
   payerEmail    String?
   paidAt        DateTime?
@@ -370,12 +374,12 @@ model Payment {
 
 /* ---------- Sponsor banners (the "Sponsored" section on /problems) ---------- */
 
-// One row per banner purchase, paid through Dodo Payments. The flow is PENDING_PAYMENT -> PAID -> APPROVED.
+// One row per banner purchase, paid through Razorpay (USD). The flow is PENDING_PAYMENT -> PAID -> APPROVED.
 // A banner is live while status is APPROVED and now is between startsAt and endsAt, so expiry needs no cron job.
 // Price, currency and period are stored on the row, so changing the env prices later never alters a booking.
 model AdBooking {
   id            String   @id @default(cuid())
-  orderId       String   @unique // our own id ("ad_..."), sent to Dodo as metadata.order_id
+  orderId       String   @unique // our own id ("ad_..."), sent to Razorpay as the order receipt
   userId        String
   user          User     @relation(fields: [userId], references: [id])
   slot          AdSlot
@@ -390,12 +394,14 @@ model AdBooking {
   ctaLabel      String   @default("Learn more")
   contactEmail  String
 
-  // Payment (Dodo)
+  // Payment (Razorpay)
   amountCents   Int
   currency      String   @default("USD")
   periodMonths  Int      @default(1)
-  dodoSessionId String?
-  dodoPaymentId String?
+  razorpayOrderId   String? @unique
+  razorpayPaymentId String?
+  dodoSessionId String? // legacy
+  dodoPaymentId String? // legacy
   paymentMethod String?
   payerEmail    String?
   paidAt        DateTime?

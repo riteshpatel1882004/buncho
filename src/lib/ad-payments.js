@@ -1,10 +1,12 @@
 import { prisma } from './prisma';
-import { getDodoPayment } from './dodo';
+import { inspectRazorpayOrder, methodLabel } from './razorpay';
 
 /**
- * Asks Dodo what happened to this booking's payment, then updates our record.
+ * Asks Razorpay what happened to this booking's payment, then updates our record.
  * Returns 'paid' | 'pending' | 'failed' | 'unknown'.
- * Nothing in a webhook or return URL is trusted: the payment is fetched from Dodo and must carry our order id.
+ * Nothing in a webhook or return URL is trusted: the payments of OUR Razorpay order are fetched from Razorpay, and the
+ * amount and currency must match what we stored when the order was created.
+ * `paymentId` is only a hint (kept so callers can pass what they have).
  */
 export async function settleAdPayment(orderId, paymentId = null) {
   const booking = await prisma.adBooking.findUnique({ where: { orderId } });
@@ -12,36 +14,29 @@ export async function settleAdPayment(orderId, paymentId = null) {
   if (['PAID', 'APPROVED', 'REJECTED', 'ENDED'].includes(booking.status)) return 'paid';
   if (booking.status === 'FAILED') return 'failed';
 
-  const pid = paymentId || booking.dodoPaymentId;
-  if (!pid) return 'pending';
+  if (!booking.razorpayOrderId) return 'pending'; // the buyer has not reached the payment step (or the order was never created)
 
-  const payment = await getDodoPayment(pid);
+  const result = await inspectRazorpayOrder({
+    razorpayOrderId: booking.razorpayOrderId,
+    amount: booking.amountCents,
+    currency: booking.currency,
+  });
 
-  // The payment must belong to this booking (stops one real payment being replayed against other bookings)
-  if (payment?.metadata?.order_id !== orderId) {
-    console.error('[ads] payment does not belong to this booking', orderId, pid);
-    return 'failed';
-  }
-
-  if (payment.status === 'succeeded') {
-    // Dodo may add tax on top, so the total can be higher than the banner price, never lower
-    if (payment.currency !== booking.currency || Number(payment.total_amount) < booking.amountCents) {
-      console.error('[ads] amount mismatch', orderId, payment.total_amount, payment.currency);
-      return 'failed';
-    }
+  if (result.state === 'paid') {
+    const p = result.payment;
     await prisma.adBooking.updateMany({
       where: { orderId, status: 'PENDING_PAYMENT' },
       data: {
         status: 'PAID',
         paidAt: new Date(),
-        dodoPaymentId: pid,
-        paymentMethod: payment.payment_method ? String(payment.payment_method) : null,
-        payerEmail: payment.customer?.email ?? null,
+        razorpayPaymentId: p.id ?? paymentId,
+        paymentMethod: methodLabel(p),
+        payerEmail: p.email ?? null,
       },
     });
     return 'paid';
   }
 
-  if (payment.status === 'failed' || payment.status === 'cancelled') return 'failed';
+  if (result.state === 'failed') return 'failed';
   return 'pending';
 }

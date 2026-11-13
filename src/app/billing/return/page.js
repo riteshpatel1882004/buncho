@@ -20,12 +20,12 @@ export default async function BillingReturnPage({ searchParams }) {
   const orderId = sp?.order_id;
   if (typeof orderId !== 'string' || !/^bnc_[a-z0-9]{20,40}$/.test(orderId)) redirect('/pricing');
 
-  const payment = await prisma.payment.findFirst({ where: { orderId, userId: user.id }, select: { id: true, provider: true } });
+  const payment = await prisma.payment.findFirst({ where: { orderId, userId: user.id }, select: { id: true } });
   if (!payment) redirect('/pricing');
 
-  // Dodo adds ?payment_id=... to the return URL. It is only a hint: the payment is re-checked with Dodo.
+  // Our checkout page adds ?payment_id=pay_... after a successful payment. It is only a hint: Razorpay is asked again.
   const rawPid = typeof sp?.payment_id === 'string' ? sp.payment_id : null;
-  const paymentId = payment.provider === 'DODO' && rawPid && /^[A-Za-z0-9_-]{5,64}$/.test(rawPid) ? rawPid : null;
+  const paymentId = rawPid && /^[A-Za-z0-9_-]{5,64}$/.test(rawPid) ? rawPid : null;
 
   let state;
   try {

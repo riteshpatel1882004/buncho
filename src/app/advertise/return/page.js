@@ -19,7 +19,7 @@ export default async function AdReturnPage({ searchParams }) {
   const booking = await prisma.adBooking.findFirst({ where: { orderId, userId: user.id }, select: { id: true } });
   if (!booking) redirect('/advertise');
 
-  // Dodo adds ?payment_id=...&status=... to the return URL. It is only a hint: the payment is re-checked with Dodo.
+  // Our checkout form adds ?payment_id=pay_... after a successful payment. It is only a hint: Razorpay is asked again.
   const rawPid = typeof sp?.payment_id === 'string' ? sp.payment_id : null;
   const paymentId = rawPid && /^[A-Za-z0-9_-]{5,64}$/.test(rawPid) ? rawPid : null;
 

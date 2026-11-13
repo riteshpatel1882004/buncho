@@ -39,7 +39,7 @@ export default function CurrencyDialog({ open, onClose, busyWith, error, inrRupe
       <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
         <div className="min-w-0">
           <h2 id={titleId} className="text-lg font-semibold tracking-tight">How would you like to pay?</h2>
-          <p className="mt-0.5 text-sm text-muted">Choose your currency. You will be taken to a secure payment page.</p>
+          <p className="mt-0.5 text-sm text-muted">Choose your currency. A secure Razorpay payment window will open.</p>
         </div>
         <button
           type="button"
@@ -63,7 +63,7 @@ export default function CurrencyDialog({ open, onClose, busyWith, error, inrRupe
                 {formatMoney(inrRupees * 100, 'INR')}
               </span>
             </span>
-            <span className="mt-0.5 block text-xs text-muted">UPI, cards and net banking. Secure payment by Cashfree.</span>
+            <span className="mt-0.5 block text-xs text-muted">UPI, cards, net banking and wallets. Secure payment by Razorpay.</span>
           </span>
         </button>
 
@@ -71,7 +71,7 @@ export default function CurrencyDialog({ open, onClose, busyWith, error, inrRupe
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-surface-2 text-lg font-semibold">$</span>
           <span className="min-w-0 flex-1">
             <span className="flex items-baseline justify-between gap-3">
-              <span className="font-semibold">Other currency</span>
+              <span className="font-semibold">International <span className="font-normal text-muted">(other currency)</span></span>
               <span className="flex items-center gap-2 font-semibold tabular-nums">
                 {busyWith === 'USD' && <Spinner size={14} />}
                 {formatMoney(usdCents, 'USD')} <span className="text-xs font-medium text-muted">USD</span>
@@ -79,7 +79,7 @@ export default function CurrencyDialog({ open, onClose, busyWith, error, inrRupe
             </span>
             <span className="mt-0.5 block text-xs text-muted">
               {usdEnabled
-                ? 'International cards and wallets. Secure payment by Dodo Payments. Tax may be added.'
+                ? 'International cards, charged in US dollars. Secure payment by Razorpay.'
                 : 'Not available right now. Please pay in INR.'}
             </span>
           </span>
@@ -87,7 +87,7 @@ export default function CurrencyDialog({ open, onClose, busyWith, error, inrRupe
 
         {note && <p className="text-xs text-muted">{note}</p>}
         {error && <p role="alert" className="rounded-lg bg-hard/10 px-3 py-2 text-sm font-medium text-hard">{error}</p>}
-        {busy && <p role="status" className="text-center text-xs text-muted">Opening the payment page…</p>}
+        {busy && <p role="status" className="text-center text-xs text-muted">Opening the payment window…</p>}
       </div>
     </dialog>
   );

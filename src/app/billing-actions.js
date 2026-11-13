@@ -3,8 +3,7 @@
 import crypto from 'node:crypto';
 import { prisma } from '@/lib/prisma';
 import { getOrCreateUser } from '@/lib/user';
-import { CASHFREE_MODE, createCashfreeOrder } from '@/lib/billing';
-import { appUrl, createDodoCheckout, dodoConfigured, proProductId } from '@/lib/dodo';
+import { createRazorpayOrder, razorpayConfigured, razorpayInternational, razorpayKeyId, razorpayMode } from '@/lib/razorpay';
 import { PRO_PLAN_ID } from '@/lib/constants';
 import { getQuote, monthsLabel } from '@/lib/pricing';
 
@@ -39,9 +38,9 @@ export async function previewPrice({ code } = {}) {
 }
 
 /**
- * Creates the payment record and the provider order.
- * INR -> { ok, provider: 'CASHFREE', orderId, paymentSessionId, mode }
- * USD -> { ok, provider: 'DODO', orderId, url }
+ * Creates the payment record and the Razorpay order (INR or USD, the same flow for both).
+ * Returns { ok, provider: 'RAZORPAY', orderId, razorpayOrderId, keyId, amount, currency, name, description, prefill, mode }:
+ * the browser opens Razorpay's checkout window with it, then goes to /billing/return?order_id=... (see CheckoutButton).
  */
 export async function startCheckout({ code, currency } = {}) {
   // Never let an error escape: an uncaught throw in a server action replaces the whole page with "This page couldn't load".
@@ -49,8 +48,10 @@ export async function startCheckout({ code, currency } = {}) {
     const user = await getOrCreateUser();
     if (!user) return { ok: false, error: 'Log in to upgrade.', code: 'AUTH' };
 
+    if (!razorpayConfigured()) return { ok: false, error: 'Payments are not available right now. Please try again later.' };
+
     const cur = asCurrency(currency);
-    if (cur === 'USD' && !dodoConfigured()) {
+    if (cur === 'USD' && !razorpayInternational()) {
       return { ok: false, error: 'Paying in other currencies is not available right now. Please pay in INR.' };
     }
 
@@ -69,7 +70,7 @@ export async function startCheckout({ code, currency } = {}) {
         orderId,
         userId: user.id,
         plan: PRO_PLAN_ID,
-        provider: cur === 'USD' ? 'DODO' : 'CASHFREE',
+        provider: 'RAZORPAY',
         currency: cur,
         amountPaise: q.finalPaise,
         listPaise: q.listPaise,
@@ -81,30 +82,28 @@ export async function startCheckout({ code, currency } = {}) {
     });
 
     try {
-      if (cur === 'USD') {
-        const session = await createDodoCheckout({
-          orderId,
-          amountCents: q.finalPaise,
-          email: user.email,
-          name: user.name,
-          productId: proProductId(),
-          returnUrl: `${appUrl()}/billing/return?order_id=${orderId}`,
-          metadata: { kind: 'pro', user_id: user.id, plan: PRO_PLAN_ID },
-        });
-        await prisma.payment.update({ where: { orderId }, data: { dodoSessionId: session.session_id ?? null } });
-        return { ok: true, provider: 'DODO', orderId, url: session.checkout_url };
-      }
-
-      const order = await createCashfreeOrder({
-        orderId,
-        amountPaise: q.finalPaise,
-        customerId: user.id,
-        email: user.email,
-        name: user.name,
-        note: `${q.settings.proName}, ${monthsLabel(q.months)}`,
+      const order = await createRazorpayOrder({
+        receipt: orderId,
+        amount: q.finalPaise,
+        currency: cur,
+        notes: { order_id: orderId, kind: 'pro', user_id: user.id, plan: PRO_PLAN_ID },
       });
-      if (!order.payment_session_id) throw new Error('No payment session returned.');
-      return { ok: true, provider: 'CASHFREE', orderId, paymentSessionId: order.payment_session_id, mode: CASHFREE_MODE };
+      if (!order?.id) throw new Error('No order returned.');
+      await prisma.payment.update({ where: { orderId }, data: { razorpayOrderId: order.id } });
+
+      return {
+        ok: true,
+        provider: 'RAZORPAY',
+        orderId,
+        razorpayOrderId: order.id,
+        keyId: razorpayKeyId(),
+        amount: q.finalPaise,
+        currency: cur,
+        name: q.settings.proName,
+        description: monthsLabel(q.months),
+        prefill: { ...(user.name && { name: String(user.name).slice(0, 100) }), ...(user.email && { email: user.email }) },
+        mode: razorpayMode(),
+      };
     } catch (err) {
       console.error('[billing] could not create order', err);
       await prisma.payment.update({ where: { orderId }, data: { status: 'FAILED' } }).catch(() => {});

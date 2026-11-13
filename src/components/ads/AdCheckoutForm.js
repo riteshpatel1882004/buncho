@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { startAdCheckout } from '@/app/advertise/actions';
 import AdCard from '@/components/ads/AdCard';
 import Spinner from '@/components/Spinner';
+import { payWithRazorpay } from '@/lib/razorpay-client';
 
 const input =
   'w-full rounded-lg border border-line bg-surface-2/40 px-3 py-2 text-sm outline-none transition focus:border-accent focus:ring-4 focus:ring-accent/15';
@@ -35,10 +36,14 @@ export default function AdCheckoutForm({ slot, priceLabel, defaultEmail = '', si
         const res = await startAdCheckout({ slot, ...v });
         if (!res.ok) return setError(res.error);
         setRedirecting(true);
-        window.location.assign(res.url);
+        // Razorpay's window opens on top of this page. After paying, the return page asks Razorpay before it confirms the booking.
+        const { paymentId } = await payWithRazorpay(res);
+        window.location.assign(`/advertise/return?order=${res.orderId}${paymentId ? `&payment_id=${paymentId}` : ''}`);
       } catch (err) {
-        console.error(err);
-        setError('Something went wrong. Please try again.');
+        if (!err?.dismissed) console.error(err);
+        setRedirecting(false);
+        // Closing the window is not an error. The booking stays unpaid, and pressing the button again starts a fresh payment.
+        setError(err?.dismissed ? err.message || null : err?.message || 'Something went wrong. Please try again.');
       }
     });
   }
@@ -98,7 +103,7 @@ export default function AdCheckoutForm({ slot, priceLabel, defaultEmail = '', si
             className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-accent-ink hover:opacity-90 disabled:cursor-wait disabled:opacity-60"
           >
             {busy && <Spinner size={14} />}
-            {redirecting ? 'Opening secure checkout…' : pending ? 'Please wait…' : `Continue to payment · ${priceLabel} for 1 month`}
+            {redirecting ? 'Waiting for payment…' : pending ? 'Please wait…' : `Continue to payment · ${priceLabel} for 1 month`}
           </button>
         ) : (
           <a href={loginHref} className="inline-flex w-full items-center justify-center rounded-xl bg-accent px-5 py-3 text-sm font-semibold text-accent-ink hover:opacity-90">
@@ -107,7 +112,7 @@ export default function AdCheckoutForm({ slot, priceLabel, defaultEmail = '', si
         )}
 
         <p className="text-xs text-muted">
-          You will pay on Dodo Payments&rsquo; secure checkout. Tax may be added depending on your country. We review every banner
+          You will pay in a secure Razorpay window, in US dollars (international cards work). We review every banner
           before it goes live, and it runs for 1 month from the day it is approved.
         </p>
       </div>
