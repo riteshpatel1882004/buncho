@@ -513,6 +513,7 @@ html, body { overflow-x: clip; }
 .doc ul { list-style: disc; }
 .doc ol { list-style: decimal; }
 .doc li > p { margin: .2rem 0; }
+.doc li > ul, .doc li > ol { margin: .3rem 0 .2rem; }
 .doc blockquote { border-left: 3px solid var(--line); padding-left: 1rem; color: var(--muted); margin: .9rem 0; }
 .doc hr { border: 0; border-top: 1px solid var(--line); margin: 1.6rem 0; }
 .doc code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .88em; background: var(--surface-2); border-radius: .35rem; padding: .1em .35em; }
@@ -534,7 +535,24 @@ html, body { overflow-x: clip; }
 .doc .tok-decorator { color: var(--tok-decorator); }
 .doc .tok-constant { color: var(--tok-constant); }
 .doc .tok-self { color: var(--tok-self); font-style: italic; }
-.doc img { max-width: 100%; height: auto; border-radius: .6rem; margin: .8rem 0; }
+/* Images: always centred. The width is the percentage chosen in the editor (--img-size), 60% when none was chosen. */
+.doc img { display: block; width: var(--img-size, 60%); max-width: 100%; height: auto; border-radius: .6rem; margin: 1.1rem auto; }
+@media (max-width: 640px) { .doc img { width: max(var(--img-size, 60%), 88%); } } /* on a phone a small image would be unreadable */
+/* Inside the editor the image sits in a wrapper that carries the size, so it can show drag handles */
+.doc .doc-img { position: relative; display: block; width: var(--img-size, 60%); max-width: 100%; margin: 1.1rem auto; line-height: 0; }
+.doc .doc-img img { width: 100%; margin: 0; }
+.doc .doc-img.is-selected img { outline: 2px solid var(--accent); outline-offset: 2px; }
+.doc .doc-img-ui { display: none; }
+.doc .doc-img.is-selected .doc-img-ui, .doc .doc-img.is-resizing .doc-img-ui { display: block; }
+.doc .ProseMirror[contenteditable='false'] .doc-img-ui { display: none !important; }
+.doc .doc-img-handle { position: absolute; top: 50%; width: .6rem; height: 3rem; margin-top: -1.5rem; border-radius: 999px; background: var(--accent); border: 2px solid var(--surface); cursor: ew-resize; touch-action: none; z-index: 4; }
+.doc .doc-img-handle.is-left { left: -.35rem; }
+.doc .doc-img-handle.is-right { right: -.35rem; }
+.doc .doc-img-bar { position: absolute; left: 50%; bottom: .6rem; transform: translateX(-50%); display: flex; align-items: center; gap: .15rem; padding: .2rem; background: var(--surface); border: 1px solid var(--line); border-radius: .7rem; box-shadow: 0 6px 20px rgb(0 0 0 / .25); z-index: 5; font: 600 .75rem/1 var(--font-sans, system-ui, sans-serif); }
+.doc .doc-img-bar button { border: 0; background: transparent; color: var(--muted); border-radius: .5rem; padding: .35rem .55rem; cursor: pointer; }
+.doc .doc-img-bar button:hover { background: var(--surface-2); color: var(--ink); }
+.doc .doc-img-bar button.is-on { background: var(--accent-soft); color: var(--accent); }
+.doc .doc-img-badge { padding: 0 .45rem; color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
 .doc mark { border-radius: .25rem; padding: 0 .12em; }
 .doc .tableWrapper { margin: 1rem 0; overflow-x: auto; }
 .doc table { border-collapse: collapse; table-layout: fixed; width: 100%; margin: 0; }
@@ -645,6 +663,15 @@ html, body { overflow-x: clip; }
   border-radius: 999px;
   background: var(--muted);
 }
+
+/* Sub-points: a bullet can carry its own 2-3 points. Each level is a little smaller and quieter than the one above. */
+.q-read .doc li > ul:not([data-type='taskList']), .q-read .doc li > ol { margin: .45rem 0 .25rem; }
+.q-read .doc li li { margin: .35rem 0; font-size: .96em; }
+.q-read .doc ul:not([data-type='taskList']) ul:not([data-type='taskList']) > li::before { width: .3rem; height: .3rem; background: transparent; border: 1.5px solid var(--muted); }
+.q-read .doc ul:not([data-type='taskList']) ul:not([data-type='taskList']) ul:not([data-type='taskList']) > li::before { width: .4rem; height: 2px; top: .95em; border: 0; border-radius: 1px; background: var(--muted); }
+.q-read .doc li li, .q-read .doc li li p { color: color-mix(in srgb, var(--ink) 82%, var(--muted)); }
+/* an image inside a point stays centred in that point */
+.q-read .doc li > img { margin: .8rem auto; }
 
 /* Numbered lists: neutral circles */
 .q-read .doc ol { list-style: none; counter-reset: q; padding-left: 0; margin: 1rem 0; }

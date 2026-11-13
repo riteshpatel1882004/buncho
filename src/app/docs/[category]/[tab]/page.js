@@ -5,7 +5,7 @@ import { getOrCreateUser } from '@/lib/user';
 import { isAdmin } from '@/lib/admin';
 import { CATEGORIES, categoryOf } from '@/lib/categories';
 import { getTab, getTabs, getTabsForAdmin, readSettings } from '@/lib/docs/store';
-import { EMPTY_DOC, ensureHeadingIds, extractQuestions, isDoc } from '@/lib/docs/tree';
+import { EMPTY_DOC, continueNumbering, ensureHeadingIds, extractQuestions, isDoc } from '@/lib/docs/tree';
 import { buildExtensions } from '@/lib/docs/extensions';
 import DocTabs from '@/components/docs/DocTabs';
 import DocEditor from '@/components/docs/DocEditor';
@@ -41,7 +41,7 @@ export default async function DocTabPage({ params }) {
   const doc = isDoc(tab.content) ? ensureHeadingIds(tab.content) : EMPTY_DOC;
   const questions = extractQuestions(doc); // the sub-topics shown under the open topic
   const count = questions.length;
-  const html = admin ? null : enhanceDocHtml(generateHTML(doc, buildExtensions()));
+  const html = admin ? null : enhanceDocHtml(generateHTML({ ...doc, content: continueNumbering(doc.content) }, buildExtensions()));
 
   return (
     <DocLayout

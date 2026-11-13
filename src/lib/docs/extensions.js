@@ -237,6 +237,155 @@ const PythonColors = Extension.create({
   },
 });
 
+// ---------- Images: centred, resizable, and the chosen size is what readers see ----------
+// The size is a percentage of the page width (not pixels), so it looks the same on every screen. A new image starts at 60%:
+// big enough to read a diagram, small enough not to dominate the answer. Old images without a size get the same default.
+export const IMG_DEFAULT = 60;
+export const IMG_MIN = 15;
+export const IMG_MAX = 100;
+export const IMG_PRESETS = [
+  ['S', 35, 'Small'],
+  ['M', 60, 'Medium'],
+  ['L', 85, 'Large'],
+  ['Full', 100, 'Full width'],
+];
+export function cleanImgSize(value) {
+  const n = Math.round(Number(value));
+  return Number.isFinite(n) && n > 0 ? Math.min(IMG_MAX, Math.max(IMG_MIN, n)) : IMG_DEFAULT;
+}
+
+const ResizableImage = Image.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      size: {
+        default: IMG_DEFAULT,
+        parseHTML: (el) => cleanImgSize(el.getAttribute('data-size')),
+        renderHTML: (attrs) => {
+          const size = cleanImgSize(attrs.size);
+          return { 'data-size': String(size), style: `--img-size:${size}%` };
+        },
+      },
+    };
+  },
+
+  // Editor only: the image gets drag handles on both sides and a small S / M / L / Full bar while it is selected.
+  // Plain DOM on purpose, so this file stays free of React. It is never called on the server (generateHTML uses renderHTML).
+  addNodeView() {
+    return ({ node, editor, getPos }) => {
+      let current = node;
+      const dom = document.createElement('div');
+      dom.className = 'doc-img';
+
+      const img = document.createElement('img');
+      img.draggable = false;
+      dom.appendChild(img);
+
+      const ui = document.createElement('div');
+      ui.className = 'doc-img-ui';
+      ui.contentEditable = 'false';
+      dom.appendChild(ui);
+
+      const badge = document.createElement('span');
+      badge.className = 'doc-img-badge';
+
+      const paint = (size) => {
+        dom.style.setProperty('--img-size', `${size}%`);
+        badge.textContent = `${size}%`;
+        ui.querySelectorAll('[data-preset]').forEach((b) => b.classList.toggle('is-on', Number(b.dataset.preset) === size));
+      };
+
+      const commit = (size) => {
+        const pos = getPos();
+        if (typeof pos !== 'number' || !editor.isEditable) return;
+        const next = cleanImgSize(size);
+        editor.view.dispatch(editor.view.state.tr.setNodeMarkup(pos, undefined, { ...current.attrs, size: next }));
+      };
+
+      const bar = document.createElement('div');
+      bar.className = 'doc-img-bar';
+      IMG_PRESETS.forEach(([label, value, title]) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.textContent = label;
+        b.title = `${title} (${value}%)`;
+        b.dataset.preset = String(value);
+        b.addEventListener('mousedown', (e) => e.preventDefault());
+        b.addEventListener('click', (e) => {
+          e.preventDefault();
+          commit(value);
+        });
+        bar.appendChild(b);
+      });
+      bar.appendChild(badge);
+      ui.appendChild(bar);
+
+      // One handle per side. The image stays centred, so dragging a side by N px changes the width by 2N px.
+      [-1, 1].forEach((side) => {
+        const h = document.createElement('span');
+        h.className = `doc-img-handle ${side < 0 ? 'is-left' : 'is-right'}`;
+        h.title = 'Drag to resize';
+        h.addEventListener('pointerdown', (e) => {
+          if (!editor.isEditable) return;
+          e.preventDefault();
+          e.stopPropagation();
+          h.setPointerCapture?.(e.pointerId);
+          const startX = e.clientX;
+          const startPx = dom.getBoundingClientRect().width;
+          const room = dom.parentElement?.clientWidth || startPx;
+          let size = cleanImgSize(current.attrs.size);
+          const prevSelect = document.body.style.userSelect;
+          document.body.style.userSelect = 'none';
+          dom.classList.add('is-resizing');
+
+          const move = (ev) => {
+            size = cleanImgSize(((startPx + side * (ev.clientX - startX) * 2) / room) * 100);
+            paint(size);
+          };
+          const up = () => {
+            h.removeEventListener('pointermove', move);
+            h.removeEventListener('pointerup', up);
+            h.removeEventListener('pointercancel', up);
+            document.body.style.userSelect = prevSelect;
+            dom.classList.remove('is-resizing');
+            commit(size);
+          };
+          h.addEventListener('pointermove', move);
+          h.addEventListener('pointerup', up);
+          h.addEventListener('pointercancel', up);
+        });
+        ui.appendChild(h);
+      });
+
+      const sync = () => {
+        img.src = current.attrs.src;
+        img.alt = current.attrs.alt ?? '';
+        if (current.attrs.title) img.title = current.attrs.title;
+        paint(cleanImgSize(current.attrs.size));
+      };
+      sync();
+
+      return {
+        dom,
+        update(updated) {
+          if (updated.type !== current.type) return false;
+          current = updated;
+          sync();
+          return true;
+        },
+        selectNode() {
+          dom.classList.add('is-selected');
+        },
+        deselectNode() {
+          dom.classList.remove('is-selected');
+        },
+        stopEvent: (e) => Boolean(e.target?.closest?.('.doc-img-ui')),
+        ignoreMutation: () => true,
+      };
+    };
+  },
+});
+
 export function buildExtensions({ placeholder } = {}) {
   return [
     StarterKit.configure({ heading: false, code: false, codeBlock: false, link: { openOnClick: false, autolink: true, HTMLAttributes: { rel: 'noopener noreferrer nofollow', target: '_blank' } } }),
@@ -246,7 +395,7 @@ export function buildExtensions({ placeholder } = {}) {
     InlineCode,
     PythonCodeBlock,
     PythonColors,
-    Image.configure({ allowBase64: true }),
+    ResizableImage.configure({ allowBase64: true }),
     TextStyle,
     Color,
     Highlight.configure({ multicolor: true }),

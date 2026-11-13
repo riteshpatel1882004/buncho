@@ -124,3 +124,33 @@ export function teaser(nodes, max = 220) {
 export function isDoc(value) {
   return Boolean(value) && typeof value === 'object' && value.type === 'doc' && Array.isArray(value.content);
 }
+
+/**
+ * Keeps a numbered list counting when an image (or an empty line) sits between two of its parts.
+ * Pasting an image between "1." and "2." splits the list in two, and the second half would start again at 1.
+ * Only top-level lists are touched, and only when the second list has no start number of its own.
+ * Does not mutate. Used on the server before the document is turned into HTML.
+ */
+export function continueNumbering(nodes) {
+  const out = [];
+  let lastEnd = null; // the number the previous top-level numbered list ended on
+  for (const n of nodes ?? []) {
+    if (n?.type === 'orderedList') {
+      const explicit = Number(n.attrs?.start);
+      let start = Number.isFinite(explicit) && explicit > 0 ? explicit : 1;
+      let node = n;
+      if (lastEnd !== null && start === 1) {
+        start = lastEnd + 1;
+        node = { ...n, attrs: { ...n.attrs, start } };
+      }
+      lastEnd = start + (n.content ?? []).length - 1;
+      out.push(node);
+    } else if (n?.type === 'image' || (n?.type === 'paragraph' && !(n.content ?? []).length)) {
+      out.push(n); // images and blank lines do not end a numbered list
+    } else {
+      lastEnd = null;
+      out.push(n);
+    }
+  }
+  return out;
+}

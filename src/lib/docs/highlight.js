@@ -75,6 +75,7 @@ const unesc = (s) => s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quo
 /**
  * Takes the HTML made by generateHTML and
  *  - colours every <pre><code> block (they are all Python)
+ *  - keeps the number of a numbered list that does not start at 1
  *  - wraps every <table> in .tableWrapper so wide or resized tables scroll sideways instead of breaking the page
  */
 export function enhanceDocHtml(html) {
@@ -85,6 +86,12 @@ export function enhanceDocHtml(html) {
         .map((t) => (t.type === 'plain' ? esc(t.text) : `<span class="tok-${t.type}">${esc(t.text)}</span>`))
         .join('');
       return `<pre${preAttrs}><code${codeAttrs}>${inner}</code></pre>`;
+    })
+    // A numbered list that starts at 2, 3... (for example the second half of a list split by an image) must count from
+    // there. The reader draws its own number circles with a CSS counter, which ignores the `start` attribute, so pass it on.
+    .replace(/<ol((?:\s[^>]*?)?)\sstart="(\d+)"([^>]*)>/g, (_all, a, n, b) => {
+      const style = ` style="counter-reset:q ${Math.max(0, Number(n) - 1)}"`;
+      return /\sstyle=/.test(a + b) ? `<ol${a} start="${n}"${b}>` : `<ol${a} start="${n}"${b}${style}>`;
     })
     .replace(/<table/g, '<div class="tableWrapper"><table')
     .replace(/<\/table>/g, '</table></div>');

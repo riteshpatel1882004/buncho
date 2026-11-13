@@ -7,7 +7,7 @@ import { isAdmin } from '@/lib/admin';
 import { getIsPro } from '@/lib/subscription';
 import { canAccessProblem } from '@/lib/pro-access';
 import { CATEGORIES, categoryOf, problemHref } from '@/lib/categories';
-import { extractQuestions, findQuestion, isDoc, plainText, teaser } from '@/lib/docs/tree';
+import { continueNumbering, extractQuestions, findQuestion, isDoc, plainText, teaser } from '@/lib/docs/tree';
 import { readSettings } from '@/lib/docs/store';
 import { buildExtensions } from '@/lib/docs/extensions';
 import { enhanceDocHtml } from '@/lib/docs/highlight';
@@ -98,7 +98,7 @@ export default async function QuestionPage({ params }) {
       ])
     : [null, null];
 
-  const html = open ? enhanceDocHtml(generateHTML({ type: 'doc', content: found.body.length ? found.body : [{ type: 'paragraph' }] }, buildExtensions())) : null;
+  const html = open ? enhanceDocHtml(generateHTML({ type: 'doc', content: found.body.length ? continueNumbering(found.body) : [{ type: 'paragraph' }] }, buildExtensions())) : null;
   const hint = open ? '' : teaser(found.body);
   const hasAnswer = found.body.some((n) => plainText(n).trim() || n.type !== 'paragraph');
 

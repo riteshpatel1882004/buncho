@@ -108,6 +108,16 @@ const I = {
       <path d="M4 20h4L19 9l-4-4L4 16v4zM13.5 6.5l4 4" />
     </Icon>
   ),
+  indent: (
+    <Icon>
+      <path d="M3 6h18M12 12h9M12 18h9M3 10l4 3-4 3" />
+    </Icon>
+  ),
+  outdent: (
+    <Icon>
+      <path d="M3 6h18M12 12h9M12 18h9M7 10l-4 3 4 3" />
+    </Icon>
+  ),
   caret: (
     <Icon size={12}>
       <path d="M6 9l6 6 6-6" />
@@ -410,6 +420,10 @@ export default function DocEditor({ slug, title, initialCount, initialContent, i
   if (!editor) return <div className="h-64 animate-pulse rounded-xl bg-surface-2" />;
 
   const chain = () => editor.chain().focus();
+  // Sub-points: push the current list item one level in (it becomes a point under the item above), or bring it back out
+  const itemType = () => (editor.isActive('taskItem') ? 'taskItem' : 'listItem');
+  const indentItem = () => chain().sinkListItem(itemType()).run();
+  const outdentItem = () => chain().liftListItem(itemType()).run();
   const run = (fn) => () => {
     fn();
     closeMenu();
@@ -547,6 +561,14 @@ export default function DocEditor({ slug, title, initialCount, initialContent, i
               </MenuItem>
               <MenuItem icon={I.check} active={editor.isActive('taskList')} onClick={run(() => chain().toggleTaskList().run())}>
                 Checklist
+              </MenuItem>
+              <div className="my-1 border-t border-line" />
+              <Label>Sub-points (Tab / Shift+Tab)</Label>
+              <MenuItem icon={I.indent} onClick={run(() => indentItem())}>
+                Make it a sub-point
+              </MenuItem>
+              <MenuItem icon={I.outdent} onClick={run(() => outdentItem())}>
+                Move it back out
               </MenuItem>
             </Menu>
           </div>
@@ -738,6 +760,7 @@ export default function DocEditor({ slug, title, initialCount, initialContent, i
                   >
                     From a link
                   </MenuItem>
+                  <p className="max-w-52 px-2.5 pb-1 pt-1.5 text-xs text-muted">You can also paste or drop an image. Click it to pick S / M / L / Full, or drag its sides.</p>
                 </Menu>
                 <input
                   ref={fileRef}
@@ -803,6 +826,12 @@ export default function DocEditor({ slug, title, initialCount, initialContent, i
                   </MenuItem>
                   <MenuItem icon={<span className="text-xs">1.</span>} onClick={run(() => chain().toggleOrderedList().run())}>
                     Numbered list
+                  </MenuItem>
+                  <MenuItem icon={I.indent} onClick={run(() => indentItem())}>
+                    Sub-point (indent, Tab)
+                  </MenuItem>
+                  <MenuItem icon={I.outdent} onClick={run(() => outdentItem())}>
+                    Move out (Shift+Tab)
                   </MenuItem>
                   <MenuItem icon={<span className="text-xs">❝</span>} onClick={run(() => chain().toggleBlockquote().run())}>
                     Quote
