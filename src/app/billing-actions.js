@@ -7,7 +7,7 @@ import { createRazorpayOrder, razorpayConfigured, razorpayInternational, razorpa
 import { PRO_PLAN_ID } from '@/lib/constants';
 import { getQuote, monthsLabel } from '@/lib/pricing';
 
-const MAX_PENDING_PER_HOUR = 5;
+
 const asCurrency = (c) => (c === 'USD' ? 'USD' : 'INR');
 
 /**
@@ -73,10 +73,6 @@ export async function startCheckout({ code, currency } = {}) {
     if (!q.settings.checkoutOpen) return { ok: false, error: 'Upgrades are paused right now. Please try again later.' };
     if (q.error) return { ok: false, error: q.error };
 
-    const recent = await prisma.payment.count({
-      where: { userId: user.id, status: 'PENDING', createdAt: { gte: new Date(Date.now() - 3600 * 1000) } },
-    });
-    if (recent >= MAX_PENDING_PER_HOUR) return { ok: false, error: 'Too many payment attempts. Please try again in a while.' };
 
     const orderId = `bnc_${crypto.randomUUID().replace(/-/g, '')}`;
     await prisma.payment.create({
