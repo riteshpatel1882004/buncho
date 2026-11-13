@@ -12,7 +12,7 @@ export const PRO_PRICE_USD_CENTS = 299;
 
 // The lowest amount we will charge after any discount, in minor units. ₹1 for INR, $0.10 for USD.
 // (A 99% promo code on $2.99 used to be lifted back up to $1. Now it can go all the way down to $0.10.)
-export const USD_MIN_CENTS = 10;
+export const USD_MIN_CENTS = 100;
 const MIN_MINOR = { INR: 100, USD: USD_MIN_CENTS };
 
 // Which payment currency a promo code works for. Stored as a plain string on DiscountCode.currencies.
