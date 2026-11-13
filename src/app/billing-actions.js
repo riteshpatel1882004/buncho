@@ -10,7 +10,10 @@ import { getQuote, monthsLabel } from '@/lib/pricing';
 const MAX_PENDING_PER_HOUR = 5;
 const asCurrency = (c) => (c === 'USD' ? 'USD' : 'INR');
 
-/** Checks a promo code and returns the price the buyer would pay in each currency. Nothing is created. */
+/**
+ * Checks a promo code and returns the price the buyer would pay in each currency. Nothing is created.
+ * A code can be limited by the admin to INR or USD, so the answer says where it applies (appliesTo).
+ */
 export async function previewPrice({ code } = {}) {
   try {
     const user = await getOrCreateUser();
@@ -20,16 +23,27 @@ export async function previewPrice({ code } = {}) {
       getQuote({ userId: user.id, code, currency: 'INR' }),
       getQuote({ userId: user.id, code, currency: 'USD' }),
     ]);
-    if (inr.error) return { ok: false, error: inr.error };
-    if (inr.source !== 'code') return { ok: false, error: 'Enter a promo code.' };
+    const inrOn = inr.source === 'code';
+    const usdOn = usd.source === 'code';
 
-    const usdApplies = usd.source === 'code';
+    if (!inrOn && !usdOn) {
+      // Prefer "not valid / expired / used" over "wrong currency" when both are reported.
+      const worst = [inr, usd].find((q) => q.error && q.errorKind !== 'currency') ?? inr;
+      return { ok: false, error: worst.error || 'Enter a promo code.' };
+    }
+
+    const winner = inrOn ? inr : usd;
+    const scope = inrOn && usdOn ? '' : inrOn ? ' (INR payments only)' : ' (USD payments only)';
     return {
       ok: true,
-      code: inr.code,
+      code: winner.code,
+      appliesTo: { INR: inrOn, USD: usdOn },
       inrRupees: Math.round(inr.finalPaise / 100),
+      listInrRupees: Math.round(inr.listPaise / 100),
       usdCents: usd.finalPaise,
-      message: `${inr.code} applied: ${inr.dealLabel}${usdApplies ? '' : ' (INR payments only)'}`,
+      listUsdCents: usd.listPaise,
+      bonusDays: winner.bonusDays,
+      message: `${winner.code} applied: ${winner.dealLabel}${scope}`,
     };
   } catch (err) {
     console.error('[billing] previewPrice failed', err);

@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { getOrCreateUser } from '@/lib/user';
 import { isAdmin } from '@/lib/admin';
-import { OFFER_TYPES, normalizeCode } from '@/lib/pricing';
+import { CODE_CURRENCIES, OFFER_TYPES, normalizeCode } from '@/lib/pricing';
 
 /* Every export is a public endpoint, so each one re-checks admin rights on the server. */
 
@@ -95,6 +95,8 @@ export async function createCode(formData) {
   const code = normalizeCode(formData.get('code'));
   const type = String(formData.get('type') ?? '');
   const value = int(formData, 'value');
+  const currenciesRaw = String(formData.get('currencies') ?? 'BOTH');
+  const currencies = CODE_CURRENCIES[currenciesRaw] ? currenciesRaw : 'BOTH'; // BOTH | INR | USD
   const startsAt = parseIst(formData.get('startsAt'));
   const expiresAt = parseIst(formData.get('expiresAt'));
   const maxRaw = String(formData.get('maxRedemptions') ?? '').trim();
@@ -108,6 +110,7 @@ export async function createCode(formData) {
   if (code.length < 3) back('error', 'A code needs at least 3 letters or numbers.');
   const problem = checkDeal(type, value, priceInr);
   if (problem) back('error', problem);
+  if (type === 'FLAT_OFF' && currencies !== 'INR') back('error', 'A flat ₹ off code can only work for INR. Set "Works for" to INR payments only, or use Percent off.');
   if (startsAt === undefined || expiresAt === undefined) back('error', 'A date is not valid.');
   if (startsAt && expiresAt && expiresAt <= startsAt) back('error', 'The end date must be after the start date.');
   if (maxRedemptions !== null && (!Number.isInteger(maxRedemptions) || maxRedemptions < 1)) back('error', 'Max uses must be 1 or more, or empty for unlimited.');
@@ -116,7 +119,7 @@ export async function createCode(formData) {
   let message = null;
   try {
     await prisma.discountCode.create({
-      data: { code, type, value, startsAt, expiresAt, maxRedemptions, perUserLimit, note: note || null },
+      data: { code, type, value, currencies, startsAt, expiresAt, maxRedemptions, perUserLimit, note: note || null },
     });
   } catch (err) {
     message = err?.code === 'P2002' ? 'That code already exists.' : 'Could not create the code.';

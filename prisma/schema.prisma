@@ -335,6 +335,7 @@ model DiscountCode {
   maxRedemptions Int? // null = unlimited
   perUserLimit   Int       @default(1)
   redeemedCount  Int       @default(0)
+  currencies     String    @default("BOTH") // which payment currency it works for: BOTH, INR or USD
   note           String?
   createdAt      DateTime  @default(now())
 }

@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { getOrCreateUser } from '@/lib/user';
 import { isAdmin } from '@/lib/admin';
-import { OFFER_TYPES, describeDeal, getBillingSettings, monthsLabel } from '@/lib/pricing';
+import { CODE_CURRENCIES, OFFER_TYPES, USD_MIN_CENTS, describeDeal, getBillingSettings, monthsLabel } from '@/lib/pricing';
 import { formatMoney } from '@/lib/money';
 import PendingButton from '@/components/PendingButton';
 import { createCode, deleteCode, saveSettings, toggleCode } from './actions';
@@ -48,7 +48,15 @@ const STATUS_BADGE = {
   FAILED: ['Failed', 'bg-hard/15 text-hard'],
 };
 
-const PROVIDER_LABEL = { CASHFREE: 'Cashfree', DODO: 'Dodo Payments' };
+const PROVIDER_LABEL = { RAZORPAY: 'Razorpay', CASHFREE: 'Cashfree', DODO: 'Dodo Payments' };
+
+const SCOPE_STYLE = {
+  BOTH: 'bg-accent-soft text-accent',
+  INR: 'bg-medium/15 text-medium',
+  USD: 'bg-surface-2 text-ink',
+};
+
+const idOf = (p) => (p.provider === 'DODO' ? p.dodoPaymentId : p.provider === 'CASHFREE' ? p.cfPaymentId : p.razorpayPaymentId);
 
 function Card({ id, title, hint, children }) {
   return (
@@ -164,7 +172,7 @@ export default async function AdminBillingPage({ searchParams }) {
 
       <div className="mt-8 space-y-8">
         {/* Recent payments */}
-        <Card id="recent-payments" title="Recent payments" hint="Pro payments from Cashfree (INR) and Dodo Payments (other currency), newest first. Shows the last 50 in the selected tab.">
+        <Card id="recent-payments" title="Recent payments" hint="Pro payments (INR and USD through Razorpay), newest first. Shows the last 50 in the selected tab.">
           <nav aria-label="Payment lists" className="flex gap-1 overflow-x-auto border-b border-line">
             {PAY_TABS.map((t) => {
               const on = payTab.id === t.id;
@@ -188,7 +196,7 @@ export default async function AdminBillingPage({ searchParams }) {
               {payments.map((p) => {
                 const [statusLabel, statusStyle] = STATUS_BADGE[p.status] ?? [p.status, 'bg-surface-2 text-muted'];
                 const providerLabel = PROVIDER_LABEL[p.provider] ?? p.provider;
-                const paymentId = p.provider === 'DODO' ? p.dodoPaymentId : p.cfPaymentId;
+                const paymentId = idOf(p);
                 return (
                   <li key={p.id} className="rounded-2xl border border-line bg-surface-2/30 p-4 sm:p-5">
                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -242,7 +250,7 @@ export default async function AdminBillingPage({ searchParams }) {
         </Card>
         
         {/* Price and site-wide offer */}
-        <Card title="Pro price and site-wide offer" hint="The offer applies to everyone automatically. A promo code replaces it (they do not stack). The lowest price is ₹1 or $1. Flat ₹ offers apply to INR payments only.">
+        <Card title="Pro price and site-wide offer" hint={`The offer applies to everyone automatically. A promo code replaces it (they do not stack). After any discount the lowest price is ₹1 for INR and $${(USD_MIN_CENTS / 100).toFixed(2)} for USD. Flat ₹ offers apply to INR payments only.`}>
           <form action={saveSettings} className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-4">
               <div>
@@ -299,7 +307,7 @@ export default async function AdminBillingPage({ searchParams }) {
         </Card>
 
         {/* Promo codes */}
-        <Card title="Promo codes" hint="Buyers type these on the pricing page. The discount is applied before payment.">
+        <Card title="Promo codes" hint="Buyers type these on the pricing page. The discount is applied before payment. Choose whether a code works for INR payments, USD payments or both. Flat ₹ codes work in INR only.">
           <form action={createCode} className="grid gap-4 rounded-xl border border-line p-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <label htmlFor="code" className={label}>Code</label>
@@ -312,6 +320,14 @@ export default async function AdminBillingPage({ searchParams }) {
             <div>
               <label htmlFor="value" className={label}>Value</label>
               <input id="value" name="value" type="number" min={1} required className={`${input} mt-1.5`} />
+            </div>
+            <div>
+              <label htmlFor="currencies" className={label}>Works for</label>
+              <select id="currencies" name="currencies" defaultValue="BOTH" className={`${input} mt-1.5`}>
+                {Object.entries(CODE_CURRENCIES).map(([k, v]) => (
+                  <option key={k} value={k}>{k === 'BOTH' ? `Both (${v})` : `${v.replace(' only', '')} payments only`}</option>
+                ))}
+              </select>
             </div>
             <div>
               <label htmlFor="perUserLimit" className={label}>Uses per person</label>
@@ -329,7 +345,7 @@ export default async function AdminBillingPage({ searchParams }) {
               <label htmlFor="expiresAt" className={label}>Expires (India time)</label>
               <input id="expiresAt" name="expiresAt" type="datetime-local" className={`${input} mt-1.5`} />
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <label htmlFor="note" className={label}>Note for you (optional)</label>
               <input id="note" name="note" maxLength={120} className={`${input} mt-1.5`} />
             </div>
@@ -344,7 +360,7 @@ export default async function AdminBillingPage({ searchParams }) {
                 <thead className="text-xs text-muted">
                   <tr>
                     <th className="py-2 pr-3 font-medium">Code</th>
-                    <th className="py-2 pr-3 font-medium">Deal</th>
+                    <th className="py-2 pr-3 font-medium">Deal and currency</th>
                     <th className="py-2 pr-3 font-medium">Used</th>
                     <th className="py-2 pr-3 font-medium">Valid</th>
                     <th className="py-2 pr-3 font-medium">Status</th>
@@ -358,7 +374,14 @@ export default async function AdminBillingPage({ searchParams }) {
                         <p className="font-semibold tracking-wide">{c.code}</p>
                         {c.note && <p className="text-xs text-muted">{c.note}</p>}
                       </td>
-                      <td className="py-3 pr-3">{describeDeal(c.type, c.value)}</td>
+                      <td className="py-3 pr-3">
+                        {describeDeal(c.type, c.value)}
+                        <p className="mt-1">
+                          <span className={`rounded-full px-2 py-0.5 text-[0.7rem] font-semibold ${SCOPE_STYLE[c.currencies ?? 'BOTH'] ?? SCOPE_STYLE.BOTH}`}>
+                            {CODE_CURRENCIES[c.currencies ?? 'BOTH'] ?? CODE_CURRENCIES.BOTH}
+                          </span>
+                        </p>
+                      </td>
                       <td className="py-3 pr-3 tabular-nums">
                         {c.redeemedCount}{c.maxRedemptions != null ? ` / ${c.maxRedemptions}` : ''}
                         <p className="text-xs text-muted">{c.perUserLimit} per person</p>

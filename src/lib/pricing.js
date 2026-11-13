@@ -9,7 +9,19 @@ export const OFFER_TYPES = {
 };
 
 export const PRO_PRICE_USD_CENTS = 299;
-const MIN_MINOR = 100; // ₹1 or $1: the lowest price the payment providers can charge
+
+// The lowest amount we will charge after any discount, in minor units. ₹1 for INR, $0.10 for USD.
+// (A 99% promo code on $2.99 used to be lifted back up to $1. Now it can go all the way down to $0.10.)
+export const USD_MIN_CENTS = 10;
+const MIN_MINOR = { INR: 100, USD: USD_MIN_CENTS };
+
+// Which payment currency a promo code works for. Stored as a plain string on DiscountCode.currencies.
+export const CODE_CURRENCIES = {
+  BOTH: 'INR and USD',
+  INR: 'INR only',
+  USD: 'USD only',
+};
+export const codeAllowsCurrency = (scope, currency) => !scope || scope === 'BOTH' || scope === currency;
 
 export const monthsLabel = (n) => (n === 1 ? '1 month' : `${n} months`);
 export const normalizeCode = (s) => String(s ?? '').toUpperCase().replace(/[^A-Z0-9_-]/g, '').slice(0, 24);
@@ -73,12 +85,13 @@ const worksIn = (currency, type) => currency === 'INR' || type !== 'FLAT_OFF';
 
 /** Discount in minor units (paise or cents). INR percent discounts stay in whole rupees. */
 function dealFor(type, value, listMinor, currency) {
+  const minMinor = MIN_MINOR[currency] ?? 100;
   if (type === 'PERCENT_OFF') {
     const pct = Math.min(value, 99);
     const discountMinor = currency === 'INR' ? Math.round(((listMinor / 100) * pct) / 100) * 100 : Math.round((listMinor * pct) / 100);
     return { discountMinor, bonusDays: 0 };
   }
-  if (type === 'FLAT_OFF') return { discountMinor: Math.max(0, Math.min(value * 100, listMinor - MIN_MINOR)), bonusDays: 0 };
+  if (type === 'FLAT_OFF') return { discountMinor: Math.max(0, Math.min(value * 100, listMinor - minMinor)), bonusDays: 0 };
   if (type === 'EXTRA_DAYS') return { discountMinor: 0, bonusDays: value };
   return { discountMinor: 0, bonusDays: 0 };
 }
@@ -114,13 +127,20 @@ export async function getQuote({ userId = null, code = '', currency = 'INR' } = 
   let source = null;
   let usedCode = null;
   let error = null;
+  let errorKind = null; // 'invalid' (bad code) or 'currency' (good code, but not for this currency)
 
   if (String(code ?? '').trim()) {
     const found = await findUsableCode(code, userId);
     if (!found.ok) {
       error = found.error;
+      errorKind = 'invalid';
+    } else if (!codeAllowsCurrency(found.row.currencies, cur)) {
+      const only = found.row.currencies === 'INR' ? 'INR' : 'USD';
+      error = `That code only works when paying in ${only}.`;
+      errorKind = 'currency';
     } else if (!worksIn(cur, found.row.type)) {
       error = 'That code only works when paying in INR.';
+      errorKind = 'currency';
     } else {
       deal = { type: found.row.type, value: found.row.value };
       source = 'code';
@@ -133,7 +153,9 @@ export async function getQuote({ userId = null, code = '', currency = 'INR' } = 
   }
 
   const { discountMinor, bonusDays } = deal ? dealFor(deal.type, deal.value, listMinor, cur) : { discountMinor: 0, bonusDays: 0 };
-  const finalMinor = Math.max(MIN_MINOR, listMinor - discountMinor);
+  // The floor never pushes the price above the list price (a list price already under the floor stays as it is).
+  const floorMinor = Math.min(listMinor, MIN_MINOR[cur] ?? 100);
+  const finalMinor = Math.max(floorMinor, listMinor - discountMinor);
 
   return {
     settings,
@@ -147,6 +169,7 @@ export async function getQuote({ userId = null, code = '', currency = 'INR' } = 
     source,
     code: usedCode,
     error,
+    errorKind,
   };
 }
 
