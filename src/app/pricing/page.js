@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getOrCreateUser } from '@/lib/user';
 import { getEntitlements } from '@/lib/subscription';
 import { getQuote, monthsLabel } from '@/lib/pricing';
+import { razorpayInternational } from '@/lib/razorpay';
 import { formatMoney } from '@/lib/money';
 import CheckoutButton from '@/components/billing/CheckoutButton';
 import { ProBadge } from '@/components/ProBadge';
@@ -54,7 +55,7 @@ export default async function PricingPage() {
     getQuote({ userId: user?.id ?? null, currency: 'USD' }),
   ]);
   const { settings } = quote;
-  const usdEnabled = dodoConfigured();
+  const usdEnabled = razorpayInternational();
 
   const listRupees = Math.round(quote.listPaise / 100);
   const finalRupees = Math.round(quote.finalPaise / 100);
