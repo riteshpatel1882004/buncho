@@ -2,7 +2,6 @@ import Link from 'next/link';
 import { getOrCreateUser } from '@/lib/user';
 import { getEntitlements } from '@/lib/subscription';
 import { getQuote, monthsLabel } from '@/lib/pricing';
-import { dodoConfigured } from '@/lib/dodo';
 import { formatMoney } from '@/lib/money';
 import CheckoutButton from '@/components/billing/CheckoutButton';
 import { ProBadge } from '@/components/ProBadge';
