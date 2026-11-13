@@ -94,6 +94,7 @@ export default function CheckoutButton({ signedIn, label = 'Upgrade to Pro', pri
   const busy = pending || Boolean(payingWith);
   const shownInr = applied ? applied.inrRupees : price;
   const shownUsd = applied ? applied.usdCents : priceUsdCents;
+  const showUsd = usdEnabled && shownUsd != null; // dollars are offered only when switched on and priced
 
   return (
     <div className="space-y-3">
@@ -144,10 +145,37 @@ export default function CheckoutButton({ signedIn, label = 'Upgrade to Pro', pri
       <button type="button" onClick={openChooser} disabled={busy} aria-haspopup="dialog" className={`${ctaBtn} w-full`}>
         {busy && <Spinner size={14} />}
         {label}
-        {shownInr != null && ` · ${formatMoney(shownInr * 100, 'INR')}`}
+        {shownInr != null && (
+          <>
+            {' · '}
+            {formatMoney(shownInr * 100, 'INR')}
+            {showUsd && <span className="font-medium opacity-70"> / {formatMoney(shownUsd, 'USD')}</span>}
+          </>
+        )}
       </button>
-      <p className="text-center text-[0.7rem] text-muted">
-        Pay in INR (UPI, cards, net banking){usdEnabled && shownUsd != null ? ` or with an international card (${formatMoney(shownUsd, 'USD')} USD)` : ''}. Secure payment by Razorpay.
+
+      {/* The two ways to pay, side by side, so it is clear that dollars work too */}
+      <div className={`grid gap-2 text-left ${showUsd ? 'sm:grid-cols-2' : ''}`}>
+        <div className="flex items-start gap-2.5 rounded-xl border border-line bg-surface-2/40 px-3 py-2.5">
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-accent-soft text-sm font-semibold text-accent">₹</span>
+          <span className="min-w-0 text-xs leading-snug">
+            <span className="block font-semibold text-ink">Pay in INR{shownInr != null && ` · ${formatMoney(shownInr * 100, 'INR')}`}</span>
+            <span className="block text-muted">UPI, cards, net banking, wallets</span>
+          </span>
+        </div>
+        {showUsd && (
+          <div className="flex items-start gap-2.5 rounded-xl border border-line bg-surface-2/40 px-3 py-2.5">
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-surface-2 text-sm font-semibold">$</span>
+            <span className="min-w-0 text-xs leading-snug">
+              <span className="block font-semibold text-ink">Pay in USD · {formatMoney(shownUsd, 'USD')}</span>
+              <span className="block text-muted">International cards (Visa, Mastercard, Amex)</span>
+            </span>
+          </div>
+        )}
+      </div>
+      <p className="flex items-center justify-center gap-1.5 text-center text-[0.7rem] text-muted">
+        <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="9" rx="2" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
+        Secure payment by Razorpay
       </p>
       {error && !chooserOpen && <p role="alert" className="rounded-lg bg-hard/10 px-3 py-2 text-center text-sm font-medium text-hard">{error}</p>}
 
